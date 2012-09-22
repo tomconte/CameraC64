@@ -1,5 +1,6 @@
 #import "PhotoAppDelegate.h"
 #import "PhotoViewController.h"
+#import "TestFlight.h"
 
 @implementation PhotoAppDelegate
 
@@ -8,6 +9,13 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
+    
+#define TESTING 1
+#ifdef TESTING
+    [TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
+#endif
+    
+    [TestFlight takeOff:@"e4290428e14d44211d2aa8a8786fdb2d_NTMzNTkyMDEyLTAxLTE4IDE3OjA3OjMyLjM4NzMxMw"];
     
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     // Override point for customization after application launch.
