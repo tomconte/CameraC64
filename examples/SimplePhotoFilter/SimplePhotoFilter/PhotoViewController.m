@@ -24,8 +24,12 @@
     // Yes, I know I'm a caveman for doing all this by hand
 	UIView *primaryView = [[UIView alloc] initWithFrame:mainScreenFrame];
 	primaryView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        
-    imageView = [[GPUImageView alloc] initWithFrame:CGRectMake(0, 0, 640/2, 852/2)];
+    
+    if (mainScreenFrame.size.height == 1136/2) {
+        imageView = [[GPUImageView alloc] initWithFrame:CGRectMake(0, 20, 640/2, 852/2)];
+    } else {
+        imageView = [[GPUImageView alloc] initWithFrame:CGRectMake(0, 0, 640/2, 852/2)];
+    }
     [primaryView addSubview:imageView];
 
     UIImageView *titleBar = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"newtitlebar.png"]];
@@ -196,7 +200,11 @@
             UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:image.CGImage scale: 1.0 orientation:UIImageOrientationUp];
             capturedImage = [[UIImageView alloc] initWithImage:rotatedImage];
         }
-        [capturedImage setFrame:CGRectMake(0, 0, 320, 426)];
+        if (mainScreenFrame.size.height == 1136/2) {
+            [capturedImage setFrame:CGRectMake(0, 20, 320, 426)];
+        } else {
+            [capturedImage setFrame:CGRectMake(0, 0, 320, 426)];
+        }
         
         [self.view addSubview:capturedImage];
         
