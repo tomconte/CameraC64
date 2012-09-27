@@ -114,9 +114,6 @@
 //        filter = c64Filter;
     }
 
-    [(GPUImageFilterGroup *)filter setInitialFilters:[NSArray arrayWithObject:transformFilter]];
-    [(GPUImageFilterGroup *)filter setTerminalFilter:transformFilter2];
-
 //    GPUImageC64ColorspaceFilter *c64Filter = [[GPUImageC64ColorspaceFilter alloc] init];
 //    GPUImageC64ColorspaceFilter *c64Filter = [[GPUImageAmatorkaFilter alloc] init];
     
@@ -124,18 +121,18 @@
     //            [(GPUImageFilterGroup *)filter addFilter:pixellateFilter];
     
     
-//    GPUImageScreenBlendFilter *blendFilter = [[GPUImageScreenBlendFilter alloc] init];
+//    GPUImageOverlayBlendFilter *blendFilter = [[GPUImageOverlayBlendFilter alloc] init];
+//    UIImage *inputImage;
+//    inputImage = [UIImage imageNamed:@"scanline.png"];
+//    GPUImagePicture *sourcePicture = [[GPUImagePicture alloc] initWithImage:inputImage smoothlyScaleOutput:NO];
+//    [sourcePicture processImage];
+//    [sourcePicture addTarget:blendFilter];
+
+//    [(GPUImageFilterGroup *)filter addFilter:blendFilter];
+//    [transformFilter2 addTarget:blendFilter];
     
-//    if (false) { 
-//        [videoCamera addTarget:blendFilter];
-//        videoCamera.runBenchmark = YES;
-//        UIImage *inputImage;
-//        inputImage = [UIImage imageNamed:@"scanline.png"];
-//        
-//        sourcePicture = [[GPUImagePicture alloc] initWithImage:inputImage smoothlyScaleOutput:YES];
-//        [sourcePicture processImage];            
-//        [sourcePicture addTarget:blendFilter];
-//    }
+    [(GPUImageFilterGroup *)filter setInitialFilters:[NSArray arrayWithObject:transformFilter]];
+    [(GPUImageFilterGroup *)filter setTerminalFilter:transformFilter2];
 
 	[filter prepareForImageCapture];
     
