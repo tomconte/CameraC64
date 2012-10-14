@@ -4,15 +4,14 @@
 
 @implementation GPUImageFastC64Filter
 
-- (id)init;
+- (id)initWithCLUT:(NSString *)clutFile;
 {
     if (!(self = [super init]))
     {
 		return nil;
     }
 
-    UIImage *image = [UIImage imageNamed:@"paletteC64_first.png"];
-    NSAssert(image, @"To use GPUImageAmatorkaFilter you need to add lookup_amatorka.png from GPUImage/framework/Resources to your application bundle.");
+    UIImage *image = [UIImage imageNamed:clutFile];
     
     lookupImageSource = [[GPUImagePicture alloc] initWithImage:image];
     GPUImageLookupFilter *lookupFilter = [[GPUImageLookupFilter alloc] init];

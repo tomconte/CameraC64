@@ -11,8 +11,11 @@
 
 @interface GPUImageC64Filter : GPUImageFilterGroup
 {
+
     GPUImagePicture *lookupImageSource;
     GPUImagePicture *lookupImageSource2;
 }
+
+- (id)initWithCLUT1:(NSString *)clut1File andCLUT2:(NSString *)clut2File;
 
 @end

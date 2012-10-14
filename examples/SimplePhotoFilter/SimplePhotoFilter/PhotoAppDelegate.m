@@ -1,6 +1,8 @@
 #import "PhotoAppDelegate.h"
 #import "PhotoViewController.h"
-#import "TestFlight.h"
+//#import "TestFlight.h"
+#import "Flurry.h"
+#import "C64IAPHelper.h"
 
 @implementation PhotoAppDelegate
 
@@ -10,13 +12,6 @@
 {
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
     
-#define TESTING 1
-#ifdef TESTING
-    [TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
-#endif
-    
-    [TestFlight takeOff:@"e4290428e14d44211d2aa8a8786fdb2d_NTMzNTkyMDEyLTAxLTE4IDE3OjA3OjMyLjM4NzMxMw"];
-    
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     // Override point for customization after application launch.
     self.window.backgroundColor = [UIColor blackColor];
@@ -25,6 +20,21 @@
     rootViewController.view.frame = [[UIScreen mainScreen] bounds];
 //    [self.window addSubview:rootViewController.view];
     [self.window setRootViewController:rootViewController];
+    
+    // Initialize In-App Purchases
+    [C64IAPHelper sharedInstance];
+    
+    // TestFlight
+
+#define TESTING 0
+#ifdef TESTING
+    //    [TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
+#endif
+    
+    //    [TestFlight takeOff:@"e4290428e14d44211d2aa8a8786fdb2d_NTMzNTkyMDEyLTAxLTE4IDE3OjA3OjMyLjM4NzMxMw"];
+
+    // Flurry
+    [Flurry startSession:@"TJKQX4BPTHTHC62JKH8J"];
     
     [self.window makeKeyAndVisible];
     return YES;

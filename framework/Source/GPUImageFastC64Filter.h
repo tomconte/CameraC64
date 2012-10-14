@@ -14,4 +14,6 @@
     GPUImagePicture *lookupImageSource;
 }
 
+- (id)initWithCLUT:(NSString *)clutFile;
+
 @end
