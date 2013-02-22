@@ -613,30 +613,32 @@
 
 - (IBAction)switchFlash:(id)sender;
 {
-    [stillCamera.inputCamera lockForConfiguration:nil];
-    if ([stillCamera.inputCamera flashMode] == AVCaptureFlashModeOff) {
-        [stillCamera.inputCamera setFlashMode:AVCaptureFlashModeOn];
-        UIImage *btnImageFlash;
-        if (iPhone5) {
-            btnImageFlash = [UIImage imageNamed:@"flash-on-568h@2x.png"];
+    if ([stillCamera.inputCamera hasFlash]) {
+        [stillCamera.inputCamera lockForConfiguration:nil];
+        if ([stillCamera.inputCamera flashMode] == AVCaptureFlashModeOff) {
+            [stillCamera.inputCamera setFlashMode:AVCaptureFlashModeOn];
+            UIImage *btnImageFlash;
+            if (iPhone5) {
+                btnImageFlash = [UIImage imageNamed:@"flash-on-568h@2x.png"];
+            } else {
+                btnImageFlash = [UIImage imageNamed:@"flash-on.png"];
+            }
+            [flashButton setImage:btnImageFlash forState:UIControlStateNormal];
+            [flashButton setImage:btnImageFlash forState:UIControlStateHighlighted];
+            
         } else {
-            btnImageFlash = [UIImage imageNamed:@"flash-on.png"];
+            [stillCamera.inputCamera setFlashMode:AVCaptureFlashModeOff];
+            UIImage *btnImageFlash;
+            if (iPhone5) {
+                btnImageFlash = [UIImage imageNamed:@"flash-off-568h@2x.png"];
+            } else {
+                btnImageFlash = [UIImage imageNamed:@"flash-off.png"];
+            }
+            [flashButton setImage:btnImageFlash forState:UIControlStateNormal];
+            [flashButton setImage:btnImageFlash forState:UIControlStateHighlighted];
         }
-        [flashButton setImage:btnImageFlash forState:UIControlStateNormal];
-        [flashButton setImage:btnImageFlash forState:UIControlStateHighlighted];
-
-    } else {
-        [stillCamera.inputCamera setFlashMode:AVCaptureFlashModeOff];
-        UIImage *btnImageFlash;
-        if (iPhone5) {
-            btnImageFlash = [UIImage imageNamed:@"flash-off-568h@2x.png"];
-        } else {
-            btnImageFlash = [UIImage imageNamed:@"flash-off.png"];
-        }
-        [flashButton setImage:btnImageFlash forState:UIControlStateNormal];
-        [flashButton setImage:btnImageFlash forState:UIControlStateHighlighted];
+        [stillCamera.inputCamera unlockForConfiguration];
     }
-    [stillCamera.inputCamera unlockForConfiguration];
 }
 
 - (IBAction)switchScanline:(id)sender;
