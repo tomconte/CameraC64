@@ -36,7 +36,6 @@
 		FD7652EB16270EC0004A45E1 /* b&w_paletteC64_second.png in Resources */ = {isa = PBXBuildFile; fileRef = FD7652E516270EC0004A45E1 /* b&w_paletteC64_second.png */; };
 		FD7652EC16270EC0004A45E1 /* green_paletteC64_first.png in Resources */ = {isa = PBXBuildFile; fileRef = FD7652E616270EC0004A45E1 /* green_paletteC64_first.png */; };
 		FD7652ED16270EC0004A45E1 /* green_paletteC64_second.png in Resources */ = {isa = PBXBuildFile; fileRef = FD7652E716270EC0004A45E1 /* green_paletteC64_second.png */; };
-		FD7652F1162715C7004A45E1 /* libFlurry.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FD7652F0162715C7004A45E1 /* libFlurry.a */; };
 		FD7652F3162716C1004A45E1 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FD7652F2162716C1004A45E1 /* SystemConfiguration.framework */; };
 		FD76530016274DFB004A45E1 /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = FD7652FF16274DFB004A45E1 /* Default.png */; };
 		FD76530216274E00004A45E1 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FD76530116274E00004A45E1 /* Default@2x.png */; };
@@ -118,6 +117,7 @@
 		FDC8B052161E22A7005A946A /* scanline-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04E161E22A7005A946A /* scanline-off-568h@2x.png */; };
 		FDC8B053161E22A7005A946A /* flash-on-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */; };
 		FDC8B054161E22A7005A946A /* flash-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */; };
+		FDDFAC0916D8C8CD0052F7ED /* libFlurry.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */; };
 		FDFA5EEF1624BC9200CDD833 /* IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */; };
 		FDFA5EF11624BCB200CDD833 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFA5EF01624BCB200CDD833 /* StoreKit.framework */; };
 		FDFA5EF41624BCD100CDD833 /* C64IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EF31624BCD100CDD833 /* C64IAPHelper.m */; };
@@ -184,8 +184,6 @@
 		FD7652E516270EC0004A45E1 /* b&w_paletteC64_second.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "b&w_paletteC64_second.png"; sourceTree = "<group>"; };
 		FD7652E616270EC0004A45E1 /* green_paletteC64_first.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = green_paletteC64_first.png; sourceTree = "<group>"; };
 		FD7652E716270EC0004A45E1 /* green_paletteC64_second.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = green_paletteC64_second.png; sourceTree = "<group>"; };
-		FD7652EF162715C7004A45E1 /* Flurry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Flurry.h; sourceTree = "<group>"; };
-		FD7652F0162715C7004A45E1 /* libFlurry.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libFlurry.a; sourceTree = "<group>"; };
 		FD7652F2162716C1004A45E1 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		FD7652FF16274DFB004A45E1 /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
 		FD76530116274E00004A45E1 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
@@ -267,6 +265,8 @@
 		FDC8B04E161E22A7005A946A /* scanline-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-off-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "flash-on-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "flash-off-568h@2x.png"; sourceTree = "<group>"; };
+		FDDFAC0716D8C8CD0052F7ED /* Flurry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Flurry.h; sourceTree = "<group>"; };
+		FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libFlurry.a; sourceTree = "<group>"; };
 		FDFA5EED1624BC9200CDD833 /* IAPHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IAPHelper.h; sourceTree = "<group>"; };
 		FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IAPHelper.m; sourceTree = "<group>"; };
 		FDFA5EF01624BCB200CDD833 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -293,7 +293,7 @@
 				BCC1E6A31523E3620006EFA5 /* Foundation.framework in Frameworks */,
 				BCC1E6A51523E3620006EFA5 /* CoreGraphics.framework in Frameworks */,
 				FD1DAB63160DC17700E12222 /* libTestFlight.a in Frameworks */,
-				FD7652F1162715C7004A45E1 /* libFlurry.a in Frameworks */,
+				FDDFAC0916D8C8CD0052F7ED /* libFlurry.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -306,12 +306,12 @@
 				FD76530316274E03004A45E1 /* Default-568h@2x.png */,
 				FD76530116274E00004A45E1 /* Default@2x.png */,
 				FD7652FF16274DFB004A45E1 /* Default.png */,
-				FD7652EE162715C7004A45E1 /* Flurry */,
-				FD1DAB5E160DC17700E12222 /* TestFlightSDK */,
 				FD1DAB66160DC1BB00E12222 /* libz.dylib */,
 				FD6276E41604EA4200867820 /* Icon.png */,
 				FD6276E61604EA4500867820 /* Icon@2x.png */,
 				BCC1E6A61523E3620006EFA5 /* SimplePhotoFilter */,
+				FDDFAC0616D8C8CD0052F7ED /* Flurry */,
+				FD1DAB5E160DC17700E12222 /* TestFlightSDK */,
 				BCC1E69F1523E3620006EFA5 /* Frameworks */,
 				BCC1E69D1523E3620006EFA5 /* Products */,
 			);
@@ -478,11 +478,11 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		FD7652EE162715C7004A45E1 /* Flurry */ = {
+		FDDFAC0616D8C8CD0052F7ED /* Flurry */ = {
 			isa = PBXGroup;
 			children = (
-				FD7652EF162715C7004A45E1 /* Flurry.h */,
-				FD7652F0162715C7004A45E1 /* libFlurry.a */,
+				FDDFAC0716D8C8CD0052F7ED /* Flurry.h */,
+				FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */,
 			);
 			path = Flurry;
 			sourceTree = "<group>";
