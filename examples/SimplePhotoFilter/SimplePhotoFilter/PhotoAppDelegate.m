@@ -8,6 +8,10 @@
 
 @synthesize window = _window;
 
+void uncaughtExceptionHandler(NSException *exception) {
+    [Flurry logError:@"Uncaught" message:@"Crash!" exception:exception];
+}
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:NO];
@@ -34,6 +38,7 @@
     //    [TestFlight takeOff:@"e4290428e14d44211d2aa8a8786fdb2d_NTMzNTkyMDEyLTAxLTE4IDE3OjA3OjMyLjM4NzMxMw"];
 
     // Flurry
+    NSSetUncaughtExceptionHandler(&uncaughtExceptionHandler);
     [Flurry startSession:@"TJKQX4BPTHTHC62JKH8J"];
     
     [self.window makeKeyAndVisible];
