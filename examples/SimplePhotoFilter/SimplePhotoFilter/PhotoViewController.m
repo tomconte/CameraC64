@@ -3,6 +3,7 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 #import <Social/Social.h>
 #import "C64IAPHelper.h"
+#import "Flurry.h"
 
 @interface PhotoViewController ()
 
@@ -315,6 +316,8 @@
 
 - (IBAction)takePhoto:(id)sender;
 {
+    [Flurry logEvent:@"Photo_Take"];
+
     // Disable buttons
     photoCaptureButton.enabled = NO;
     changeFilterButton.enabled = NO;
@@ -425,6 +428,8 @@
 
 - (IBAction)discardPhoto:(id)sender;
 {
+    [Flurry logEvent:@"Photo_Discard"];
+
     runOnMainQueueWithoutDeadlocking(^{
         //                 report_memory(@"Operation completed");
         [msgLabel removeFromSuperview];
@@ -447,6 +452,8 @@
 
 - (IBAction)savePhoto:(id)sender;
 {
+    [Flurry logEvent:@"Photo_Save"];
+
     [msgLabel setText: @"Saving to gallery..."];
         
     // Save to assets library
@@ -484,6 +491,8 @@
 
 - (IBAction)sharePhoto:(id)sender;
 {
+    [Flurry logEvent:@"Photo_Share"];
+
     NSArray *activityItems;
     
     activityItems = @[resultJPEG];
@@ -498,17 +507,23 @@
     NSString *title = [alertView buttonTitleAtIndex:buttonIndex];
     if([title isEqualToString:@"Purchase"])
     {
+        [Flurry logEvent:@"InApp_Purchase"];
+
         SKProduct *product = _products[0]; // Only one product ...
         [[C64IAPHelper sharedInstance] buyProduct:product];
     }
     else if([title isEqualToString:@"Restore"])
     {
+        [Flurry logEvent:@"InApp_Restore"];
+
         [[C64IAPHelper sharedInstance] restoreCompletedTransactions];
     }
 }
 
 - (IBAction)changeFilter:(id)sender;
 {
+    [Flurry logEvent:@"Filter_Change"];
+    
     GLint maxTextureSize = [GPUImageOpenGLESContext maximumTextureSizeForThisDevice];
     bool isFast = (maxTextureSize > 2048);
 
@@ -527,6 +542,8 @@
         // Retrieve product information from App Store
         [[C64IAPHelper sharedInstance] requestProductsWithCompletionHandler:^(BOOL success, NSArray *products) {
             if (success) {
+                [Flurry logEvent:@"InApp_Dialog"];
+
                 _products = products;
                 
                 SKProduct *product = (SKProduct *)_products[0]; // Only one product ...
@@ -613,6 +630,8 @@
 
 - (IBAction)switchFlash:(id)sender;
 {
+    [Flurry logEvent:@"Flash_Switch"];
+
     if ([stillCamera.inputCamera hasFlash]) {
         [stillCamera.inputCamera lockForConfiguration:nil];
         if ([stillCamera.inputCamera flashMode] == AVCaptureFlashModeOff) {
@@ -643,6 +662,8 @@
 
 - (IBAction)switchScanline:(id)sender;
 {
+    [Flurry logEvent:@"Scanline_Switch"];
+
     if (!scanlineOn) {
         scanlineOn = YES;
         UIImage *btnImageScanline;
@@ -683,6 +704,8 @@
 
 - (IBAction)switchScreen:(id)sender;
 {
+    [Flurry logEvent:@"Screen_Switch"];
+
     UIImage *toImage;
     UIImage *fromImage;
     
