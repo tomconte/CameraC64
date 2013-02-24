@@ -338,21 +338,52 @@
     msgLabel.text = [NSString stringWithFormat: @"Processing picture..."];
     [imageView addSubview:msgLabel];
 
-    [stillCamera capturePhotoAsJPEGProcessedUpToFilter:filter withCompletionHandler:^(NSData *processedJPEG, NSError *error) {
+    [stillCamera capturePhotoAsImageProcessedUpToFilter:filter withCompletionHandler:^(UIImage *processedImage, NSError *error) {
                 
         [stillCamera.captureSession stopRunning];
         
-        resultJPEG = processedJPEG;
+        // Reorient
+        
+        UIImage *bottomImage;
+
+        if (processedImage.imageOrientation == UIImageOrientationUp) {
+            bottomImage = processedImage;
+        } else {
+            UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:processedImage.CGImage scale: 1.0 orientation:UIImageOrientationUp];
+            bottomImage = rotatedImage;
+        }
+        
+        // Merge scanlines
+        
+        UIImage *newImage;
+        
+        if (scanlineOn) {
+            UIImage *image = [UIImage imageNamed:@"scanline-vertical.png"]; //foreground image        
+            CGSize newSize = CGSizeMake(bottomImage.size.width, bottomImage.size.height);
+            UIGraphicsBeginImageContext(newSize);
+            [bottomImage drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+            [image drawInRect:CGRectMake(0, 0, newSize.width, newSize.height) blendMode:kCGBlendModeNormal alpha:0.8];
+            newImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+        } else {
+            newImage = bottomImage;
+        }
+
+        // The image to display
+        
+        capturedImage = [[UIImageView alloc] initWithImage:newImage];
+
+        // Now restore the original orientation if necessary before generating the result JPEG
+        
+        if (processedImage.imageOrientation == UIImageOrientationUp) {
+            resultJPEG = UIImageJPEGRepresentation(newImage, 0.80);
+        } else {
+            UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:newImage.CGImage scale: 1.0 orientation:processedImage.imageOrientation];
+            resultJPEG = UIImageJPEGRepresentation(rotatedImage, 0.80);
+        }
         
         // Display the image
         
-        UIImage *image = [UIImage imageWithData:resultJPEG];
-        if (image.imageOrientation == UIImageOrientationUp) {
-            capturedImage = [[UIImageView alloc] initWithImage:image];
-        } else {
-            UIImage *rotatedImage = [[UIImage alloc] initWithCGImage:image.CGImage scale: 1.0 orientation:UIImageOrientationUp];
-            capturedImage = [[UIImageView alloc] initWithImage:rotatedImage];
-        }
         if (mainScreenFrame.size.height == 1136/2) {
             [capturedImage setFrame:CGRectMake(0, 20, 320, 426)];
         } else {

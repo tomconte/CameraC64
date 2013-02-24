@@ -118,6 +118,7 @@
 		FDC8B053161E22A7005A946A /* flash-on-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */; };
 		FDC8B054161E22A7005A946A /* flash-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */; };
 		FDDFAC0916D8C8CD0052F7ED /* libFlurry.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */; };
+		FDDFAC0D16D962840052F7ED /* scanline-vertical.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC0B16D962840052F7ED /* scanline-vertical.png */; };
 		FDFA5EEF1624BC9200CDD833 /* IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */; };
 		FDFA5EF11624BCB200CDD833 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFA5EF01624BCB200CDD833 /* StoreKit.framework */; };
 		FDFA5EF41624BCD100CDD833 /* C64IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EF31624BCD100CDD833 /* C64IAPHelper.m */; };
@@ -267,6 +268,7 @@
 		FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "flash-off-568h@2x.png"; sourceTree = "<group>"; };
 		FDDFAC0716D8C8CD0052F7ED /* Flurry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Flurry.h; sourceTree = "<group>"; };
 		FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libFlurry.a; sourceTree = "<group>"; };
+		FDDFAC0B16D962840052F7ED /* scanline-vertical.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-vertical.png"; sourceTree = "<group>"; };
 		FDFA5EED1624BC9200CDD833 /* IAPHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IAPHelper.h; sourceTree = "<group>"; };
 		FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IAPHelper.m; sourceTree = "<group>"; };
 		FDFA5EF01624BCB200CDD833 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -365,6 +367,7 @@
 		BCC1E6A71523E3620006EFA5 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				FDDFAC0B16D962840052F7ED /* scanline-vertical.png */,
 				FD7652E216270EC0004A45E1 /* amber_paletteC64_first.png */,
 				FD7652E316270EC0004A45E1 /* amber_paletteC64_second.png */,
 				FD7652E416270EC0004A45E1 /* b&w_paletteC64_first.png */,
@@ -656,6 +659,7 @@
 				FD76530016274DFB004A45E1 /* Default.png in Resources */,
 				FD76530216274E00004A45E1 /* Default@2x.png in Resources */,
 				FD76530416274E03004A45E1 /* Default-568h@2x.png in Resources */,
+				FDDFAC0D16D962840052F7ED /* scanline-vertical.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
