@@ -51,6 +51,21 @@
 
     [primaryView addSubview:titleBar];
 
+    // Rotate camera
+
+    if( [UIImagePickerController isCameraDeviceAvailable: UIImagePickerControllerCameraDeviceFront ]) {
+        UIImage *rotateImage = [UIImage imageNamed:@"reverse-back.png"];
+        
+        rotateButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        [rotateButton setImage:rotateImage forState:UIControlStateNormal];
+        [rotateButton setImage:rotateImage forState:UIControlStateHighlighted];
+        [rotateButton setFrame:CGRectMake(mainScreenFrame.size.width - 120/2, 0, 120/2, 120/2)];
+        rotateButton.adjustsImageWhenDisabled = NO;
+        [rotateButton addTarget:self action:@selector(switchCamera:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [primaryView addSubview:rotateButton];
+    }
+
     if (iPhone5) {
         
         // Power bar
@@ -806,6 +821,23 @@
         
         [self.view addSubview:imageScreen];
     }
+}
+
+- (IBAction)switchCamera:(id)sender;
+{
+    [stillCamera rotateCamera];
+    
+    if (isFrontCamera) {
+        UIImage *rotateImage = [UIImage imageNamed:@"reverse-back.png"];        
+        [rotateButton setImage:rotateImage forState:UIControlStateNormal];
+        [rotateButton setImage:rotateImage forState:UIControlStateHighlighted];
+    } else {
+        UIImage *rotateImage = [UIImage imageNamed:@"reverse-front.png"];
+        [rotateButton setImage:rotateImage forState:UIControlStateNormal];
+        [rotateButton setImage:rotateImage forState:UIControlStateHighlighted];
+    }
+    
+    isFrontCamera = !isFrontCamera;
 }
 
 @end

@@ -16,6 +16,7 @@
     UIButton *saveButton;
     UIButton *changeFilterButton;
     UIButton *titleBar;
+    UIButton *rotateButton;
     UIButton *powerBar;
     UIButton *flashButton;
     UIButton *scanlineButton;
@@ -27,6 +28,7 @@
     bool iPhone5;
     bool scanlineOn;
     bool isScreenOff;
+    bool isFrontCamera;
     NSArray *_products;
 }
 
