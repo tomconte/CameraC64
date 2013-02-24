@@ -113,12 +113,14 @@
 		FDC8B042161E1C6E005A946A /* monitor-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B03D161E1C6E005A946A /* monitor-off-568h@2x.png */; };
 		FDC8B043161E1C6E005A946A /* monitor-color-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B03E161E1C6E005A946A /* monitor-color-568h@2x.png */; };
 		FDC8B044161E1C6E005A946A /* monitor-green-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B03F161E1C6E005A946A /* monitor-green-568h@2x.png */; };
-		FDC8B051161E22A7005A946A /* scanline-on-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04D161E22A6005A946A /* scanline-on-568h@2x.png */; };
-		FDC8B052161E22A7005A946A /* scanline-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04E161E22A7005A946A /* scanline-off-568h@2x.png */; };
 		FDC8B053161E22A7005A946A /* flash-on-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */; };
 		FDC8B054161E22A7005A946A /* flash-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */; };
 		FDDFAC0916D8C8CD0052F7ED /* libFlurry.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */; };
 		FDDFAC0D16D962840052F7ED /* scanline-vertical.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC0B16D962840052F7ED /* scanline-vertical.png */; };
+		FDDFAC1016DA7C150052F7ED /* scanline-off-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC0E16DA7C150052F7ED /* scanline-off-568h@2x.png */; };
+		FDDFAC1116DA7C150052F7ED /* scanline-on-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC0F16DA7C150052F7ED /* scanline-on-568h@2x.png */; };
+		FDDFAC1416DA7F4A0052F7ED /* reverse-back.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC1216DA7F4A0052F7ED /* reverse-back.png */; };
+		FDDFAC1516DA7F4A0052F7ED /* reverse-front.png in Resources */ = {isa = PBXBuildFile; fileRef = FDDFAC1316DA7F4A0052F7ED /* reverse-front.png */; };
 		FDFA5EEF1624BC9200CDD833 /* IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */; };
 		FDFA5EF11624BCB200CDD833 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDFA5EF01624BCB200CDD833 /* StoreKit.framework */; };
 		FDFA5EF41624BCD100CDD833 /* C64IAPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = FDFA5EF31624BCD100CDD833 /* C64IAPHelper.m */; };
@@ -262,13 +264,15 @@
 		FDC8B03D161E1C6E005A946A /* monitor-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "monitor-off-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B03E161E1C6E005A946A /* monitor-color-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "monitor-color-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B03F161E1C6E005A946A /* monitor-green-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "monitor-green-568h@2x.png"; sourceTree = "<group>"; };
-		FDC8B04D161E22A6005A946A /* scanline-on-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-on-568h@2x.png"; sourceTree = "<group>"; };
-		FDC8B04E161E22A7005A946A /* scanline-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-off-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "flash-on-568h@2x.png"; sourceTree = "<group>"; };
 		FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "flash-off-568h@2x.png"; sourceTree = "<group>"; };
 		FDDFAC0716D8C8CD0052F7ED /* Flurry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Flurry.h; sourceTree = "<group>"; };
 		FDDFAC0816D8C8CD0052F7ED /* libFlurry.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libFlurry.a; sourceTree = "<group>"; };
 		FDDFAC0B16D962840052F7ED /* scanline-vertical.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-vertical.png"; sourceTree = "<group>"; };
+		FDDFAC0E16DA7C150052F7ED /* scanline-off-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-off-568h@2x.png"; sourceTree = "<group>"; };
+		FDDFAC0F16DA7C150052F7ED /* scanline-on-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "scanline-on-568h@2x.png"; sourceTree = "<group>"; };
+		FDDFAC1216DA7F4A0052F7ED /* reverse-back.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "reverse-back.png"; sourceTree = "<group>"; };
+		FDDFAC1316DA7F4A0052F7ED /* reverse-front.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "reverse-front.png"; sourceTree = "<group>"; };
 		FDFA5EED1624BC9200CDD833 /* IAPHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IAPHelper.h; sourceTree = "<group>"; };
 		FDFA5EEE1624BC9200CDD833 /* IAPHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = IAPHelper.m; sourceTree = "<group>"; };
 		FDFA5EF01624BCB200CDD833 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -367,6 +371,10 @@
 		BCC1E6A71523E3620006EFA5 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				FDDFAC1216DA7F4A0052F7ED /* reverse-back.png */,
+				FDDFAC1316DA7F4A0052F7ED /* reverse-front.png */,
+				FDDFAC0E16DA7C150052F7ED /* scanline-off-568h@2x.png */,
+				FDDFAC0F16DA7C150052F7ED /* scanline-on-568h@2x.png */,
 				FDDFAC0B16D962840052F7ED /* scanline-vertical.png */,
 				FD7652E216270EC0004A45E1 /* amber_paletteC64_first.png */,
 				FD7652E316270EC0004A45E1 /* amber_paletteC64_second.png */,
@@ -437,8 +445,6 @@
 				FD9C8B69161F24070032D845 /* discard-up-568h@2x.png */,
 				FD9C8B6A161F24070032D845 /* share-down-568h@2x.png */,
 				FD9C8B6B161F24070032D845 /* share-up-568h@2x.png */,
-				FDC8B04D161E22A6005A946A /* scanline-on-568h@2x.png */,
-				FDC8B04E161E22A7005A946A /* scanline-off-568h@2x.png */,
 				FDC8B04F161E22A7005A946A /* flash-on-568h@2x.png */,
 				FDC8B050161E22A7005A946A /* flash-off-568h@2x.png */,
 				FDC8B03B161E1C6E005A946A /* monitor-amber-568h@2x.png */,
@@ -583,8 +589,6 @@
 				FDC8B042161E1C6E005A946A /* monitor-off-568h@2x.png in Resources */,
 				FDC8B043161E1C6E005A946A /* monitor-color-568h@2x.png in Resources */,
 				FDC8B044161E1C6E005A946A /* monitor-green-568h@2x.png in Resources */,
-				FDC8B051161E22A7005A946A /* scanline-on-568h@2x.png in Resources */,
-				FDC8B052161E22A7005A946A /* scanline-off-568h@2x.png in Resources */,
 				FDC8B053161E22A7005A946A /* flash-on-568h@2x.png in Resources */,
 				FDC8B054161E22A7005A946A /* flash-off-568h@2x.png in Resources */,
 				FD9C8B6C161F24070032D845 /* discard-down-568h@2x.png in Resources */,
@@ -660,6 +664,10 @@
 				FD76530216274E00004A45E1 /* Default@2x.png in Resources */,
 				FD76530416274E03004A45E1 /* Default-568h@2x.png in Resources */,
 				FDDFAC0D16D962840052F7ED /* scanline-vertical.png in Resources */,
+				FDDFAC1016DA7C150052F7ED /* scanline-off-568h@2x.png in Resources */,
+				FDDFAC1116DA7C150052F7ED /* scanline-on-568h@2x.png in Resources */,
+				FDDFAC1416DA7F4A0052F7ED /* reverse-back.png in Resources */,
+				FDDFAC1516DA7F4A0052F7ED /* reverse-front.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -711,7 +719,7 @@
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -745,8 +753,8 @@
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: THOMAS CONTE";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -757,7 +765,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				PROVISIONING_PROFILE = "";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "1B4775DD-D952-4385-8151-D7D3309420D0";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 				VALIDATE_PRODUCT = YES;
