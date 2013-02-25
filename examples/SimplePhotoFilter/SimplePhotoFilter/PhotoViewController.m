@@ -587,7 +587,7 @@
         
         // Retrieve product information from App Store
         [[C64IAPHelper sharedInstance] requestProductsWithCompletionHandler:^(BOOL success, NSArray *products) {
-            if (success) {
+            if (success && products.count > 0) {
                 [Flurry logEvent:@"InApp_Dialog"];
 
                 _products = products;
@@ -610,6 +610,13 @@
                                         nil];
                 [message setAlpha:0.5];
                 [message show];
+            } else {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"In-App Store unavailable"
+                                                                message:@"The In-App Store is currently unavailable, please try again later."
+                                                               delegate:nil
+                                                      cancelButtonTitle:@"OK"
+                                                      otherButtonTitles:nil, nil];
+                [alert show];
             }
         }];
 
