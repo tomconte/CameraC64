@@ -39,6 +39,6 @@ Under the repository's Settings → Secrets and variables → Actions:
   - `ASC_KEY_ID` and `ASC_ISSUER_ID`: from App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys.
   - `ASC_KEY_P8`: the contents of the key's `.p8` file, which can only be downloaded once.
   - The key must have the **Admin** role; cloud signing fails with other roles.
-- **Variable**: `DEVELOPMENT_TEAM`, the Team ID from developer.apple.com → Membership.
+- **`DEVELOPMENT_TEAM`**, as a variable or a secret: the Team ID from developer.apple.com → Membership.
 
 The `DIST_CERT_P12_BASE64` and `DIST_CERT_PASSWORD` secrets are not used: cloud signing replaced them. They can stay as a fallback in case cloud signing ever stops working, or be deleted, with the certificate revoked on developer.apple.com.

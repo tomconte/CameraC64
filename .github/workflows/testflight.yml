@@ -39,7 +39,7 @@ jobs:
           [ -n "$ASC_KEY_ID" ] || missing+=("secret ASC_KEY_ID")
           [ -n "$ASC_ISSUER_ID" ] || missing+=("secret ASC_ISSUER_ID")
           [ -n "$ASC_KEY_P8" ] || missing+=("secret ASC_KEY_P8")
-          [ -n "$DEVELOPMENT_TEAM" ] || missing+=("variable DEVELOPMENT_TEAM")
+          [ -n "$DEVELOPMENT_TEAM" ] || missing+=("variable or secret DEVELOPMENT_TEAM")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing ${missing[*]} (see docs/CI.md)"
             exit 1
