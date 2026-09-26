@@ -1,0 +1,67 @@
+# XcodeGen spec: `xcodegen generate` creates CameraC64.xcodeproj (not committed).
+name: CameraC64
+
+options:
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "3.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  C64Core:
+    path: Packages/C64Core
+
+targets:
+  CameraC64:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+      - App/Resources
+    dependencies:
+      - package: C64Core
+    settings:
+      base:
+        # Must match the existing App Store record (the legacy app's bundle ID).
+        PRODUCT_BUNDLE_IDENTIFIER: com.camerac64
+        # DEVELOPMENT_TEAM: ABCDE12345  # your Apple team ID, needed to run on a device
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: Camera C64
+        # No encryption beyond what iOS provides, so TestFlight builds skip the export-compliance question.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: "NO"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.photography
+        INFOPLIST_KEY_NSCameraUsageDescription: Camera C64 turns what your camera sees into Commodore 64 pictures.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Camera C64 saves your pictures to your photo library.
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: "YES"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+    scheme:
+      testTargets:
+        - CameraC64Tests
+
+  CameraC64Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - App/Tests
+    dependencies:
+      - target: CameraC64
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.camerac64.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/CameraC64.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CameraC64
+        BUNDLE_LOADER: $(TEST_HOST)
