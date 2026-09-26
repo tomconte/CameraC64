@@ -303,7 +303,8 @@ docs/                     this plan and design notes
 0. **Repository reset** (done):
    - legacy code tagged and removed, this plan, project skeleton
    - CI on GitHub Actions: Linux for `C64Core`, a macOS runner for the app
-   - Swift installed automatically in Claude Code web sessions
+   - TestFlight uploads from CI, with Apple's cloud signing (first build uploaded September 2026)
+   - Swift installed automatically in Claude Code web sessions, and a `CLAUDE.md` with the technical ways of working
 1. **Foundation**:
    - `C64Core` palettes (Colodore), `ModeSpec` and `C64Frame`, and the renderer for the standard modes.
    - Koala, Art Studio, `.prg` and `.d64` writers.
