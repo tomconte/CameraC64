@@ -2,13 +2,12 @@ name: TestFlight
 
 on:
   workflow_dispatch:
+  # Pushing a commit whose message contains [testflight] also uploads a build,
+  # for tools that can push but cannot start workflows by hand.
+  push:
 
 permissions:
   contents: read
-
-concurrency:
-  group: testflight
-  cancel-in-progress: false
 
 defaults:
   run:
@@ -17,6 +16,10 @@ defaults:
 jobs:
   upload:
     name: Archive and upload
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    concurrency:
+      group: testflight
+      cancel-in-progress: false
     runs-on: macos-26
     timeout-minutes: 45
     env:

@@ -19,7 +19,9 @@ When changing the Swift version, update it in three places: the container image 
 
 ## TestFlight
 
-`.github/workflows/testflight.yml` uploads a build to TestFlight. It only runs when triggered by hand, from the Actions tab (TestFlight → Run workflow) or through the API.
+`.github/workflows/testflight.yml` uploads a build to TestFlight. It runs in two cases:
+- when started by hand, from the Actions tab (TestFlight → Run workflow; the button appears once the workflow is on the default branch)
+- when a pushed commit's message contains `[testflight]`
 
 1. It checks that the signing settings exist, and names any that are missing.
 2. It builds an **unsigned** archive. The version comes from `MARKETING_VERSION` in `project.yml`, and the build number is the workflow's run number.
