@@ -30,6 +30,8 @@ No Mac is needed to work on the project:
 - **CI** (`.github/workflows/ci.yml`) lints, builds and tests `C64Core` on Linux, and builds and tests the app in the iOS Simulator on a macOS runner, on every push.
 - **Claude Code on the web** installs Swift at the start of each session (`.claude/hooks/session-start.sh`), so `C64Core` can be built and tested there.
 
+Details, including TestFlight setup: [docs/CI.md](docs/CI.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Credits for borrowed code are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
