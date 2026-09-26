@@ -24,7 +24,7 @@ When changing the Swift version, update it in three places: the container image 
 - when a pushed commit's message contains `[testflight]`
 
 1. It checks that the signing settings exist, and names any that are missing.
-2. It builds an **unsigned** archive. The version comes from `MARKETING_VERSION` in `project.yml`, and the build number is the workflow's run number.
+2. It builds an **unsigned** archive. The version comes from `MARKETING_VERSION` in `project.yml`. The build number is the UTC date followed by the workflow's run number (e.g. `20260926003`). App Store Connect requires each build number to be higher than every earlier upload, and this app's last one, from 2018, was `20180325001`.
 3. It exports the archive with the App Store Connect API key. Apple's cloud-managed signing supplies the distribution certificate and the App Store provisioning profile, and `xcodebuild` uploads the result.
 
 The archive is left unsigned on purpose. Signing it on CI makes Xcode create a new development certificate through the API key on every run, until Apple's certificate limit stops the job.

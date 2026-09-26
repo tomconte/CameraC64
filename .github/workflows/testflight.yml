@@ -27,9 +27,14 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       DEVELOPMENT_TEAM: ${{ vars.DEVELOPMENT_TEAM || secrets.DEVELOPMENT_TEAM }}
-      BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
+
+      # App Store Connect only accepts build numbers higher than every earlier
+      # upload, and this app's last one (2018) was 20180325001. Continue that
+      # scheme: the UTC date, then the run number.
+      - name: Choose the build number
+        run: echo "BUILD_NUMBER=$(date -u +%Y%m%d)$(printf '%03d' "$GITHUB_RUN_NUMBER")" >> "$GITHUB_ENV"
 
       - name: Check the signing settings
         env:
