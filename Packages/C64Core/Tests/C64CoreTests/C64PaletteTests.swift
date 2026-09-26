@@ -1,5 +1,5 @@
-import Testing
 import C64Core
+import Testing
 
 @Test func sixteenColoursWithHardwareIndices() {
     #expect(C64Color.allCases.count == 16)

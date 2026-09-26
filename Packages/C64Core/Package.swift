@@ -8,7 +8,7 @@ let package = Package(
     name: "C64Core",
     platforms: [.iOS(.v18), .macOS(.v15)],
     products: [
-        .library(name: "C64Core", targets: ["C64Core"]),
+        .library(name: "C64Core", targets: ["C64Core"])
     ],
     targets: [
         .target(name: "C64Core"),

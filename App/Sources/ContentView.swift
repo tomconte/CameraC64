@@ -1,5 +1,5 @@
-import SwiftUI
 import C64Core
+import SwiftUI
 
 /// Placeholder until the camera screen exists: shows the 16 C64 colours.
 struct ContentView: View {
@@ -23,8 +23,8 @@ struct ContentView: View {
     }
 }
 
-private extension Color {
-    init(_ rgb: RGB) {
+extension Color {
+    fileprivate init(_ rgb: RGB) {
         self.init(red: Double(rgb.r) / 255, green: Double(rgb.g) / 255, blue: Double(rgb.b) / 255)
     }
 }

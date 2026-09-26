@@ -1,4 +1,5 @@
 import Testing
+
 @testable import CameraC64
 
 struct CameraC64Tests {
