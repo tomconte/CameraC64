@@ -17,27 +17,26 @@ When changing the Swift version, update it in three places: the container image 
 
 `.claude/hooks/session-start.sh` runs when a web session starts. It installs Swift 6.3.3 from swift.org into `/opt/swift`, after checking its signature. The download is about 1 GB and takes under a minute. The session can then build, lint and test `C64Core`; the iOS app itself is built by CI.
 
-## TestFlight (not wired up yet)
+## TestFlight
 
-Uploading builds to TestFlight from CI needs a few things that only the account holder can create. All of them can be created in a browser plus any computer with `openssl`:
+`.github/workflows/testflight.yml` uploads a build to TestFlight. It only runs when triggered by hand, from the Actions tab (TestFlight → Run workflow) or through the API.
 
-1. **App Store Connect API key.**
-   1. In App Store Connect, go to Users and Access → Integrations → App Store Connect API → Team Keys and create a key with the **Admin** role. Cloud signing fails with other roles.
-   2. Download the `.p8` file (possible only once) and note the Key ID and the Issuer ID.
-2. **Apple Distribution certificate.** Creating one certificate up front stops CI from creating a new one on every run, which would eventually hit Apple's certificate limit.
-   1. Create a key and a signing request:
-      ```sh
-      openssl req -new -newkey rsa:2048 -nodes -keyout dist.key -out dist.csr -subj "/emailAddress=you@example.com/CN=Your Name"
-      ```
-   2. On developer.apple.com, go to Certificates → + → Apple Distribution, upload `dist.csr` and download `distribution.cer`.
-   3. Convert it into a `.p12` file:
-      ```sh
-      openssl x509 -inform DER -in distribution.cer -out dist.pem
-      openssl pkcs12 -export -legacy -inkey dist.key -in dist.pem -out dist.p12 -passout pass:CHOOSE_A_PASSWORD
-      base64 -i dist.p12 | tr -d '\n' > dist.p12.b64
-      ```
-3. **GitHub settings.** Under the repository's Settings → Secrets and variables → Actions:
-   - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (the `.p8` file's contents), `DIST_CERT_P12_BASE64` (the contents of `dist.p12.b64`), `DIST_CERT_PASSWORD`.
-   - Variable: `DEVELOPMENT_TEAM`, your Team ID from developer.apple.com → Membership.
+1. It checks that the signing settings exist, and names any that are missing.
+2. It builds an **unsigned** archive. The version comes from `MARKETING_VERSION` in `project.yml`, and the build number is the workflow's run number.
+3. It exports the archive with the App Store Connect API key. Apple's cloud-managed signing supplies the distribution certificate and the App Store provisioning profile, and `xcodebuild` uploads the result.
 
-Once these exist, a manually triggered `testflight.yml` workflow will archive, sign and upload a build, with the build number taken from the run number. The app will also need a real 1024×1024 icon before its first upload.
+The archive is left unsigned on purpose. Signing it on CI makes Xcode create a new development certificate through the API key on every run, until Apple's certificate limit stops the job.
+
+After an upload, App Store Connect takes a few minutes to process the build. It then appears under TestFlight, where internal testers can install it with the TestFlight app. The app icon is a placeholder for now.
+
+### Settings it needs
+
+Under the repository's Settings → Secrets and variables → Actions:
+
+- **Secrets**:
+  - `ASC_KEY_ID` and `ASC_ISSUER_ID`: from App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys.
+  - `ASC_KEY_P8`: the contents of the key's `.p8` file, which can only be downloaded once.
+  - The key must have the **Admin** role; cloud signing fails with other roles.
+- **Variable**: `DEVELOPMENT_TEAM`, the Team ID from developer.apple.com → Membership.
+
+The `DIST_CERT_P12_BASE64` and `DIST_CERT_PASSWORD` secrets are not used: cloud signing replaced them. They can stay as a fallback in case cloud signing ever stops working, or be deleted, with the certificate revoked on developer.apple.com.

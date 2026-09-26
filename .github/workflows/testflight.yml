@@ -1,0 +1,110 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  upload:
+    name: Archive and upload
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      DEVELOPMENT_TEAM: ${{ vars.DEVELOPMENT_TEAM || secrets.DEVELOPMENT_TEAM }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the signing settings
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=()
+          [ -n "$ASC_KEY_ID" ] || missing+=("secret ASC_KEY_ID")
+          [ -n "$ASC_ISSUER_ID" ] || missing+=("secret ASC_ISSUER_ID")
+          [ -n "$ASC_KEY_P8" ] || missing+=("secret ASC_KEY_P8")
+          [ -n "$DEVELOPMENT_TEAM" ] || missing+=("variable DEVELOPMENT_TEAM")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing ${missing[*]} (see docs/CI.md)"
+            exit 1
+          fi
+          echo "Team $DEVELOPMENT_TEAM, build number $BUILD_NUMBER"
+
+      - name: Write the App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          key="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$key"
+          chmod 600 "$key"
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # The archive is left unsigned: signing it would make Xcode mint a new
+      # development certificate through the API key on every run. All signing
+      # happens at export, through Apple's cloud-managed distribution signing.
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -project CameraC64.xcodeproj \
+            -scheme CameraC64 \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/CameraC64.xcarchive" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+          plist="$RUNNER_TEMP/CameraC64.xcarchive/Products/Applications/CameraC64.app/Info.plist"
+          for key in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion ITSAppUsesNonExemptEncryption; do
+            echo "$key: $(/usr/libexec/PlistBuddy -c "Print :$key" "$plist" 2>&1)"
+          done
+
+      # Cloud signing needs an API key with the Admin role. With
+      # destination=upload, this step signs and sends the build; its exit
+      # status says whether App Store Connect accepted it.
+      - name: Sign and upload to TestFlight
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$DEVELOPMENT_TEAM</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/CameraC64.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove the API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
