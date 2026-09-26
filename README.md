@@ -22,7 +22,13 @@ Requires Xcode 26 and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew i
 xcodegen generate                              # creates CameraC64.xcodeproj from project.yml
 open CameraC64.xcodeproj
 swift test --package-path Packages/C64Core     # core library tests
+swift format lint --strict --recursive Packages App
 ```
+
+No Mac is needed to work on the project:
+
+- **CI** (`.github/workflows/ci.yml`) lints, builds and tests `C64Core` on Linux, and builds and tests the app in the iOS Simulator on a macOS runner, on every push.
+- **Claude Code on the web** installs Swift at the start of each session (`.claude/hooks/session-start.sh`), so `C64Core` can be built and tested there.
 
 ## License
 

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  core:
+    name: C64Core (Linux)
+    # Pull requests from this repository are already covered by their push run.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    # Keep in step with .claude/hooks/session-start.sh and the Swift in Xcode.
+    container: swift:6.3.3-noble
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lint
+        run: swift format lint --strict --recursive Packages App
+      - name: Build
+        run: swift build --package-path Packages/C64Core
+      - name: Test
+        run: swift test --package-path Packages/C64Core
+
+  app:
+    name: App (iOS)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show toolchain
+        run: xcodebuild -version && swift --version
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Test on the iOS Simulator
+        run: |
+          xcodebuild test \
+            -project CameraC64.xcodeproj \
+            -scheme CameraC64 \
+            -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17' \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+      - name: Build for device (unsigned)
+        run: |
+          xcodebuild archive \
+            -project CameraC64.xcodeproj \
+            -scheme CameraC64 \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/CameraC64.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+      - name: Keep test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: TestResults
+          path: build/TestResults.xcresult
+          if-no-files-found: ignore
