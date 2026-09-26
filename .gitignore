@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Xcode (the project is generated from project.yml by XcodeGen)
+/CameraC64.xcodeproj/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Build outputs
+/build/
+/C64/build/
