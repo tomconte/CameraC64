@@ -21,7 +21,7 @@ When changing the Swift version, update it in three places: the container image 
 
 `.github/workflows/testflight.yml` uploads a build to TestFlight. It runs in two cases:
 - when started by hand, from the Actions tab (TestFlight → Run workflow)
-- when a pushed commit's message contains `[testflight]`
+- when a pushed commit's message starts with `[testflight]`, e.g. `[testflight] Tweak the palette`. The marker anywhere else in a message, such as a commit body or a squash merge's list of commits, does not count.
 
 It can upload to two App Store Connect records:
 

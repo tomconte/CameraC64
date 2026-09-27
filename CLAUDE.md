@@ -32,7 +32,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
-- **TestFlight:** a pushed commit whose message contains `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). Only do this when asked. The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
+- **TestFlight:** a pushed commit whose message starts with `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). Only do this when asked. The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
 
 ## Architecture
 

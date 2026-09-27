@@ -8,9 +8,10 @@ on:
         type: choice
         options: [dev, release]
         default: dev
-  # Pushing a commit whose message contains [testflight] also uploads a build
-  # (always to the dev app), for tools that can push but cannot start
-  # workflows by hand.
+  # Pushing a commit whose message starts with [testflight] also uploads a
+  # build (always to the dev app), for tools that can push but cannot start
+  # workflows by hand. Only the start counts: the marker quoted in a message
+  # body, or in the commit list of a squash merge, must not upload.
   push:
 
 permissions:
@@ -23,7 +24,7 @@ defaults:
 jobs:
   upload:
     name: Archive and upload
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[testflight]')
     concurrency:
       group: testflight
       cancel-in-progress: false
