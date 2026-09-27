@@ -254,6 +254,8 @@ Restoring the listing (the record still exists, confirmed September 2026):
 3. Refresh the metadata (screenshots, App Privacy details, age rating, description) and add the new in-app purchase.
 4. Submit. After approval, make the app available again under Pricing and Availability.
 
+Until then, TestFlight cannot install builds of the removed-from-sale record. Development builds therefore go to a separate dev app, `com.camerac64.dev` (see [CI.md](CI.md)).
+
 ## 13. Tech stack
 
 - **Language and tools**: Swift 6 language mode, SwiftUI, Swift Testing, Xcode 26, `swift format` for linting.

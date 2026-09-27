@@ -32,7 +32,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
-- **TestFlight:** a pushed commit whose message contains `[testflight]` uploads a TestFlight build (`.github/workflows/testflight.yml`). Only do this when asked. The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403).
+- **TestFlight:** a pushed commit whose message contains `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). Only do this when asked. The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
 
 ## Architecture
 
@@ -56,7 +56,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - `SWIFT_VERSION` in the session hook
   - `DEVELOPER_DIR` (Xcode 26.6, which ships Swift 6.3.3) in both workflows
 - **Versions:**
-  - The bundle ID `com.camerac64` belongs to the existing App Store record and must not change.
+  - The bundle ID `com.camerac64` belongs to the existing App Store record and must not change. That record is removed from sale, so TestFlight can't install its builds; everyday builds go to a separate dev app, `com.camerac64.dev`, whose bundle ID and name the TestFlight workflow sets at archive time.
   - The app version is `MARKETING_VERSION` in `project.yml`.
   - Build numbers come from the TestFlight workflow and must keep increasing past the app's 2018 build, `20180325001`.
 - **TestFlight signing:**
