@@ -2,8 +2,16 @@ name: TestFlight
 
 on:
   workflow_dispatch:
-  # Pushing a commit whose message contains [testflight] also uploads a build,
-  # for tools that can push but cannot start workflows by hand.
+    inputs:
+      app:
+        description: App Store Connect record to upload to
+        type: choice
+        options: [dev, release]
+        default: dev
+  # Pushing a commit whose message starts with [testflight] also uploads a
+  # build (always to the dev app), for tools that can push but cannot start
+  # workflows by hand. Only the start counts: the marker quoted in a message
+  # body, or in the commit list of a squash merge, must not upload.
   push:
 
 permissions:
@@ -16,7 +24,7 @@ defaults:
 jobs:
   upload:
     name: Archive and upload
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[testflight]')
     concurrency:
       group: testflight
       cancel-in-progress: false
@@ -27,14 +35,28 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       DEVELOPMENT_TEAM: ${{ vars.DEVELOPMENT_TEAM || secrets.DEVELOPMENT_TEAM }}
+      APP_TARGET: ${{ inputs.app || 'dev' }}
     steps:
       - uses: actions/checkout@v7
 
-      # App Store Connect only accepts build numbers higher than every earlier
-      # upload, and this app's last one (2018) was 20180325001. Continue that
-      # scheme: the UTC date, then the run number.
-      - name: Choose the build number
-        run: echo "BUILD_NUMBER=$(date -u +%Y%m%d)$(printf '%03d' "$GITHUB_RUN_NUMBER")" >> "$GITHUB_ENV"
+      # Development builds go to a separate App Store Connect record: the
+      # release record (com.camerac64) is removed from sale, and TestFlight
+      # cannot install builds of an app in that state.
+      # Build numbers must be higher than every earlier upload to a record, and
+      # the release record's last one (2018) was 20180325001. Both records
+      # continue that scheme: the UTC date, then the run number.
+      - name: Choose the app and build number
+        run: |
+          case "$APP_TARGET" in
+            dev) bundle_id=com.camerac64.dev; display_name="C64 Dev" ;;
+            release) bundle_id=com.camerac64; display_name="Camera C64" ;;
+            *) echo "::error::Unknown app '$APP_TARGET'"; exit 1 ;;
+          esac
+          {
+            echo "APP_BUNDLE_ID=$bundle_id"
+            echo "APP_DISPLAY_NAME=$display_name"
+            echo "BUILD_NUMBER=$(date -u +%Y%m%d)$(printf '%03d' "$GITHUB_RUN_NUMBER")"
+          } >> "$GITHUB_ENV"
 
       - name: Check the signing settings
         env:
@@ -49,7 +71,7 @@ jobs:
             echo "::error::Missing ${missing[*]} (see docs/CI.md)"
             exit 1
           fi
-          echo "Team $DEVELOPMENT_TEAM, build number $BUILD_NUMBER"
+          echo "Uploading $APP_BUNDLE_ID for team $DEVELOPMENT_TEAM, build number $BUILD_NUMBER"
 
       - name: Write the App Store Connect API key
         env:
@@ -76,12 +98,15 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/CameraC64.xcarchive" \
+            PRODUCT_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
+            INFOPLIST_KEY_CFBundleDisplayName="$APP_DISPLAY_NAME" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
           plist="$RUNNER_TEMP/CameraC64.xcarchive/Products/Applications/CameraC64.app/Info.plist"
-          for key in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion ITSAppUsesNonExemptEncryption; do
+          for key in CFBundleIdentifier CFBundleDisplayName CFBundleShortVersionString CFBundleVersion \
+              ITSAppUsesNonExemptEncryption; do
             echo "$key: $(/usr/libexec/PlistBuddy -c "Print :$key" "$plist" 2>&1)"
           done
 
@@ -112,6 +137,20 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Summarise the upload
+        run: |
+          plist="$RUNNER_TEMP/CameraC64.xcarchive/Products/Applications/CameraC64.app/Info.plist"
+          version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist")
+          {
+            echo "### Uploaded to TestFlight"
+            echo ""
+            echo "| App | Bundle ID | Version | Build |"
+            echo "|---|---|---|---|"
+            echo "| $APP_DISPLAY_NAME | \`$APP_BUNDLE_ID\` | $version | $BUILD_NUMBER |"
+            echo ""
+            echo "App Store Connect processes the build for a few minutes before TestFlight can install it."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove the API key
         if: always()
