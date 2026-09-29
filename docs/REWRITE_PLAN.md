@@ -92,24 +92,33 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
 ### Core data model
 
 - **`ModeSpec`**: a graphics mode described as data, an idea taken from Retropixels.
-  - It contains a pixel grid, bits per pixel, and a list of colour maps. Each map has its own granularity (global, per line, or per W×H cell) and allowed values (0–15 or 0–7).
-  - It also describes dead zones (the FLI bug), sprite layers and interlace frames.
-  - One optimiser and one renderer work for every mode. Adding a mode means describing it and writing its display program.
+  - It has a pixel grid (320×200, or 160×200 double-wide pixels) and colour maps in pixel value order: a pixel with value v takes its colour from map v, as the VIC-II's bit patterns do.
+  - Each map has a granularity (global or per W×H cell, later per line), its allowed colours (any, 0–7, or one of a few shared by the picture), and where the VIC-II reads it: a background register, a nibble of the video matrix, the colour RAM, or the extended colour mode's background selector.
+  - Character modes add a limit on their own characters (256, or 64 in extended colour mode), or a fixed set such as the character ROM's.
+  - Later modes will add dead zones (the FLI bug), sprite layers and interlace frames.
+  - One encoder turns any `ModePicture` (the converter's result: every pixel's value and every map's colours) into a `C64Frame`, and rejects pictures that break the mode's limits. One optimiser will search any mode. Adding a mode means describing it and writing its display program.
 
   ```swift
-  // Sketch
-  let multicolorFLI = ModeSpec(grid: .init(width: 160, height: 200, pixelWidth: 2), bitsPerPixel: 2,
-      maps: [.global(0...15),        // background register ($D021)
-             .cell(4, 8, 0...15),    // colour memory
-             .cell(4, 1, 0...15),    // screen memory, high nibble
-             .cell(4, 1, 0...15)],   // screen memory, low nibble
-      deadZone: 12)                  // FLI bug
+  static let multicolor = ModeSpec(
+      graphicsMode: .multicolorBitmap, width: 160, height: 200, pixelWidth: 2,
+      maps: [
+          ColorMap(.global, .any, .backgroundColor(0)),                   // 00: $D021
+          ColorMap(.cell(width: 4, height: 8), .any, .screenHighNibble),  // 01
+          ColorMap(.cell(width: 4, height: 8), .any, .screenLowNibble),   // 10
+          ColorMap(.cell(width: 4, height: 8), .any, .colorRAM),          // 11
+      ], pixels: .bitmap)
   ```
 
-- **`C64Frame`**: the memory image. It holds the bitmap or character set, screen memory banks, colour memory, register values, sprite data, per-line register writes, and a second frame for interlace modes.
-- **Renderer**: turns a `C64Frame` into palette indices, exactly as the VIC-II displays it with our display programs.
-- **`DisplayModel`**: turns palette indices into the RGB picture a viewer sees on the chosen monitor (section 7).
+- **`C64Frame`**: the memory image: the 16 KB the VIC-II reads, the colour RAM, the graphics mode, the memory pointers (`$D018`), and the border and background colours.
+  - It holds RAM only, never the character ROM, so an exported program can place it where the VIC-II sees no ROM.
+  - Later modes will add sprite data, per-line register writes, and a second frame for interlace.
+- **Renderer** (`VICII`): turns a `C64Frame` into colour indices exactly as the VIC-II displays it with our display programs: 25 rows of 40 columns, no scrolling, and the border, over the 384×272 area VICE shows with normal borders.
+- **`DisplayModel`**: turns colour indices into the RGB picture a viewer sees on the chosen monitor (section 7).
 - **Exporters**: `.prg`, `.d64`, Koala, Art Studio, FLI/AFLI formats, PNG.
+- **Display programs**: `C64/viewer.s` shows a frame in any standard mode.
+  - The `.prg` holds a `SYS` line, the viewer, its parameters, and only the memory the picture uses, so a multicolour picture takes about 10 KB, like a Koala file.
+  - The viewer copies each block into the bank at `$C000`. There the VIC-II sees no character ROM, and a program loaded at `$0801` cannot overlap it.
+  - It then sets the registers, and resets the C64 when a key is pressed.
 
 `C64Core` does not depend on UIKit, SwiftUI or Metal and takes plain pixel buffers, so it builds and tests with `swift test` on a Mac or on Linux.
 
@@ -180,6 +189,8 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 ## 8. Palettes
 
 - **Colodore** (Pepto, 2017) is the default. We implement the published algorithm, including its brightness, contrast and saturation settings.
+  - Its defaults give the published palette.
+  - VICE's `colodore.vpl` is the same model at brightness 47 and saturation 70; the tests check both.
 - **Pepto 2001** is the palette the legacy app used; it is already in `C64Core`.
 - Others can be added as needed, e.g. VICE's palettes.
 
@@ -201,10 +212,14 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 - **Unit tests** (Swift Testing) for `C64Core`.
 - **VICE golden tests.** For each mode:
   1. Export a `.prg`.
-  2. Run `x64sc -autostart <prg> -limitcycles <n> -exitscreenshot <png>`, with CRT emulation off and a known palette.
-  3. Map the screenshot back to palette indices, and require an exact match with our renderer. Interlace modes check two consecutive frames.
+  2. Run `x64sc -autostart <prg> -limitcycles <n> -exitscreenshot <png>`, with CRT emulation off, normal borders, and our palette with VICE's colour settings neutral, so VICE shows each colour exactly.
+  3. Map the screenshot back to palette indices, and require an exact match with our renderer over the whole 384×272 screen, border included. Interlace modes check two consecutive frames.
 
-  These run on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew.
+  The standard modes are checked with random pictures (every colour, bit pattern and cell), with memory layouts under the I/O area and the KERNAL, with PETSCII using VICE's own character ROM (read at test time, never stored), and with a `.d64` loaded through an emulated 1541.
+
+  They are Swift tests in `Tools/`, which run wherever `x64sc` is found:
+  - on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew
+  - in Claude Code web sessions, after `Tools/install-vice.sh` builds VICE without a user interface
 - **Speed benchmark.** A hidden screen in TestFlight builds times each mode's conversion on the phone it runs on.
   - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
   - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
@@ -271,7 +286,9 @@ Until then, TestFlight cannot install builds of the removed-from-sale record. De
   - AVFoundation: `AVCaptureSession`, a video data output for the viewfinder, `AVCapturePhotoOutput` for stills.
   - Metal: SwiftUI shader effects for the CRT layer, and compute kernels only if the speed benchmark calls for them (section 10).
   - Vision, StoreKit 2, PhotoKit/PhotosUI, SwiftData, MetricKit.
-- **6502 display programs**: written for KickAssembler (NUFLIX's display programs use its syntax) or ca65. They are assembled in CI and bundled as templates that the app fills with picture data.
+- **6502 display programs**: written for ca65 (cc65), which is open source and packaged for apt and Homebrew.
+  - `C64/build.sh` assembles them into `C64Core` as Swift byte arrays, which the app fills with picture data, and CI checks that the result is up to date.
+  - NUFLIX's display programs use KickAssembler's syntax; they will be ported when milestone 4 needs them.
 - **No third-party runtime dependencies.**
 
 ## 14. Borrowing policy and sources
@@ -313,9 +330,9 @@ docs/                     this plan, the UX (UX.md) and design notes
    - CI on GitHub Actions: Linux for `C64Core`, a macOS runner for the app
    - TestFlight uploads from CI, with Apple's cloud signing (first build uploaded September 2026)
    - Swift installed automatically in Claude Code web sessions, and a `CLAUDE.md` with the technical ways of working
-1. **Foundation**:
+1. **Foundation** (done):
    - `C64Core` palettes (Colodore), `ModeSpec` and `C64Frame`, and the renderer for the standard modes.
-   - Koala, Art Studio, `.prg` and `.d64` writers.
+   - Koala, Art Studio, `.prg` and `.d64` writers, and the standard modes' display program.
    - The `c64conv` CLI and the VICE golden tests in CI.
 2. **Converter**:
    - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark.
@@ -341,6 +358,8 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 ## 17. Risks and open issues
 
 - **Character ROM.** PETSCII mode needs the ROM character shapes, which are still under copyright. Either license them or offer only our own character sets.
+  - Until then, frames hold RAM only, and the tests read the ROM from VICE's installation.
+  - If PETSCII ships with the ROM's characters, its viewer should point the VIC-II at the ROM instead of copying them, so exported files never contain them.
 - **Name and trademark.** The Commodore brand is active again (C64 Ultimate). Check "Camera C64" and the icon before resubmitting.
 - **PAL only.** Owners of NTSC machines can still view the standard modes, but not FLI, NUFLI or the other cycle-timed modes (section 4).
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.

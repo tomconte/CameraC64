@@ -11,4 +11,4 @@ No third-party code is included yet.
 | [NUFLIX Studio](https://github.com/cobbpg/nuflix-studio), © 2024 Patai Gergely | MIT | NUFLI/NUFLIX display programs; optimiser ported to Swift |
 | [Retropixels](https://github.com/micheldebree/retropixels), © 2015 Michel de Bree | MIT | Ideas only: graphics modes described as colour maps |
 | [image64](https://github.com/nschneir/image64), © 2026 image64 contributors | MIT | Ideas only; its CLI as a quality baseline |
-| [VICE](https://vice-emu.sourceforge.io/) | GPL-2.0-or-later | Test tool only, run in CI; never part of the app |
+| [VICE](https://vice-emu.sourceforge.io/) | GPL-2.0-or-later | Test tool only, run by the tests; never part of the app |

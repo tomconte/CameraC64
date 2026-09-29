@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds VICE's x64sc without a user interface into /opt/vice, for the VICE
-# comparison tests on Linux, such as in Claude Code web sessions. It takes
-# about 5 minutes. On a Mac, `brew install vice` is enough.
+# comparison tests on Linux, such as in Claude Code web sessions. It takes a
+# few minutes. On a Mac, `brew install vice` is enough.
 #
 # VICE is GPL software and comes with Commodore's ROMs: it is only run by the
 # tests, never copied into the repository or the app.

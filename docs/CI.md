@@ -6,16 +6,19 @@
 
 | Job | Runner | Steps |
 |---|---|---|
-| C64Core (Linux) | `ubuntu-latest`, `swift:6.3.3-noble` container | `swift format lint`, build, tests |
+| C64Core and tools (Linux) | `ubuntu-latest`, `swift:6.3.3-noble` container | `swift format lint`; reassemble the display programs with cc65 and check that `DisplayPrograms.swift` is unchanged; build and test `C64Core`; test the tools |
 | App (iOS) | `macos-26`, Xcode 26.6 | generate the project with XcodeGen, run the tests in the iOS Simulator (iPhone 17), build an unsigned archive for devices |
+| VICE comparison (macOS) | `macos-26`, Xcode 26.6 | install VICE with Homebrew, then run the tools' tests, which run every exported program in VICE and compare its screen with the renderer's |
 
-If the app tests fail, the job keeps the `.xcresult` bundle as a download on the run page.
+If the app tests fail, the job keeps the `.xcresult` bundle as a download on the run page. If the VICE comparison fails, its job keeps the screens that differ, VICE's and the renderer's, as a download.
 
 When changing the Swift version, update it in three places: the container image in `ci.yml`, `SWIFT_VERSION` in `.claude/hooks/session-start.sh`, and the Xcode version (`DEVELOPER_DIR`) in `ci.yml`.
 
 ## Claude Code on the web
 
-`.claude/hooks/session-start.sh` runs when a web session starts. It installs Swift 6.3.3 from swift.org into `/opt/swift`, after checking its signature. The download is about 1 GB and takes under a minute. The session can then build, lint and test `C64Core`; the iOS app itself is built by CI.
+`.claude/hooks/session-start.sh` runs when a web session starts. It installs Swift 6.3.3 from swift.org into `/opt/swift`, after checking its signature, and cc65 from Ubuntu's packages. The download is about 1 GB and takes under a minute. The session can then build, lint and test `C64Core` and the tools, and assemble the display programs; the iOS app itself is built by CI.
+
+VICE takes minutes to build, so the hook leaves it out. `Tools/install-vice.sh` builds `x64sc` without a user interface into `/opt/vice` when a session needs the VICE comparison. It downloads the same release as Homebrew's from SourceForge and checks its SHA-256.
 
 ## TestFlight
 
