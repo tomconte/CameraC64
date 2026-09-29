@@ -4,7 +4,7 @@ import SwiftUI
 struct CameraC64App: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CameraScreen()
         }
     }
 }

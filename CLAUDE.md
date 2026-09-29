@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Camera C64 is being rewritten from scratch as an iOS 26 SwiftUI app that turns camera shots into authentic Commodore 64 pictures. What the app does and why is in `docs/REWRITE_PLAN.md`; how CI and TestFlight work is in `docs/CI.md`. This file only covers how to work in the code. The 2012–2013 app lives at tag `legacy-1.2`, not in the tree.
+Camera C64 is being rewritten from scratch as an iOS 26 SwiftUI app that turns camera shots into authentic Commodore 64 pictures. What the app does and why is in `docs/REWRITE_PLAN.md`, how it looks and behaves is in `docs/UX.md`, and how CI and TestFlight work is in `docs/CI.md`. This file only covers how to work in the code. The 2012–2013 app lives at tag `legacy-1.2`, not in the tree.
 
 ## Commands
 
@@ -43,8 +43,9 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app target uses MainActor as its default actor isolation.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
+  - The one exception is temporary: the camera screen (`App/Sources/Camera/`) is a placeholder that shows sample pictures from `App/Resources/Assets.xcassets/Samples` and tints them for the mono monitors. Replace both with C64Core's renderer and display models as soon as they exist.
 - **Still to come** (plan section 5):
-  - a `C64Metal` target whose kernels must match `C64Core` bit for bit
+  - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit
   - 6502 display programs in `C64/`
   - VICE comparison tests and a `c64conv` CLI in `Tools/`
 
