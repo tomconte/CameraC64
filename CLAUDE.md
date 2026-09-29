@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Camera C64 is being rewritten from scratch as an iOS 26 SwiftUI app that turns camera shots into authentic Commodore 64 pictures. What the app does and why is in `docs/REWRITE_PLAN.md`; how CI and TestFlight work is in `docs/CI.md`. This file only covers how to work in the code. The 2012–2013 app lives at tag `legacy-1.2`, not in the tree.
+Camera C64 is being rewritten from scratch as an iOS 26 SwiftUI app that turns camera shots into authentic Commodore 64 pictures. What the app does and why is in `docs/REWRITE_PLAN.md`, how it looks and behaves is in `docs/UX.md`, and how CI and TestFlight work is in `docs/CI.md`. This file only covers how to work in the code. The 2012–2013 app lives at tag `legacy-1.2`, not in the tree.
 
 ## Commands
 

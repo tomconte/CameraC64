@@ -48,7 +48,7 @@ A GPUImage (OpenGL ES 2) filter chain:
 
 1. **The output is C64 memory, not an image.** Converters produce a C64 memory image. Everything the user sees is drawn from it by an emulation of the VIC-II video chip, so the hardware limits hold by construction, including in the live viewfinder.
 2. **Prove it.** Automated tests run every exported program in VICE and compare the result pixel for pixel.
-3. **Optimise for the chosen display.** Error is measured on the picture as the viewer will see it on the selected monitor (sharp, PAL TV, mono…). The C64 data is equally legal either way.
+3. **Optimise for the chosen display.** Error is measured on the picture as the viewer will see it on the selected monitor (sharp, TV, mono…). The C64 data is equally legal either way.
 4. **Measure quality.** A fixed photo set and a metric turn "better" into a number.
 5. **Own the core, borrow with credit** (section 14).
 
@@ -67,10 +67,13 @@ A GPUImage (OpenGL ES 2) filter chain:
 | NUFLI / NUFLIX | 320×200 | AFLI on every 2nd line (2 colours per 8×2) plus 6 double-wide sprites underneath (columns 4–39) whose colours change every other line; sprites also cover the FLI-bug area | Paid, later |
 | Sprite layers | — | 8 sprites of 24×21 (hires) or 12×21 (multicolour) pixels, reused down the screen; the time the video chip spends fetching them counts against each line's cycle budget | Paid, later |
 
-Settings shared by every mode:
+Shared by every mode:
 
-- **Video standard**: PAL (default) or NTSC. Pixels are about 0.94 as wide as tall on PAL and 0.75 on NTSC. A line takes 63 CPU cycles on PAL and 65 on NTSC, so timing-critical display programs need two variants.
-- **Border colour.**
+- **Video standard**: PAL only. Pixels are about 0.94 as wide as tall, a line takes 63 CPU cycles and the screen refreshes at 50 Hz.
+  - Most C64 art and screenshots are PAL: the demo and art scenes are mostly European, and VICE emulates a PAL machine by default.
+  - NTSC would need a second picture shape (6:5, with pixels 0.75 as wide as tall), a second palette and TV model, and a second version of every cycle-timed display program.
+  - Programs for the standard modes still run on NTSC machines; those for FLI, NUFLI and the other cycle-timed modes do not display correctly there.
+- **Border colour**: chosen per picture, automatic by default (it matches the picture's edges).
 - **Palette**: Colodore (default), Pepto 2001, others (section 8).
 - **VIC-II revision**: 9 brightness levels (default) or 5 (earliest chips).
 
@@ -113,7 +116,7 @@ Tools/                           c64conv CLI, VICE comparison tests, quality ben
 ## 6. Conversion engine
 
 1. **Target.**
-   - Crop the photo to the real screen shape: the display window is about 3:2 on PAL and 6:5 on NTSC.
+   - Crop the photo to the real screen shape: the display window is about 3:2 (see [UX.md](UX.md) for how the camera frames it).
    - Shrink it to the mode's grid by averaging in linear light, so each C64 pixel's target is the true average of the area it covers.
    - Then apply the brightness, contrast, saturation and gamma controls, plus optional sharpening.
 2. **Colour distance** is measured in OKLab, a perceptual colour space. Faces and the main subject can optionally be weighted more heavily, using the Vision framework.
@@ -150,7 +153,7 @@ Tools/                           c64conv CLI, VICE comparison tests, quality ben
 CRTs blend colours, and C64 artists exploit it:
 
 - **Horizontally**, a TV carries colour at about 1.3 MHz while hires pixels run at about 7.9 MHz, so neighbouring pixels' colours smear together. Brightness stays sharper, especially on a monitor fed separate brightness and colour signals.
-- **Vertically (PAL only)**, the PAL delay line averages each line's colour with the line above.
+- **Vertically**, the PAL delay line averages each line's colour with the line above.
 - **Only colour blends, not brightness.**
   - Two colours with the same brightness blend into a new, flicker-free tint. A colour paired with the grey of the same brightness gives a softer version of it.
   - With different brightness, the pattern stays visible as texture.
@@ -161,16 +164,15 @@ The display model is used in two places: in the converter's mixing cost, and in 
 It works in the brightness/colour signal space the VIC-II outputs, which is the space the Colodore model is defined in:
 
 1. blur colour horizontally
-2. on PAL, average colour with the previous line
+2. average colour with the previous line (the PAL delay line)
 3. soften brightness on composite
 4. convert to RGB
 
 | Preset | Model |
 |---|---|
 | Sharp | No blending: HDMI output, emulators without CRT emulation |
-| PAL TV (default) | Composite: colour blur, delay line, softened brightness |
+| TV (default) | Composite: colour blur, delay line, softened brightness |
 | Commodore monitor | Separate brightness and colour: sharper brightness, delay line |
-| NTSC TV | Colour blur, no delay line |
 | Mono: green, amber, B&W | Brightness only |
 
 The presets replace the old app's tints and are free. Scanlines, bloom, curvature and the power-off animation form a presentation layer on top. The model is an approximation, since real TVs vary. It is checked against VICE's PAL/CRT emulation and a real CRT, not by pixel-exact tests.
@@ -184,7 +186,7 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 ## 9. Output and export
 
 - **Pixel-exact PNG** at integer scale with square pixels. It is always kept in the gallery and available for export, and is never saved as JPEG.
-- **"As on TV" image**, with the real pixel shape and the display model applied. This is what gets shared by default.
+- **"As on TV" image**, with the real pixel shape, the display model and the border, so about 4:3. This is what gets shared by default.
 - **Interlace modes** export the blended picture plus the two frames, or an animated PNG at 50 Hz.
 - **C64 files**:
   - a self-running `.prg` for every mode
@@ -212,22 +214,24 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 
 ## 11. The app
 
+How the app looks and behaves, screen by screen, is in [UX.md](UX.md).
+
 | Legacy feature | New app |
 |---|---|
 | Live C64 viewfinder | Metal viewfinder drawn from real C64 memory, 30–60 fps |
 | Colour / B&W / amber / green monitors (paid) | Monitor presets (display models), free |
 | Scanlines baked into the JPEG | CRT layer for display and sharing only; the pixel-exact PNG is always kept |
-| Power-off animation, retro UI | SwiftUI and Metal shaders, new artwork |
+| Power-off animation, retro UI | SwiftUI and Metal shaders; drawn in code first, detailed artwork later |
 | Flash, front/back camera | Same, plus lens and zoom |
-| Discard / share / save | Same, plus C64 export and "send to C64" |
+| Discard / share / save | Every shot is kept in the gallery; share, save to Photos, C64 export, "send to C64" and delete |
 | In-app purchase | StoreKit 2; the old purchase is honoured |
 | — | Photo-library import, mode picker, a strip showing the photo in every mode after capture, re-editing later (the gallery keeps the original photo, the settings and the C64 memory) |
 
 **Screens**:
 - **Camera**: viewfinder, mode and monitor pickers, shutter, flash, lens.
-- **Review**: mode strip, tone controls, export.
+- **Review**: the camera screen after a shot, also opened from the gallery: mode strip, tone controls, export.
 - **Gallery.**
-- **Settings**: video standard, palette, chip revision, border.
+- **Settings**: palette, chip revision, and a few app options.
 - **Store.**
 
 **Platform**:
@@ -279,7 +283,7 @@ Rules:
 | Project | Licence (checked September 2026) | What we take |
 |---|---|---|
 | [Retropixels](https://github.com/micheldebree/retropixels) | MIT | The mode-as-colour-maps idea behind `ModeSpec` |
-| [NUFLIX Studio](https://github.com/cobbpg/nuflix-studio) | MIT | Its NUFLI/NUFLIX display programs (PAL and NTSC templates); a port of its layered optimiser and code generator; re-optimising a cell on edit; live preview in VICE through its binary monitor |
+| [NUFLIX Studio](https://github.com/cobbpg/nuflix-studio) | MIT | Its NUFLI/NUFLIX display programs (the PAL templates); a port of its layered optimiser and code generator; re-optimising a cell on edit; live preview in VICE through its binary monitor |
 | [image64](https://github.com/nschneir/image64) | MIT | Ideas: preview drawn from the exported bytes, fixed tie-breaks, the self-relocating `.prg` layout. Its CLI is a benchmark baseline |
 | [VICE](https://vice-emu.sourceforge.io/) | GPL-2.0-or-later | Test oracle and behaviour reference only; never shipped |
 | [VirtualC64](https://github.com/dirkwhoffmann/virtualc64) | App GPL-3.0; emulator core MPL-2.0; CPU emulator (Peddle) MIT | Not needed; the only realistic option if we ever embed a real emulator |
@@ -297,7 +301,7 @@ App/Tests/                app tests
 Packages/C64Core/         the core library and its tests
 C64/                      6502 display programs
 Tools/                    c64conv CLI, VICE comparison tests, quality benchmark
-docs/                     this plan and design notes
+docs/                     this plan, the UX (UX.md) and design notes
 ```
 
 ## 16. Milestones
@@ -336,7 +340,7 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 
 - **Character ROM.** PETSCII mode needs the ROM character shapes, which are still under copyright. Either license them or offer only our own character sets.
 - **Name and trademark.** The Commodore brand is active again (C64 Ultimate). Check "Camera C64" and the icon before resubmitting.
-- **PAL/NTSC timing.** FLI and NUFLI display programs are timed to the exact cycle and need both variants. Ship PAL first.
+- **PAL only.** Owners of NTSC machines can still view the standard modes, but not FLI, NUFLI or the other cycle-timed modes (section 4).
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
 - **Display models are approximate.** They are validated against VICE and a CRT, not pixel for pixel.
 - **NUFLI.** Aim to match NUFLIX Studio, not beat it.
