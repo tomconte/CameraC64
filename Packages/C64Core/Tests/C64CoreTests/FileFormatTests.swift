@@ -71,8 +71,7 @@ func programsPutTheFrameInPlace(mode: Int) throws {
 
 @Test func programsSwitchOutTheIOAreaUnderIt() throws {
     var frame = try C64Frame(ModePicture.random(.characterSet, seed: 6))
-    frame.memory.replaceSubrange(0x1000..<0x1800, with: frame.memory[0x0800..<0x1000])
-    frame.graphicsAddress = 0x1000  // $D000 once exported
+    frame.relocate(screen: 0x0000, graphics: 0x1000)  // $D000 once exported
     let prg = frame.prg()
     let (memory, _) = load(prg)
     #expect(memory[0xD000..<0xD800] == frame.memory[0x1000..<0x1800])

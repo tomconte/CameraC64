@@ -52,21 +52,28 @@ public struct C64Frame: Hashable, Sendable {
     public static let memorySize = 0x4000
     public static let cellCount = 1000
 
-    public var mode: GraphicsMode
+    public let mode: GraphicsMode
     /// The 16 KB the VIC-II reads from, as offsets from the start of its
     /// bank. Exported programs place it in a bank without the character ROM.
-    public var memory: [UInt8]
+    public var memory: [UInt8] {
+        didSet { precondition(memory.count == Self.memorySize, "The VIC-II reads 16 KB") }
+    }
     /// The colour RAM: one colour (0–15) for each of the 1,000 cells.
-    public var colorRAM: [UInt8]
+    public var colorRAM: [UInt8] {
+        didSet { precondition(colorRAM.count == Self.cellCount, "The colour RAM has 1,000 cells") }
+    }
     /// Where the video matrix (screen memory) starts: a multiple of $400.
-    public var screenAddress: Int
+    /// `relocate(screen:graphics:)` moves it.
+    public private(set) var screenAddress: Int
     /// Where the character set starts, a multiple of $800, or the bitmap,
-    /// $0000 or $2000.
-    public var graphicsAddress: Int
+    /// $0000 or $2000. `relocate(screen:graphics:)` moves it.
+    public private(set) var graphicsAddress: Int
     public var borderColor: C64Color
     /// Background colours 0–3 ($D021–$D024). Every mode uses the first; the
     /// multicolour and extended colour modes use more.
-    public var backgroundColors: [C64Color]
+    public var backgroundColors: [C64Color] {
+        didSet { precondition(backgroundColors.count == 4, "The VIC-II has 4 background colours") }
+    }
 
     /// A frame with blank memory, black colours and the usual layout: the
     /// screen at $0000 and the character set at $0800, or the bitmap at $2000.
@@ -85,12 +92,7 @@ public struct C64Frame: Hashable, Sendable {
         precondition(memory.count == Self.memorySize, "The VIC-II reads 16 KB")
         precondition(colorRAM.count == Self.cellCount, "The colour RAM has 1,000 cells")
         precondition(backgroundColors.count == 4, "The VIC-II has 4 background colours")
-        precondition(screenAddress & 0x3FF == 0 && (0..<Self.memorySize).contains(screenAddress))
-        if mode.isBitmap {
-            precondition(graphicsAddress == 0x0000 || graphicsAddress == 0x2000, "A bitmap starts at $0000 or $2000")
-        } else {
-            precondition(graphicsAddress & 0x7FF == 0 && (0..<Self.memorySize).contains(graphicsAddress))
-        }
+        Self.checkLayout(mode, screen: screenAddress, graphics: graphicsAddress)
         self.mode = mode
         self.memory = memory
         self.colorRAM = colorRAM
@@ -98,6 +100,32 @@ public struct C64Frame: Hashable, Sendable {
         self.graphicsAddress = graphicsAddress
         self.borderColor = borderColor
         self.backgroundColors = backgroundColors
+    }
+
+    /// Moves the video matrix and the character set or bitmap to other
+    /// addresses, with their contents, so the picture stays the same. Memory
+    /// the picture does not use is cleared.
+    public mutating func relocate(screen: Int, graphics: Int) {
+        Self.checkLayout(mode, screen: screen, graphics: graphics)
+        let (oldScreen, oldGraphics) = (usedMemory[0], usedMemory[1])
+        let newScreen = screen..<screen + oldScreen.count
+        let newGraphics = graphics..<graphics + oldGraphics.count
+        precondition(!newScreen.overlaps(newGraphics), "The video matrix and the graphics would overlap")
+        var moved = [UInt8](repeating: 0, count: Self.memorySize)
+        moved.replaceSubrange(newGraphics, with: memory[oldGraphics])
+        moved.replaceSubrange(newScreen, with: memory[oldScreen])
+        memory = moved
+        screenAddress = screen
+        graphicsAddress = graphics
+    }
+
+    private static func checkLayout(_ mode: GraphicsMode, screen: Int, graphics: Int) {
+        precondition(screen & 0x3FF == 0 && (0..<memorySize).contains(screen), "The video matrix starts every $400")
+        if mode.isBitmap {
+            precondition(graphics == 0x0000 || graphics == 0x2000, "A bitmap starts at $0000 or $2000")
+        } else {
+            precondition(graphics & 0x7FF == 0 && (0..<memorySize).contains(graphics), "Characters start every $800")
+        }
     }
 
     /// $D018: where the VIC-II finds the video matrix and the character set

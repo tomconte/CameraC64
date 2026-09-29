@@ -53,16 +53,10 @@ private func expectVICEShows(
     }
 }
 
-/// Moves a frame's screen and graphics to other addresses; the picture stays
-/// the same.
+/// The same picture with its video matrix and graphics elsewhere.
 private func relocated(_ frame: C64Frame, screen: Int, graphics: Int) -> C64Frame {
     var moved = frame
-    moved.memory = [UInt8](repeating: 0, count: C64Frame.memorySize)
-    let (oldScreen, oldGraphics) = (frame.usedMemory[0], frame.usedMemory[1])
-    moved.screenAddress = screen
-    moved.graphicsAddress = graphics
-    moved.memory.replaceSubrange(graphics..<graphics + oldGraphics.count, with: frame.memory[oldGraphics])
-    moved.memory.replaceSubrange(screen..<screen + oldScreen.count, with: frame.memory[oldScreen])
+    moved.relocate(screen: screen, graphics: graphics)
     return moved
 }
 

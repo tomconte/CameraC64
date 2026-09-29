@@ -88,8 +88,7 @@ private func cellLine(_ image: IndexedImage, column: Int, row: Int, line: Int) -
 @Test func memoryPointersFollowTheLayout() {
     var text = C64Frame(mode: .standardText)
     #expect(text.memoryPointers == 0x02)
-    text.screenAddress = 0x0400
-    text.graphicsAddress = 0x1000
+    text.relocate(screen: 0x0400, graphics: 0x1000)
     #expect(text.memoryPointers == 0x14)
     #expect(text.usedMemory == [0x0400..<0x07E8, 0x1000..<0x1800])
 
@@ -97,4 +96,20 @@ private func cellLine(_ image: IndexedImage, column: Int, row: Int, line: Int) -
     #expect(bitmap.memoryPointers == 0x08)
     #expect(bitmap.usedMemory == [0x0000..<0x03E8, 0x2000..<0x3F40])
     #expect(C64Frame(mode: .extendedColorText).usedMemory[1] == 0x0800..<0x0A00)
+}
+
+@Test func relocatingKeepsThePicture() throws {
+    let frame = try C64Frame(ModePicture.random(.multicolorCharacterSet, seed: 8))
+    var moved = frame
+    moved.relocate(screen: 0x3C00, graphics: 0x1000)
+    #expect(moved.screenAddress == 0x3C00 && moved.graphicsAddress == 0x1000)
+    #expect(moved.memoryPointers == 0xF4)
+    #expect(VICII.render(moved) == VICII.render(frame))
+}
+
+@Test func overlappingLayoutsAreRefused() async {
+    await #expect(processExitsWith: .failure) {
+        var frame = C64Frame(mode: .standardText)
+        frame.relocate(screen: 0x0400, graphics: 0x0000)  // the characters run to $07FF
+    }
 }

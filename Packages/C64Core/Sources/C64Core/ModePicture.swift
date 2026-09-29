@@ -4,10 +4,14 @@ public struct ModePicture: Hashable, Sendable {
     public let spec: ModeSpec
     /// Row by row, each pixel's value: the index of the map it takes its
     /// colour from.
-    public var pixels: [UInt8]
+    public var pixels: [UInt8] {
+        didSet { precondition(pixels.count == spec.width * spec.height, "One value per pixel") }
+    }
     /// Each map's colours: one for a global map, and one per cell, row by
     /// row, for a cell map.
-    public var colors: [[C64Color]]
+    public var colors: [[C64Color]] {
+        didSet { precondition(Self.fit(colors, spec), "One colour per map for global maps, and one per cell") }
+    }
     public var borderColor: C64Color
 
     /// A picture with every pixel 0 and every colour black.
@@ -18,13 +22,16 @@ public struct ModePicture: Hashable, Sendable {
     }
 
     public init(spec: ModeSpec, pixels: [UInt8], colors: [[C64Color]], borderColor: C64Color) {
-        precondition(pixels.count == spec.width * spec.height)
-        precondition(colors.count == spec.maps.count)
-        precondition(zip(spec.maps, colors).allSatisfy { spec.valueCount($0) == $1.count })
+        precondition(pixels.count == spec.width * spec.height, "One value per pixel")
+        precondition(Self.fit(colors, spec), "One colour per map for global maps, and one per cell")
         self.spec = spec
         self.pixels = pixels
         self.colors = colors
         self.borderColor = borderColor
+    }
+
+    private static func fit(_ colors: [[C64Color]], _ spec: ModeSpec) -> Bool {
+        colors.count == spec.maps.count && zip(spec.maps, colors).allSatisfy { spec.valueCount($0) == $1.count }
     }
 
     /// Each pixel's colour as the mode defines it, at 320 × 200 hires pixels.
