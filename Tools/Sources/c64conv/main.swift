@@ -133,8 +133,11 @@ func run(_ command: String, _ arguments: Arguments) throws {
         let png = PNG.encode(screen, palette: .pepto2001, scale: try arguments.integer("--scale", default: 1))
         try Data(png).write(to: arguments.output())
 
+    case "help", "-h", "--help":
+        print(usage)
+
     default:
-        throw Failure(description: usage)
+        throw Failure(description: "Unknown command \(command)\n\n\(usage)")
     }
 }
 

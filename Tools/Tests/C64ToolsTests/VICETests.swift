@@ -66,6 +66,14 @@ private func relocated(_ frame: C64Frame, screen: Int, graphics: Int) -> C64Fram
     return moved
 }
 
+/// CI's VICE job sets $VICE_REQUIRED, so there a missing VICE fails rather
+/// than skipping every comparison.
+@Test func viceIsFoundWhereRequired() {
+    if ProcessInfo.processInfo.environment["VICE_REQUIRED"] != nil {
+        #expect(vice != nil, "VICE's x64sc was not found")
+    }
+}
+
 @Suite(.enabled(if: vice != nil, "needs VICE's x64sc"))
 struct VICETests {
     @Test(arguments: standardModes.indices)
