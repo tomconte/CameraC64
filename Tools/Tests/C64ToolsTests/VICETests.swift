@@ -70,9 +70,11 @@ private func relocated(_ frame: C64Frame, screen: Int, graphics: Int) -> C64Fram
 
 @Suite(.enabled(if: vice != nil, "needs VICE's x64sc"))
 struct VICETests {
+    /// Two random pictures per mode; $VICE_SEEDS asks for more.
     @Test(arguments: standardModes.indices)
     func standardModesLookTheSameInVICE(mode: Int) throws {
-        for seed: UInt64 in 1...2 {
+        let seeds = UInt64(ProcessInfo.processInfo.environment["VICE_SEEDS"] ?? "") ?? 2
+        for seed in 1...max(seeds, 1) {
             let frame = try C64Frame(TestPictures.random(standardModes[mode].spec, seed: seed))
             try expectVICEShows(frame, "\(standardModes[mode].name) \(seed)")
         }
