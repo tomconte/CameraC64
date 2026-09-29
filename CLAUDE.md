@@ -45,7 +45,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
   - The one exception is temporary: the camera screen (`App/Sources/Camera/`) is a placeholder that shows sample pictures from `App/Resources/Assets.xcassets/Samples` and tints them for the mono monitors. Replace both with C64Core's renderer and display models as soon as they exist.
 - **Still to come** (plan section 5):
-  - a `C64Metal` target whose kernels must match `C64Core` bit for bit
+  - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit
   - 6502 display programs in `C64/`
   - VICE comparison tests and a `c64conv` CLI in `Tools/`
 

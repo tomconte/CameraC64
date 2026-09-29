@@ -36,8 +36,7 @@ struct TVView: View {
     static let fillDuration: TimeInterval = 0.8
 
     var picture: String
-    /// Shown under the finished picture while it fills in.
-    var previousPicture: String?
+    /// When the picture started filling in on a cleared screen, or nil to show it whole.
     var fillStart: Date?
     var showsOriginal = false
     var monitor = Monitor.tv
@@ -86,9 +85,6 @@ struct TVView: View {
         } else {
             ZStack {
                 if let fillStart {
-                    if let previousPicture {
-                        c64Picture(previousPicture)
-                    }
                     TimelineView(.animation) { context in
                         let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
                         c64Picture(picture)

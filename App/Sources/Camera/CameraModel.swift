@@ -42,8 +42,9 @@ enum PictureMode: CaseIterable, Identifiable {
     /// Part of the paid "Advanced modes" unlock.
     var isAdvanced: Bool { self == .fli || self == .afli }
 
-    /// The sample picture as the finished conversion shows it.
-    var finishedSample: String {
+    /// The mode's sample picture. The viewfinder and the shot use the same
+    /// converter (plan, section 6), so both show the same one.
+    var sample: String {
         switch self {
         case .hires: "SampleHires"
         case .multicolour: "SampleMulticolour"
@@ -52,10 +53,6 @@ enum PictureMode: CaseIterable, Identifiable {
         case .afli: "SampleAFLI"
         }
     }
-
-    /// The sample picture as the viewfinder shows it: for multicolour, with the
-    /// viewfinder's ordered dithering instead of the finished error diffusion.
-    var liveSample: String { self == .multicolour ? "SampleMulticolourLive" : finishedSample }
 
     /// The mode `steps` places along the dial, stopping at either end.
     func moved(by steps: Int) -> PictureMode {

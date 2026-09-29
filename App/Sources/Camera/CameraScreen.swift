@@ -93,8 +93,7 @@ struct CameraScreen: View {
         let live = model.stage == .live
         let label = live ? "Viewfinder, \(model.mode.name)" : "Your picture, \(model.reviewMode.name)"
         return TVView(
-            picture: live ? model.mode.liveSample : model.reviewMode.finishedSample,
-            previousPicture: model.mode.liveSample,
+            picture: live ? model.mode.sample : model.reviewMode.sample,
             fillStart: model.fillStart,
             showsOriginal: showingOriginal,
             monitor: model.monitor,
@@ -241,7 +240,7 @@ struct CameraScreen: View {
             return
         }
         let width: CGFloat = 384
-        let tv = TVView(picture: model.reviewMode.finishedSample, monitor: model.monitor, crtOn: model.crtOn)
+        let tv = TVView(picture: model.reviewMode.sample, monitor: model.monitor, crtOn: model.crtOn)
             .frame(width: width, height: width / TVGeometry.aspectRatio)
         let renderer = ImageRenderer(content: tv)
         renderer.scale = 3

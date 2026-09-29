@@ -81,13 +81,13 @@ Shared by every mode:
 
 ```
 CameraC64 app (App/)             SwiftUI · AVFoundation · StoreKit 2 · PhotoKit · SwiftData
- ├─ C64Metal (to come)           Metal kernels: fast path for the live viewfinder,
- │                               tested to give the same output as C64Core
  └─ C64Core (Packages/C64Core)   plain Swift: palettes, modes, converter, renderer,
                                  display models, C64 file formats
 C64/                             6502 display programs embedded in exported .prg files
 Tools/                           c64conv CLI, VICE comparison tests, quality benchmark
 ```
+
+There is one converter, and it runs on the CPU. The viewfinder and the shot both use it, so the viewfinder shows what the shot will produce. A Metal version of the search comes only if the speed benchmark calls for one (section 10).
 
 ### Core data model
 
@@ -139,13 +139,13 @@ Tools/                           c64conv CLI, VICE comparison tests, quality ben
    each cell  → best[cell][background].S
    ```
 
-   A full multicolour screen is about 58 million small comparisons, which should take a few milliseconds on an iPhone GPU.
+   A full multicolour screen is about 58 million small comparisons. Vectorised Swift should do that in a few milliseconds on an iPhone's CPU, well within the 33 ms of a 30 fps viewfinder frame; the speed benchmark checks it (section 10).
 5. **Dithering-aware scoring.** A pixel can also be matched by mixing two of the set's colours, as in Yliluoma's ordered dithering for arbitrary palettes. Mixes are computed in linear light and compared in OKLab. The penalty for visible texture comes from the display model.
-6. **Dithering.**
-   - The viewfinder uses ordered dithering with a pattern fixed to the screen, so it stays stable between frames.
-   - Captured photos use error diffusion restricted to each cell's colours, alternating "choose colours ↔ dither" two or three times.
-7. **Harder modes** (interlace, NUFLI): there are too many combinations to try them all. Start from the per-cell solution and re-optimise one setting at a time until nothing improves.
-8. **Live viewfinder.** A cell keeps the previous frame's colours unless the new ones are clearly better, which prevents flicker. Heavier modes may use a faster draft search in the viewfinder; its result is still legal C64 memory.
+6. **Dithering** is ordered, with a pattern fixed to the screen, in the viewfinder and in the shot alike.
+   - It stays stable from frame to frame, it is the classic C64 look, and the scoring in step 5 is designed around it.
+   - Error diffusion restricted to each cell's colours may come later as an optional look in Edit, if the quality benchmark shows a clear gain.
+7. **Harder modes** (interlace, NUFLI, custom character sets): there are too many combinations to try them all. Start from the per-cell solution and re-optimise one setting at a time until nothing improves. The viewfinder shows the starting solution; the shot runs the refinement passes.
+8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames. A cell keeps the previous frame's colours unless the new ones are clearly better, which prevents flicker.
 9. **Mono monitors** run the same search on brightness only. Within a group of equally bright colours, the converter picks whichever is legal for that cell (e.g. 0–7 in colour memory).
 
 ## 7. Display models ("monitors")
@@ -205,7 +205,9 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   3. Map the screenshot back to palette indices, and require an exact match with our renderer. Interlace modes check two consecutive frames.
 
   These run on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew.
-- **GPU = CPU.** The Metal kernels must give bit-identical results to `C64Core`.
+- **Speed benchmark.** A hidden screen in TestFlight builds times each mode's conversion on the phone it runs on.
+  - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
+  - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
 - **Quality benchmark.**
   - A fixed photo set (faces, landscapes, low light, high contrast), scored after the display model, with side-by-side sheets.
   - Baselines: image64's CLI for the standard modes, NUFLIX Studio for NUFLI.
@@ -218,7 +220,7 @@ How the app looks and behaves, screen by screen, is in [UX.md](UX.md).
 
 | Legacy feature | New app |
 |---|---|
-| Live C64 viewfinder | Metal viewfinder drawn from real C64 memory, 30–60 fps |
+| Live C64 viewfinder | Viewfinder drawn from real C64 memory by the same converter as the shot, at up to 30 fps |
 | Colour / B&W / amber / green monitors (paid) | Monitor presets (display models), free |
 | Scanlines baked into the JPEG | CRT layer for display and sharing only; the pixel-exact PNG is always kept |
 | Power-off animation, retro UI | SwiftUI and Metal shaders; drawn in code first, detailed artwork later |
@@ -267,7 +269,7 @@ Until then, TestFlight cannot install builds of the removed-from-sale record. De
 - **Project file**: generated by [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`. The `.xcodeproj` is not committed.
 - **Apple frameworks**:
   - AVFoundation: `AVCaptureSession`, a video data output for the viewfinder, `AVCapturePhotoOutput` for stills.
-  - Metal: compute kernels and `MTKView`, plus SwiftUI shader effects.
+  - Metal: SwiftUI shader effects for the CRT layer, and compute kernels only if the speed benchmark calls for them (section 10).
   - Vision, StoreKit 2, PhotoKit/PhotosUI, SwiftData, MetricKit.
 - **6502 display programs**: written for KickAssembler (NUFLIX's display programs use its syntax) or ca65. They are assembled in CI and bundled as templates that the app fills with picture data.
 - **No third-party runtime dependencies.**
@@ -316,8 +318,8 @@ docs/                     this plan, the UX (UX.md) and design notes
    - Koala, Art Studio, `.prg` and `.d64` writers.
    - The `c64conv` CLI and the VICE golden tests in CI.
 2. **Converter**:
-   - Hires and multicolour search, dithering-aware scoring, error diffusion, display models, and the quality benchmark.
-   - Then the Metal kernels, verified identical.
+   - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark.
+   - The speed benchmark on real iPhones, which decides whether any search needs a Metal version.
 3. **App at feature parity**:
    - camera and viewfinder
    - capture, review, save, share and export
@@ -344,7 +346,7 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
 - **Display models are approximate.** They are validated against VICE and a CRT, not pixel for pixel.
 - **NUFLI.** Aim to match NUFLIX Studio, not beat it.
-- **Viewfinder performance** in heavier modes on the oldest supported iPhones: use the draft search in the viewfinder and the full search on capture.
+- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10).
 
 ## 18. References
 

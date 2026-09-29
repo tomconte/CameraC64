@@ -45,7 +45,7 @@ A TV above a C64, as in the 2013 app, but with a TV of the right shape.
 
 ## 4. Taking a picture
 
-1. **Shoot.** The viewfinder is a quick preview with ordered dithering, and the full conversion runs on the photo, so the result differs a little. The finished picture fills in cell by cell, in the order the C64 stores it. This also covers the seconds that slower modes such as IFLI and NUFLI take.
+1. **Shoot.** The viewfinder runs the same conversion as the shot, so it shows what the shot will be. The shot converts the full-resolution photo, which is a little cleaner than a video frame. The finished picture fills in cell by cell on a cleared screen, in the order the C64 stores it. For the harder modes, such as IFLI and NUFLI, this also covers the seconds their extra passes take.
 2. **Review.** The TV holds the finished picture, and the controls below switch to review (section 5). The capture key becomes the way back to the camera. It is one screen in two states, not a new screen.
 3. **Keep.** Every shot goes into the app's gallery. Nothing goes to Photos unless the user asks, or turns on a setting. Delete replaces the 2013 app's discard.
 

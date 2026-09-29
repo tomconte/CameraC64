@@ -302,7 +302,7 @@ struct ShutterRow: View {
 
     @ViewBuilder private var thumbnail: some View {
         if let lastShot {
-            Image(lastShot.finishedSample)
+            Image(lastShot.sample)
                 .resizable()
                 .interpolation(.none)
                 .scaledToFill()
@@ -409,7 +409,7 @@ struct ModeThumbnail: View {
     var isSelected: Bool
 
     var body: some View {
-        Image(mode.finishedSample)
+        Image(mode.sample)
             .resizable()
             .interpolation(.none)
             .clipShape(RoundedRectangle(cornerRadius: 3))
