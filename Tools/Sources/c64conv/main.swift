@@ -14,7 +14,7 @@ let usage = """
           --window is given.
       export <picture> -o <file>
           Writes a picture in another format.
-      vice <file.prg|file.d64> -o <file.png> [--cycles <n>] [--scale <n>]
+      vice <file.prg|file.d64> -o <file.png> [--cycles <n>] [--palette colodore|pepto] [--scale <n>]
           Runs a program in VICE's x64sc and saves its screen.
 
     Pictures are read from .kla/.koa (Koala) and .art (Art Studio) files, and
@@ -130,7 +130,8 @@ func run(_ command: String, _ arguments: Arguments) throws {
         guard let vice = VICE.find() else { throw Failure(description: "VICE's x64sc was not found") }
         let screen = try vice.screen(
             running: URL(fileURLWithPath: input), cycles: try arguments.integer("--cycles", default: 4_000_000))
-        let png = PNG.encode(screen, palette: .pepto2001, scale: try arguments.integer("--scale", default: 1))
+        let png = PNG.encode(
+            screen, palette: try arguments.palette(), scale: try arguments.integer("--scale", default: 1))
         try Data(png).write(to: arguments.output())
 
     case "help", "-h", "--help":
