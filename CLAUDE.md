@@ -43,6 +43,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app target uses MainActor as its default actor isolation.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
+  - The one exception is temporary: the camera screen (`App/Sources/Camera/`) is a placeholder that shows sample pictures from `App/Resources/Assets.xcassets/Samples` and tints them for the mono monitors. Replace both with C64Core's renderer and display models as soon as they exist.
 - **Still to come** (plan section 5):
   - a `C64Metal` target whose kernels must match `C64Core` bit for bit
   - 6502 display programs in `C64/`

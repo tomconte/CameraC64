@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "sample-petscii.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

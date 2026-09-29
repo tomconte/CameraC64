@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "sample-multicolour-live.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
