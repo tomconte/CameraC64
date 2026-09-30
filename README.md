@@ -11,7 +11,7 @@ The original 2012–2013 app (Objective-C, GPUImage) is preserved at tag `legacy
 - `App/`: the iOS app (SwiftUI) and its tests
 - `Packages/C64Core/`: the core library (palettes, graphics modes, converter, renderer, C64 file formats)
 - `C64/`: 6502 display programs embedded in exported `.prg` files
-- `Tools/`: developer tools (VICE comparison tests, quality benchmark)
+- `Tools/`: developer tools: the `c64conv` command-line tool and the tests that compare the renderer with the VICE emulator
 - `docs/`: plan and design notes
 
 ## Building
@@ -22,13 +22,14 @@ Requires Xcode 26 and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew i
 xcodegen generate                              # creates CameraC64.xcodeproj from project.yml
 open CameraC64.xcodeproj
 swift test --package-path Packages/C64Core     # core library tests
-swift format lint --strict --recursive Packages App
+swift test --package-path Tools                # tools; with VICE installed, the VICE comparison too
+swift format lint --strict --recursive Packages App Tools
 ```
 
 No Mac is needed to work on the project:
 
-- **CI** (`.github/workflows/ci.yml`) lints, builds and tests `C64Core` on Linux, and builds and tests the app in the iOS Simulator on a macOS runner, on every push.
-- **Claude Code on the web** installs Swift at the start of each session (`.claude/hooks/session-start.sh`), so `C64Core` can be built and tested there.
+- **CI** (`.github/workflows/ci.yml`) lints, builds and tests `C64Core` and the tools on Linux, and on macOS runners builds and tests the app in the iOS Simulator and compares the renderer with VICE, on every push.
+- **Claude Code on the web** installs Swift and cc65 at the start of each session (`.claude/hooks/session-start.sh`), so `C64Core` and the tools can be built and tested there; `Tools/install-vice.sh` adds VICE for the comparison tests.
 
 Details, including TestFlight setup: [docs/CI.md](docs/CI.md).
 

@@ -30,7 +30,6 @@ public struct C64Palette: Sendable {
 
 extension C64Palette {
     /// Pepto's 2001 palette, the one the 2012–2013 app's colour tables used.
-    /// Colodore (Pepto, 2017) becomes the default once its model is implemented.
     public static let pepto2001 = C64Palette(
         name: "Pepto (2001)",
         colors: [

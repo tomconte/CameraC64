@@ -1,7 +1,10 @@
 #!/bin/bash
 # SessionStart hook for Claude Code on the web: installs the Swift toolchain so
-# C64Core can be built, linted and tested in web sessions. The iOS app needs
-# Xcode, so it is built and tested by CI (.github/workflows/ci.yml).
+# C64Core and the tools can be built, linted and tested in web sessions, and
+# cc65 to assemble the display programs (C64/build.sh). The iOS app needs
+# Xcode, so it is built and tested by CI (.github/workflows/ci.yml). VICE, for
+# the comparison tests, takes minutes to build: Tools/install-vice.sh does it
+# when needed.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -38,6 +41,12 @@ if [ ! -x "$INSTALL_DIR/usr/bin/swift" ]; then
     gpg --batch --verify "$tmp/swift.tar.gz.sig" "$tmp/swift.tar.gz" 2>/dev/null
     mkdir -p "$INSTALL_DIR"
     tar -xzf "$tmp/swift.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+fi
+
+if ! command -v ca65 >/dev/null; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq >/dev/null 2>&1 || true
+    apt-get install -y -qq cc65 >/dev/null
 fi
 
 ln -sfn "$INSTALL_DIR" "$SWIFT_ROOT"

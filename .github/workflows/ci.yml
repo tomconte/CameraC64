@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   core:
-    name: C64Core (Linux)
+    name: C64Core and tools (Linux)
     # Pull requests from this repository are already covered by their push run.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
@@ -27,11 +27,51 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Lint
-        run: swift format lint --strict --recursive Packages App
+        run: swift format lint --strict --recursive Packages App Tools
+      - name: Check the assembled display programs
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq cc65 >/dev/null
+          generated=Packages/C64Core/Sources/C64Core/DisplayPrograms.swift
+          cp "$generated" /tmp/DisplayPrograms.swift
+          C64/build.sh
+          if ! diff -u /tmp/DisplayPrograms.swift "$generated"; then
+            echo "::error::$generated is out of date: run C64/build.sh and commit the result"
+            exit 1
+          fi
       - name: Build
         run: swift build --package-path Packages/C64Core
       - name: Test
         run: swift test --package-path Packages/C64Core
+      - name: Test the tools
+        run: swift test --package-path Tools
+
+  vice:
+    name: VICE comparison (macOS)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install VICE
+        run: |
+          brew install vice
+          ls "$(brew --prefix)/share/vice/C64"
+      # Runs every exported program in x64sc and compares the screen with the
+      # renderer's, pixel for pixel. VICE_REQUIRED makes a missing x64sc fail.
+      - name: Compare the renderer with VICE
+        env:
+          VICE_REQUIRED: "1"
+          VICE_TEST_OUTPUT: ${{ runner.temp }}/vice
+        run: swift test --package-path Tools
+      - name: Keep the screens that differ
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: VICEScreens
+          path: ${{ runner.temp }}/vice
+          if-no-files-found: ignore
 
   app:
     name: App (iOS)
