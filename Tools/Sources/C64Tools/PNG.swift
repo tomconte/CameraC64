@@ -43,6 +43,45 @@ public enum PNG {
             + chunk("IEND", [])
     }
 
+    /// Writes an RGB picture, each pixel drawn as a `scale` × `scale` square,
+    /// or `scale` × `scaleY` when given.
+    public static func encode(_ image: RGBImage, scale: Int = 1, scaleY: Int? = nil) -> [UInt8] {
+        precondition(scale >= 1 && (scaleY ?? 1) >= 1)
+        let (width, height) = (image.width * scale, image.height * (scaleY ?? scale))
+        // Each row is stored as its differences from the pixel on the left
+        // (filter 1), or from the row above when it repeats it (filter 2), so
+        // areas of one colour become runs of zeros, which the compressor
+        // handles well.
+        var raw: [UInt8] = []
+        raw.reserveCapacity((width * 3 + 1) * height)
+        for y in 0..<image.height {
+            var pixels: [UInt8] = []
+            pixels.reserveCapacity(width * 3)
+            for x in 0..<image.width {
+                let color = image[x, y]
+                for _ in 0..<scale {
+                    pixels += [color.r, color.g, color.b]
+                }
+            }
+            raw.append(1)
+            for index in pixels.indices {
+                raw.append(index < 3 ? pixels[index] : pixels[index] &- pixels[index - 3])
+            }
+            for _ in 1..<(scaleY ?? scale) {
+                raw.append(2)
+                raw += repeatElement(0, count: pixels.count)
+            }
+        }
+        let header = bigEndian(UInt32(width)) + bigEndian(UInt32(height)) + [8, 2, 0, 0, 0]
+        return signature + chunk("IHDR", header) + chunk("IDAT", zlib(raw)) + chunk("IEND", [])
+    }
+
+    /// Reads a PNG file as a picture.
+    public static func decodeImage(_ data: [UInt8]) throws(Error) -> RGBImage {
+        let (width, height, rgb) = try decode(data)
+        return RGBImage(width: width, height: height, bytes: rgb)
+    }
+
     /// Reads a non-interlaced PNG with 8 bits per channel, or indexed colour,
     /// as RGB: 3 bytes per pixel, row by row.
     public static func decode(_ data: [UInt8]) throws(Error) -> (width: Int, height: Int, rgb: [UInt8]) {

@@ -45,6 +45,28 @@ jobs:
         run: swift test --package-path Packages/C64Core
       - name: Test the tools
         run: swift test --package-path Tools
+      # The photos come from a personal website that sometimes refuses
+      # requests, so runs keep them.
+      - name: Keep the benchmark's photos
+        uses: actions/cache@v6
+        with:
+          path: Tools/Benchmark/photos
+          key: benchmark-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+      # Converts the photo set and fails if the scores get worse than
+      # Tools/Benchmark/scores.txt.
+      - name: Quality benchmark
+        run: |
+          command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null
+          Tools/Benchmark/get-photos.sh
+          swift run -c release --package-path Tools c64conv benchmark \
+            -o "$RUNNER_TEMP/benchmark" --summary "$GITHUB_STEP_SUMMARY"
+      - name: Keep the benchmark's pictures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: QualityBenchmark
+          path: ${{ runner.temp }}/benchmark
+          if-no-files-found: ignore
 
   vice:
     name: VICE comparison (macOS)
@@ -72,6 +94,23 @@ jobs:
           name: VICEScreens
           path: ${{ runner.temp }}/vice
           if-no-files-found: ignore
+      - name: Keep the benchmark's photos
+        uses: actions/cache@v6
+        with:
+          path: Tools/Benchmark/photos
+          key: benchmark-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+      # image64 (github.com/nschneir/image64, MIT) is the benchmark's baseline
+      # for the bitmap modes. It only builds on macOS. Its scores are for
+      # comparison: the Linux job checks ours.
+      - name: Compare the benchmark with image64
+        continue-on-error: true
+        run: |
+          git clone -q https://github.com/nschneir/image64.git "$RUNNER_TEMP/image64"
+          git -C "$RUNNER_TEMP/image64" checkout -q a7568a455bd0318116474135e6c746a3b3c77b5d
+          swift build -c release --package-path "$RUNNER_TEMP/image64" --product image64
+          Tools/Benchmark/get-photos.sh
+          IMAGE64="$RUNNER_TEMP/image64/.build/release/image64" \
+            swift run -c release --package-path Tools c64conv benchmark --summary "$GITHUB_STEP_SUMMARY"
 
   app:
     name: App (iOS)

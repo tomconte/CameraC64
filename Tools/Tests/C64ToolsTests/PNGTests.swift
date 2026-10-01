@@ -102,6 +102,23 @@ func picturesRoundTripThroughPNG(scale: Int) throws {
     #expect(PNG.crc32(Array("IEND".utf8)) == 0xAE42_6082)
 }
 
+@Test(arguments: [(1, nil), (2, 3)] as [(Int, Int?)])
+func rgbPicturesRoundTripThroughPNG(scale: Int, scaleY: Int?) throws {
+    var image = RGBImage(width: 7, height: 5, fill: RGB(0, 0, 0))
+    for y in 0..<5 {
+        for x in 0..<7 {
+            image[x, y] = RGB(UInt8(x * 36), UInt8(y * 50), UInt8((x + y) % 2 * 200))
+        }
+    }
+    let decoded = try PNG.decodeImage(PNG.encode(image, scale: scale, scaleY: scaleY))
+    #expect(decoded.width == 7 * scale && decoded.height == 5 * (scaleY ?? scale))
+    for y in 0..<decoded.height {
+        for x in 0..<decoded.width {
+            #expect(decoded[x, y] == image[x / scale, y / (scaleY ?? scale)])
+        }
+    }
+}
+
 @Test func testPicturesAreRepeatable() {
     #expect(TestPictures.random(.hires, seed: 3) == TestPictures.random(.hires, seed: 3))
     #expect(TestPictures.random(.hires, seed: 3) != TestPictures.random(.hires, seed: 4))

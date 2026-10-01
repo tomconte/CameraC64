@@ -1,0 +1,17 @@
+# The quality benchmark's photos (plan, section 10): from Kodak's Lossless True
+# Color Image Suite, 768 x 512 or 512 x 768, which Kodak released for
+# unrestricted use. get-photos.sh downloads them; they are not kept in the
+# repository.
+#
+# Each line: the file, its SHA-256, an exposure change in stops, and what the
+# photo tests.
+kodim03.png e25ca1ff2f0c0cb5fdfd5f9b0a0bb21ac4c3de3c84a67f35b09a85d3306249db 0 Hats in bright colours
+kodim04.png e3b946107c5d3441c022f678d0c3caf1e224d81b1604ba840a4f88e562de61aa 0 A face, from an upright photo
+kodim05.png 10349e963c5c813d327852f82c1795fa4148d69fedffc4c589bee458e3ac3d53 0 Motocross: fine detail and colour
+kodim08.png ba23983c76b4832ee0e8af0592664756841a16779acd69f792e268fb6d13d6e7 0 Old houses: high-contrast detail
+kodim13.png bc34a3ce58dea09dce1704c997171602de90cb34d0c8503a988b77f473d39b08 0 A mountain stream: foliage and water
+kodim15.png 7538cbb80cb9103606c48b806eae57d56c885c7f90b9b3be70a41160f9cbb683 0 A child's face
+kodim16.png a89c7268ccd4718ba424a99fc4643c572cf692ca6eae887185ceb4e9f11d2e54 0 Sea and sky: smooth gradients
+kodim17.png 37afcc89fbdcb76d9518e04b2fc011027e2f4cd14b3b2f83cefd721641a47c5b 0 A statue against a dark background
+kodim21.png ac958597c82073f6bb65129c68f72b651db5b9efd82e11547d07350214bc268b 0 A lighthouse: bright sky, dark rocks
+kodim22.png 1cee58eb1f2d9c7ebb254d208a03c783ce6cf2c4d8c2cf45e235dd23b4ce1b29 -2.5 A barn, darkened as in low light
