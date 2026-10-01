@@ -215,7 +215,7 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   2. Run `x64sc -autostart <prg> -limitcycles <n> -exitscreenshot <png>`, with CRT emulation off, normal borders, and our palette with VICE's colour settings neutral, so VICE shows each colour exactly.
   3. Map the screenshot back to palette indices, and require an exact match with our renderer over the whole 384×272 screen, border included. Interlace modes check two consecutive frames.
 
-  The standard modes are checked with random pictures (every colour, bit pattern and cell), with memory layouts under the I/O area and the KERNAL, with PETSCII using VICE's own character ROM (read at test time, never stored), and with a `.d64` loaded through an emulated 1541.
+  The standard modes are checked with random pictures (every colour, bit pattern and cell), with memory layouts under the I/O area and the KERNAL, with PETSCII using VICE's own character ROM (read at test time), and with a `.d64` loaded through an emulated 1541.
 
   They are Swift tests in `Tools/`, which run wherever `x64sc` is found:
   - on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew
@@ -308,6 +308,7 @@ Rules:
 | [VirtualC64](https://github.com/dirkwhoffmann/virtualc64) | App GPL-3.0; emulator core MPL-2.0; CPU emulator (Peddle) MIT | Not needed; the only realistic option if we ever embed a real emulator |
 | [C-swifty4](https://github.com/Sephiroth87/C-swifty4) | MIT | Avoid: unmaintained since 2020, and it ships Commodore's ROMs |
 | [Colodore](https://www.colodore.com/), [Pepto](https://www.pepto.de/projects/colorvic/) | Published algorithm | Palette model |
+| Commodore 64 character ROM (901225-01) | None: claimed by Amiga Corporation, licensed to Cloanto; not protected in the US (section 17) | Its character shapes, for PETSCII and the app's C64-style text |
 
 ## 15. Repository layout
 
@@ -357,9 +358,11 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 
 ## 17. Risks and open issues
 
-- **Character ROM.** PETSCII mode needs the ROM character shapes, which are still under copyright. Either license them or offer only our own character sets.
-  - Until then, frames hold RAM only, and the tests read the ROM from VICE's installation.
-  - If PETSCII ships with the ROM's characters, its viewer should point the VIC-II at the ROM instead of copying them, so exported files never contain them.
+- **Character ROM.** PETSCII mode needs the character ROM's shapes, and so does C64-style text in the app. We ship them, relying on US law (decided October 2026).
+  - The character ROM holds no code, only the shapes, so a redrawn copy would be the same bytes. In the US, typefaces can't be copyrighted (37 CFR 202.1(e)), and the Copyright Office treats a bitmap font as data showing a typeface, which can't be registered either.
+  - Elsewhere it is less clear. France protects original typographic works (CPI L112-2), and [Cloanto](https://www.c64forever.com/kb/13-122) says the C64 ROMs belong to Amiga Corporation, which licenses them to Cloanto, with no exception for the character ROM. We are asking Cloanto for written permission, which would settle it everywhere.
+  - The shapes will live in one file in `C64Core`, with their own notice and outside the MIT licence, so they are easy to replace. Until that file exists, the tests read the ROM from VICE's installation. The KERNAL and BASIC ROMs are code and never enter the repository.
+  - Exported files never contain the shapes: PETSCII's viewer points the VIC-II at the C64's own character ROM, in bank 0 or 2, instead of copying the characters.
 - **Name and trademark.** The Commodore brand is active again (C64 Ultimate). Check "Camera C64" and the icon before resubmitting.
 - **PAL only.** Owners of NTSC machines can still view the standard modes, but not FLI, NUFLI or the other cycle-timed modes (section 4).
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
