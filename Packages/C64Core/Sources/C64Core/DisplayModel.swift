@@ -177,14 +177,13 @@ public struct DisplayModel: Hashable, Sendable {
     /// the monitor blurs them: for each position, how much of the second
     /// colour's brightness and colour signal it shows.
     struct Patterns {
-        var width: Int
         var luma: [[Float]]
         var chroma: [[Float]]
     }
 
     func patterns(pixelWidth: Int) -> Patterns {
         let width = 4 * pixelWidth
-        var patterns = Patterns(width: width, luma: [], chroma: [])
+        var patterns = Patterns(luma: [], chroma: [])
         for level in 1...15 {
             var luma: [Float] = []
             var chroma: [Float] = []
