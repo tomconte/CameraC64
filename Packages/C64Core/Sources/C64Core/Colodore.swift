@@ -83,18 +83,30 @@ public struct Colodore: Hashable, Sendable {
         return (gammaCorrected(r), gammaCorrected(g), gammaCorrected(b))
     }
 
-    /// The palette these settings give.
+    /// The palette these settings give, with the model's signals.
     public var palette: C64Palette {
-        C64Palette(
+        let signals = C64Color.allCases.map(signal)
+        return C64Palette(
             name: "Colodore",
-            colors: C64Color.allCases.map { color in
-                let rgb = Self.rgb(signal(color))
+            colors: signals.map { signal in
+                let rgb = Self.rgb(signal)
                 return RGB(UInt8(rgb.r.rounded()), UInt8(rgb.g.rounded()), UInt8(rgb.b.rounded()))
-            })
+            }, signals: signals)
+    }
+
+    /// The signal that `rgb(_:)` turns into a colour: how a PAL monitor
+    /// would show a palette that is not Colodore's.
+    public static func signal(showing color: RGB) -> YUV {
+        // Undo the gamma correction, then the conversion to RGB.
+        func uncorrected(_ value: UInt8) -> Double { 255 * pow(Double(value) / 255, 2.2 / 2.8) }
+        let (r, g, b) = (uncorrected(color.r), uncorrected(color.g), uncorrected(color.b))
+        let (blueWeight, redWeight) = (0.396 / 2.029, 0.581 / 1.140)
+        let y = (g + blueWeight * b + redWeight * r) / (1 + blueWeight + redWeight)
+        return YUV(y: y, u: (b - y) / 2.029, v: (r - y) / 1.140)
     }
 
     /// From the PAL signal's gamma (2.8) to sRGB's (2.2).
-    private static func gammaCorrected(_ value: Double) -> Double {
+    static func gammaCorrected(_ value: Double) -> Double {
         let linear = pow(255, 1 - 2.8) * pow(value, 2.8)
         return min(max(pow(255, 1 - 1 / 2.2) * pow(linear, 1 / 2.2), 0), 255)
     }
