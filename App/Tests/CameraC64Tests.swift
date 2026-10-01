@@ -114,7 +114,8 @@ struct CameraScreenTests {
 
     @Test func picturesRoundTripThroughCoreGraphics() throws {
         let image = RGBImage(width: 2, height: 1, layout: .rgb, bytes: [255, 0, 0, 10, 200, 30])
-        let back = try #require(RGBImage(try #require(image.cgImage)))
+        let cgImage = try #require(image.cgImage)
+        let back = try #require(RGBImage(cgImage))
         #expect(back.width == 2 && back.height == 1)
         #expect(Array(back.bytes[0..<3]) == [255, 0, 0])
         #expect(Array(back.bytes[4..<7]) == [10, 200, 30])
