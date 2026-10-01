@@ -37,7 +37,7 @@ public struct Converter: Sendable {
         public var border: C64Color?
 
         public init(
-            palette: C64Palette = .colodore, display: DisplayModel = .tv, dithering: Float = 0.6,
+            palette: C64Palette = .colodore, display: DisplayModel = .tv, dithering: Float = 0.85,
             border: C64Color? = nil
         ) {
             precondition((0...1).contains(dithering), "Dithering goes from 0 to 1")

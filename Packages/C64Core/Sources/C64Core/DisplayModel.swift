@@ -13,8 +13,10 @@ import Foundation
 ///
 /// Only colour blends, so two colours of the same brightness blend into a new,
 /// flicker-free tint. Monochrome monitors show brightness alone, in their
-/// phosphor's colour. Real TVs vary: the presets are approximations, checked by
-/// eye against VICE's PAL emulation rather than pixel for pixel.
+/// phosphor's colour. Real TVs vary: the presets are approximations. Their
+/// blurs spread as far as those of VICE's PAL emulation with its default
+/// settings: brightness over 3 pixels, weighted 1/8, 3/4, 1/8, and colour over
+/// 4.
 public struct DisplayModel: Hashable, Sendable {
     /// A monochrome monitor's phosphor.
     public enum Phosphor: Hashable, Sendable {
@@ -54,10 +56,10 @@ public struct DisplayModel: Hashable, Sendable {
     /// No blending: HDMI output, or an emulator without CRT emulation.
     public static let sharp = DisplayModel()
     /// A PAL TV through the composite connection: the default.
-    public static let tv = DisplayModel(chromaBlur: 1.5, delayLine: true, lumaBlur: 0.5)
+    public static let tv = DisplayModel(chromaBlur: 1.1, delayLine: true, lumaBlur: 0.5)
     /// A Commodore monitor fed brightness and colour separately: brightness
     /// stays sharp.
-    public static let commodoreMonitor = DisplayModel(chromaBlur: 1.5, delayLine: true)
+    public static let commodoreMonitor = DisplayModel(chromaBlur: 1.1, delayLine: true)
     /// A black-and-white TV.
     public static let blackAndWhite = DisplayModel(lumaBlur: 0.5, phosphor: .white)
     public static let green = DisplayModel(lumaBlur: 0.4, phosphor: .green)
