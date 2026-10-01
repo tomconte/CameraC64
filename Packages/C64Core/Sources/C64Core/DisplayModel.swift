@@ -91,54 +91,66 @@ public struct DisplayModel: Hashable, Sendable {
         }
         let (width, height) = (image.width, image.height)
         let signals = palette.signals.map { (y: Float($0.y), u: Float($0.u), v: Float($0.v)) }
-        let lumaKernel = Self.gaussian(lumaBlur)
-        let chromaKernel = Self.gaussian(chromaBlur)
         let tints = phosphor.map { phosphor in (0..<256).map { Self.tint(grey: UInt8($0), phosphor) } }
-
         var output = [UInt8](repeating: 0, count: width * height * 3)
-        var (luma, u, v) = (
-            [Float](repeating: 0, count: width), [Float](repeating: 0, count: width),
-            [Float](repeating: 0, count: width)
-        )
-        var (previousU, previousV) = (u, v)
-        var scratch = u
-        Self.signalTable.withUnsafeBufferPointer { table in
-            for y in 0..<height {
-                for x in 0..<width {
-                    let signal = signals[Int(image.pixels[y * width + x])]
-                    luma[x] = signal.y
-                    u[x] = signal.u
-                    v[x] = signal.v
-                }
-                Self.blur(&luma, lumaKernel, scratch: &scratch)
-                let row = y * width * 3
-                if let tints {
-                    for x in 0..<width {
-                        let tint = tints[Int(table[Self.tableIndex(luma[x])])]
-                        output[row + x * 3] = tint.r
-                        output[row + x * 3 + 1] = tint.g
-                        output[row + x * 3 + 2] = tint.b
+        output.withUnsafeMutableBufferPointer { output in
+            let shared = Shared(output.baseAddress!)
+            concurrently(height, inChunksOf: 16) { lines in
+                let output = shared.value
+                let (lumaKernel, chromaKernel) = (Self.gaussian(lumaBlur), Self.gaussian(chromaBlur))
+                // A line's signals, the previous line's colour, and room to
+                // blur them, each in its own memory.
+                let buffers = UnsafeMutablePointer<Float>.allocate(capacity: 6 * width)
+                buffers.initialize(repeating: 0, count: 6 * width)
+                defer { buffers.deallocate() }
+                let (luma, u, v) = (buffers, buffers + width, buffers + 2 * width)
+                let (previousU, previousV, scratch) = (buffers + 3 * width, buffers + 4 * width, buffers + 5 * width)
+                // The delay line averages each line with the line above as it
+                // came, not as it was shown, so a chunk starts there.
+                let first = delayLine && tints == nil ? max(lines.lowerBound - 1, 0) : lines.lowerBound
+                Self.signalTable.withUnsafeBufferPointer { table in
+                    for y in first..<lines.upperBound {
+                        for x in 0..<width {
+                            let signal = signals[Int(image.pixels[y * width + x])]
+                            luma[x] = signal.y
+                            u[x] = signal.u
+                            v[x] = signal.v
+                        }
+                        let row = y * width * 3
+                        if let tints {
+                            Self.blur(luma, count: width, lumaKernel, scratch: scratch)
+                            for x in 0..<width {
+                                let tint = tints[Int(table[Self.tableIndex(luma[x])])]
+                                output[row + x * 3] = tint.r
+                                output[row + x * 3 + 1] = tint.g
+                                output[row + x * 3 + 2] = tint.b
+                            }
+                            continue
+                        }
+                        Self.blur(u, count: width, chromaKernel, scratch: scratch)
+                        Self.blur(v, count: width, chromaKernel, scratch: scratch)
+                        if delayLine {
+                            if y == first {
+                                previousU.update(from: u, count: width)
+                                previousV.update(from: v, count: width)
+                            }
+                            if y < lines.lowerBound {
+                                continue
+                            }
+                            for x in 0..<width {
+                                (previousU[x], u[x]) = (u[x], (u[x] + previousU[x]) / 2)
+                                (previousV[x], v[x]) = (v[x], (v[x] + previousV[x]) / 2)
+                            }
+                        }
+                        Self.blur(luma, count: width, lumaKernel, scratch: scratch)
+                        for x in 0..<width {
+                            // Colodore's conversion to RGB, then its gamma
+                            // correction.
+                            output[row + x * 3] = table[Self.tableIndex(luma[x] + 1.140 * v[x])]
+                            output[row + x * 3 + 1] = table[Self.tableIndex(luma[x] - 0.396 * u[x] - 0.581 * v[x])]
+                            output[row + x * 3 + 2] = table[Self.tableIndex(luma[x] + 2.029 * u[x])]
+                        }
                     }
-                    continue
-                }
-                Self.blur(&u, chromaKernel, scratch: &scratch)
-                Self.blur(&v, chromaKernel, scratch: &scratch)
-                if delayLine {
-                    // The delay line averages with the line above as it came,
-                    // not as it was shown.
-                    if y == 0 {
-                        (previousU, previousV) = (u, v)
-                    }
-                    for x in 0..<width {
-                        (previousU[x], u[x]) = (u[x], (u[x] + previousU[x]) / 2)
-                        (previousV[x], v[x]) = (v[x], (v[x] + previousV[x]) / 2)
-                    }
-                }
-                for x in 0..<width {
-                    // Colodore's conversion to RGB, then its gamma correction.
-                    output[row + x * 3] = table[Self.tableIndex(luma[x] + 1.140 * v[x])]
-                    output[row + x * 3 + 1] = table[Self.tableIndex(luma[x] - 0.396 * u[x] - 0.581 * v[x])]
-                    output[row + x * 3 + 2] = table[Self.tableIndex(luma[x] + 2.029 * u[x])]
                 }
             }
         }
@@ -183,9 +195,8 @@ public struct DisplayModel: Hashable, Sendable {
                 let line = (0..<3 * width).map { x in
                     Float(Bayer.showsSecond(level: level, x: x % width / pixelWidth, y: y % 4) ? 1 : 0)
                 }
-                var (lumaLine, chromaLine, scratch) = (line, line, line)
-                Self.blur(&lumaLine, Self.gaussian(lumaBlur), scratch: &scratch)
-                Self.blur(&chromaLine, Self.gaussian(chromaBlur), scratch: &scratch)
+                let lumaLine = Self.blurred(line, Self.gaussian(lumaBlur))
+                let chromaLine = Self.blurred(line, Self.gaussian(chromaBlur))
                 let middle = Array(chromaLine[width..<2 * width])
                 // The first line is only there to be the line above the last.
                 if y > 0 {
@@ -252,19 +263,31 @@ public struct DisplayModel: Hashable, Sendable {
         return weights.map { Float($0 / sum) }
     }
 
-    /// Blurs a line, repeating its end pixels beyond its edges.
-    private static func blur(_ line: inout [Float], _ kernel: [Float]?, scratch: inout [Float]) {
+    /// Blurs a line in place, repeating its end pixels beyond its edges.
+    private static func blur(
+        _ line: UnsafeMutablePointer<Float>, count: Int, _ kernel: [Float]?, scratch: UnsafeMutablePointer<Float>
+    ) {
         guard let kernel else { return }
         let radius = kernel.count / 2
-        let last = line.count - 1
-        for x in line.indices {
+        for x in 0..<count {
             var sum: Float = 0
             for (offset, weight) in kernel.enumerated() {
-                sum += weight * line[min(max(x + offset - radius, 0), last)]
+                sum += weight * line[min(max(x + offset - radius, 0), count - 1)]
             }
             scratch[x] = sum
         }
-        swap(&line, &scratch)
+        line.update(from: scratch, count: count)
+    }
+
+    /// A line blurred, repeating its end pixels beyond its edges.
+    private static func blurred(_ line: [Float], _ kernel: [Float]?) -> [Float] {
+        guard let kernel else { return line }
+        let radius = kernel.count / 2
+        return line.indices.map { x in
+            kernel.enumerated().reduce(0) { sum, tap in
+                sum + tap.element * line[min(max(x + tap.offset - radius, 0), line.count - 1)]
+            }
+        }
     }
 
     /// Each signal level's gamma-corrected value, 64 steps per unit, from 0

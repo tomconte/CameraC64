@@ -1,4 +1,5 @@
 import C64Core
+import Foundation
 import Testing
 
 /// A picture of 16 stripes, one per colour, each `width` pixels wide.
@@ -135,4 +136,62 @@ func monochromeMonitorsShowBrightness(model: DisplayModel) {
     // The mix of a colour with itself is that colour, without texture.
     let same = DisplayModel.tv.mixes(.cyan, .cyan, palette: .colodore, pixelWidth: 1)
     #expect(same.allSatisfy { $0.texture < 0.0001 && $0.color.rgb == C64Palette.colodore[.cyan] })
+}
+
+/// The display model done plainly, line by line in Double precision, to
+/// check the fast one against.
+private func plainly(_ image: IndexedImage, on model: DisplayModel, palette: C64Palette) -> RGBImage {
+    func kernel(_ deviation: Double) -> [Double]? {
+        guard deviation > 0 else { return nil }
+        let radius = Int((3 * deviation).rounded(.up))
+        let weights = (-radius...radius).map { exp(-Double($0 * $0) / (2 * deviation * deviation)) }
+        return weights.map { $0 / weights.reduce(0, +) }
+    }
+    func blurred(_ line: [Double], _ kernel: [Double]?) -> [Double] {
+        guard let kernel else { return line }
+        return line.indices.map { x in
+            kernel.indices.reduce(0) { $0 + kernel[$1] * line[min(max(x + $1 - kernel.count / 2, 0), line.count - 1)] }
+        }
+    }
+    var shown = RGBImage(width: image.width, height: image.height, fill: RGB(0, 0, 0))
+    var above: (u: [Double], v: [Double])?
+    for y in 0..<image.height {
+        let signals = (0..<image.width).map { palette.signals[Int(image[$0, y].rawValue)] }
+        let luma = blurred(signals.map(\.y), kernel(model.lumaBlur))
+        var u = blurred(signals.map(\.u), kernel(model.chromaBlur))
+        var v = blurred(signals.map(\.v), kernel(model.chromaBlur))
+        if model.delayLine {
+            let previous = above ?? (u, v)
+            above = (u, v)
+            u = zip(u, previous.u).map { ($0 + $1) / 2 }
+            v = zip(v, previous.v).map { ($0 + $1) / 2 }
+        }
+        for x in 0..<image.width {
+            let signal = model.isMonochrome ? YUV(y: luma[x], u: 0, v: 0) : YUV(y: luma[x], u: u[x], v: v[x])
+            let rgb = Colodore.rgb(signal)
+            shown[x, y] = RGB(UInt8(rgb.r.rounded()), UInt8(rgb.g.rounded()), UInt8(rgb.b.rounded()))
+        }
+    }
+    return shown
+}
+
+/// The fast display model, which works on lines in parallel, shows exactly
+/// what the plain one does, within the rounding of its gamma table.
+@Test(arguments: [DisplayModel.tv, .commodoreMonitor, .blackAndWhite])
+func displayModelsMatchAPlainImplementation(model: DisplayModel) {
+    var generator = SeededGenerator(seed: 5)
+    var image = IndexedImage(width: 96, height: 40)
+    for y in 0..<40 {
+        for x in 0..<96 {
+            image[x, y] = C64Color.random(using: &generator)
+        }
+    }
+    let (shown, expected) = (model.show(image, palette: .colodore), plainly(image, on: model, palette: .colodore))
+    var worst = (difference: 0, x: 0, y: 0)
+    for y in 0..<40 {
+        for x in 0..<96 where distance(shown[x, y], expected[x, y]) > worst.difference {
+            worst = (distance(shown[x, y], expected[x, y]), x, y)
+        }
+    }
+    #expect(worst.difference <= 1, "(\(worst.x), \(worst.y)) is off by \(worst.difference)")
 }

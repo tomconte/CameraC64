@@ -43,6 +43,10 @@ jobs:
         run: swift build --package-path Packages/C64Core
       - name: Test
         run: swift test --package-path Packages/C64Core
+      # The app runs C64Core optimised, and an optimised build once got
+      # pictures wrong that a debug build got right.
+      - name: Test optimised
+        run: swift test -c release -Xswiftc -enable-testing --package-path Packages/C64Core
       - name: Test the tools
         run: swift test --package-path Tools
       # The photos come from a personal website that sometimes refuses

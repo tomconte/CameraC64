@@ -151,34 +151,42 @@ public struct Target: Hashable, Sendable {
         let lastRow = photo.height - 1
 
         var output = [Float](repeating: 0, count: width * height * 3)
-        // One source row averaged across, kept while the next output row needs
-        // it too.
-        var rowAverages = [Float](repeating: 0, count: width * 3)
-        var cachedRow = -1
-        photo.bytes.withUnsafeBufferPointer { bytes in
-            SRGB.linear.withUnsafeBufferPointer { linear in
-                for (outputRow, footprint) in rows.enumerated() {
-                    for (offset, rowWeight) in footprint.weights.enumerated() {
-                        let sourceRow = min(footprint.first + offset, lastRow)
-                        if sourceRow != cachedRow {
-                            let rowStart = sourceRow * photo.width
-                            for (outputColumn, column) in columns.enumerated() {
-                                var (r, g, b): (Float, Float, Float) = (0, 0, 0)
-                                for (index, weight) in column.weights.enumerated() {
-                                    let pixel = (rowStart + min(column.first + index, lastColumn)) * bytesPerPixel
-                                    r += weight * linear[Int(bytes[pixel + offsets.r])]
-                                    g += weight * linear[Int(bytes[pixel + offsets.g])]
-                                    b += weight * linear[Int(bytes[pixel + offsets.b])]
+        output.withUnsafeMutableBufferPointer { output in
+            photo.bytes.withUnsafeBufferPointer { bytes in
+                let shared = Shared((output.baseAddress!, bytes.baseAddress!))
+                concurrently(height, inChunksOf: 8) { outputRows in
+                    let (output, bytes) = shared.value
+                    // One source row averaged across, kept while the next
+                    // output row needs it too.
+                    var rowAverages = [Float](repeating: 0, count: width * 3)
+                    var cachedRow = -1
+                    SRGB.linear.withUnsafeBufferPointer { linear in
+                        for outputRow in outputRows {
+                            let footprint = rows[outputRow]
+                            for (offset, rowWeight) in footprint.weights.enumerated() {
+                                let sourceRow = min(footprint.first + offset, lastRow)
+                                if sourceRow != cachedRow {
+                                    let rowStart = sourceRow * photo.width
+                                    for (outputColumn, column) in columns.enumerated() {
+                                        var (r, g, b): (Float, Float, Float) = (0, 0, 0)
+                                        for (index, weight) in column.weights.enumerated() {
+                                            let pixel =
+                                                (rowStart + min(column.first + index, lastColumn)) * bytesPerPixel
+                                            r += weight * linear[Int(bytes[pixel + offsets.r])]
+                                            g += weight * linear[Int(bytes[pixel + offsets.g])]
+                                            b += weight * linear[Int(bytes[pixel + offsets.b])]
+                                        }
+                                        rowAverages[outputColumn * 3] = r
+                                        rowAverages[outputColumn * 3 + 1] = g
+                                        rowAverages[outputColumn * 3 + 2] = b
+                                    }
+                                    cachedRow = sourceRow
                                 }
-                                rowAverages[outputColumn * 3] = r
-                                rowAverages[outputColumn * 3 + 1] = g
-                                rowAverages[outputColumn * 3 + 2] = b
+                                let start = outputRow * width * 3
+                                for index in 0..<width * 3 {
+                                    output[start + index] += rowWeight * rowAverages[index]
+                                }
                             }
-                            cachedRow = sourceRow
-                        }
-                        let start = outputRow * width * 3
-                        for index in 0..<width * 3 {
-                            output[start + index] += rowWeight * rowAverages[index]
                         }
                     }
                 }

@@ -279,27 +279,12 @@ public struct Converter: Sendable {
         }
 
         var picture = ModePicture(spec: spec, pixels: values, colors: colors, borderColor: .black)
-        picture.borderColor = settings.border ?? Self.edgeColor(of: picture.image())
+        picture.borderColor = settings.border ?? picture.image().edgeColor
         do {
             return Conversion(picture: picture, frame: try C64Frame(picture))
         } catch {
             preconditionFailure("The converter broke the mode's limits: \(error)")
         }
-    }
-
-    /// The colour most common along a picture's edges, the lowest of equals.
-    static func edgeColor(of image: IndexedImage) -> C64Color {
-        var counts = [Int](repeating: 0, count: 16)
-        for x in 0..<image.width {
-            counts[Int(image[x, 0].rawValue)] += 1
-            counts[Int(image[x, image.height - 1].rawValue)] += 1
-        }
-        for y in 1..<image.height - 1 {
-            counts[Int(image[0, y].rawValue)] += 1
-            counts[Int(image[image.width - 1, y].rawValue)] += 1
-        }
-        let most = counts.indices.max { counts[$0] < counts[$1] || counts[$0] == counts[$1] && $0 > $1 }!
-        return C64Color(rawValue: UInt8(most))!
     }
 
     // MARK: - Sets
@@ -605,19 +590,4 @@ public struct Converter: Sendable {
 public struct Conversion: Hashable, Sendable {
     public let picture: ModePicture
     public let frame: C64Frame
-}
-
-/// Values that worker threads may share, each touching only its own part.
-private struct Shared<Value>: @unchecked Sendable {
-    let value: Value
-
-    init(_ value: Value) {
-        self.value = value
-    }
-}
-
-/// Runs `body` once for each index below `count`, spread over the
-/// processor's cores.
-private func concurrently(_ count: Int, _ body: @Sendable (Int) -> Void) {
-    DispatchQueue.concurrentPerform(iterations: count, execute: body)
 }

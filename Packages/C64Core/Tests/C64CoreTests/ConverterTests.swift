@@ -182,14 +182,19 @@ func monochromeSearchesBrightnessOnly(spec: ModeSpec) {
         image[x, 0] = .blue
         image[x, 199] = .blue
     }
-    #expect(Converter.edgeColor(of: image) == .blue)
+    #expect(image.edgeColor == .blue)
     // Equal counts: the lower colour.
-    #expect(Converter.edgeColor(of: IndexedImage(width: 2, height: 2, fill: .cyan)) == .cyan)
+    var halves = IndexedImage(width: 4, height: 4, fill: .cyan)
+    for y in 0..<4 {
+        halves[0, y] = .red
+        halves[1, y] = .red
+    }
+    #expect(halves.edgeColor == .red)
 
     let spec = ModeSpec.multicolor
     let target = gradient(for: spec)
     let automatic = Converter(spec: spec).convert(target).picture
-    #expect(automatic.borderColor == Converter.edgeColor(of: automatic.image()))
+    #expect(automatic.borderColor == automatic.image().edgeColor)
     let chosen = Converter(spec: spec, settings: Converter.Settings(border: .lightBlue)).convert(target)
     #expect(chosen.picture.borderColor == .lightBlue && chosen.frame.borderColor == .lightBlue)
 }
