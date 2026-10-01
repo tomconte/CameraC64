@@ -1,12 +1,13 @@
+import C64Core
 import SwiftUI
 
 /// The C64 screen's proportions (docs/UX.md, section 2).
 enum TVGeometry {
     /// PAL pixels are about 0.94 as wide as tall.
-    static let pixelAspect: CGFloat = 0.936
+    static let pixelAspect = CGFloat(Screen.pixelAspectRatio)
     /// What a TV shows: the 320 × 200 picture inside its border.
-    static let visiblePixels = CGSize(width: 384, height: 272)
-    static let picturePixels = CGSize(width: 320, height: 200)
+    static let visiblePixels = CGSize(width: Screen.width, height: Screen.height)
+    static let picturePixels = CGSize(width: Screen.windowWidth, height: Screen.windowHeight)
     /// Width over height of the TV as seen, about 4:3.
     static let aspectRatio: CGFloat = visiblePixels.width * pixelAspect / visiblePixels.height
 
@@ -18,28 +19,26 @@ enum TVGeometry {
         return CGSize(width: width, height: width / aspectRatio)
     }
 
-    /// Where the picture sits inside a TV of the given size.
+    /// Where the picture sits inside a TV of the given size: a line nearer the
+    /// top than the bottom, as on a C64.
     static func pictureFrame(inTV size: CGSize) -> CGRect {
-        let width = size.width * picturePixels.width / visiblePixels.width
-        let height = size.height * picturePixels.height / visiblePixels.height
-        return CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
+        let (scaleX, scaleY) = (size.width / visiblePixels.width, size.height / visiblePixels.height)
+        return CGRect(
+            x: CGFloat(Screen.windowX) * scaleX, y: CGFloat(Screen.windowY) * scaleY,
+            width: picturePixels.width * scaleX, height: picturePixels.height * scaleY)
     }
 }
 
 /// The TV: a C64 picture inside its border, as it looks on the chosen monitor.
-///
-/// Placeholder: it shows bundled sample pictures and tints them for the mono
-/// monitors. Once C64Core renders pictures from C64 memory through its display
-/// models, those replace both (CLAUDE.md, core rule).
 struct TVView: View {
     /// How long the finished picture takes to fill in after a shot.
     static let fillDuration: TimeInterval = 0.8
 
-    var picture: String
+    /// The screen as the monitor shows it, or nil while it is being made.
+    var picture: ShownPicture?
     /// When the picture started filling in on a cleared screen, or nil to show it whole.
     var fillStart: Date?
     var showsOriginal = false
-    var monitor = Monitor.tv
     var crtOn = false
     var poweredOn = true
     var message: CameraModel.Message?
@@ -51,10 +50,18 @@ struct TVView: View {
         GeometryReader { geometry in
             let frame = TVGeometry.pictureFrame(inTV: geometry.size)
             ZStack(alignment: .topLeading) {
-                Look.c64Border
-                pictureLayer
-                    .frame(width: frame.width, height: frame.height)
-                    .offset(x: frame.minX, y: frame.minY)
+                Color.black
+                screen(window: frame)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                if showsOriginal {
+                    Image("SamplePhoto")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: frame.width, height: frame.height)
+                        .clipped()
+                        .offset(x: frame.minX, y: frame.minY)
+                        .accessibilityLabel("The original photo")
+                }
                 if crtOn {
                     Scanlines()
                 }
@@ -77,58 +84,54 @@ struct TVView: View {
         .clipped()
     }
 
-    @ViewBuilder private var pictureLayer: some View {
-        if showsOriginal {
-            Image("SamplePhoto")
+    /// The whole screen, border included, filling in cell by cell after a shot.
+    @ViewBuilder private func screen(window: CGRect) -> some View {
+        if let picture {
+            let image = Image(decorative: picture.screen, scale: 1)
                 .resizable()
-                .accessibilityLabel("The original photo")
-        } else {
-            ZStack {
-                if let fillStart {
-                    TimelineView(.animation) { context in
-                        let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
-                        c64Picture(picture)
-                            .mask {
-                                CellFill(progress: progress)
-                            }
+                .interpolation(.none)
+                .accessibilityLabel("C64 picture")
+            if let fillStart {
+                TimelineView(.animation) { context in
+                    let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
+                    image.mask {
+                        CellFill(progress: progress, window: window)
                     }
-                } else {
-                    c64Picture(picture)
                 }
+            } else {
+                image
             }
-            .grayscale(monitor.isMono ? 1 : 0)
-            .colorMultiply(monitor.phosphor)
         }
-    }
-
-    private func c64Picture(_ name: String) -> some View {
-        Image(name)
-            .resizable()
-            .interpolation(.none)
-            .accessibilityLabel("C64 picture")
     }
 }
 
 /// Reveals a picture cell by cell, in the order a C64 stores a bitmap: 40 cells
-/// across, then the next row of cells.
+/// across, then the next row of cells. The border shows from the start.
 struct CellFill: View {
     /// From 0 (nothing shown) to 1 (all 1,000 cells shown).
     var progress: Double
+    /// Where the display window is.
+    var window: CGRect
 
     var body: some View {
         let cells = Int(min(max(progress, 0), 1) * 1000)
         Canvas { context, size in
-            let cellWidth = size.width / 40
-            let cellHeight = size.height / 25
+            var border = Path(CGRect(origin: .zero, size: size))
+            border.addRect(window)
+            context.fill(border, with: .color(.white), style: FillStyle(eoFill: true))
+            let cellWidth = window.width / 40
+            let cellHeight = window.height / 25
             let fullRows = cells / 40
             let rest = cells % 40
             if fullRows > 0 {
-                let rows = CGRect(x: 0, y: 0, width: size.width, height: CGFloat(fullRows) * cellHeight)
+                let rows = CGRect(
+                    x: window.minX, y: window.minY, width: window.width, height: CGFloat(fullRows) * cellHeight)
                 context.fill(Path(rows), with: .color(.white))
             }
             if rest > 0 {
                 let row = CGRect(
-                    x: 0, y: CGFloat(fullRows) * cellHeight, width: CGFloat(rest) * cellWidth, height: cellHeight)
+                    x: window.minX, y: window.minY + CGFloat(fullRows) * cellHeight, width: CGFloat(rest) * cellWidth,
+                    height: cellHeight)
                 context.fill(Path(row), with: .color(.white))
             }
         }

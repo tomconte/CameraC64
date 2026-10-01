@@ -254,6 +254,8 @@ struct CompactMonitorBank: View {
 struct ShutterRow: View {
     var stage: CameraModel.Stage
     var lastShot: PictureMode?
+    /// The last picture's display window, once it is made.
+    var thumbnail: CGImage?
     var rotation: Angle
     var showsCaption: Bool
     var onGallery: () -> Void
@@ -263,7 +265,7 @@ struct ShutterRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Button(action: onGallery) {
-                thumbnail
+                lastPicture
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
@@ -300,9 +302,9 @@ struct ShutterRow: View {
         .padding(.horizontal, 28)
     }
 
-    @ViewBuilder private var thumbnail: some View {
-        if let lastShot {
-            Image(lastShot.sample)
+    @ViewBuilder private var lastPicture: some View {
+        if lastShot != nil, let thumbnail {
+            Image(decorative: thumbnail, scale: 1)
                 .resizable()
                 .interpolation(.none)
                 .scaledToFill()
@@ -341,6 +343,8 @@ struct ShutterRow: View {
 /// a lock.
 struct ModeStrip: View {
     var selection: PictureMode
+    /// Each mode's picture of the display window, once it is made.
+    var thumbnails: [PictureMode: CGImage]
     var onSelect: (PictureMode) -> Void
 
     var body: some View {
@@ -352,7 +356,7 @@ struct ModeStrip: View {
                         onSelect(mode)
                     } label: {
                         VStack(spacing: 6) {
-                            ModeThumbnail(mode: mode, isSelected: isSelected)
+                            ModeThumbnail(mode: mode, image: thumbnails[mode], isSelected: isSelected)
                                 .frame(width: 78, height: 54)
                             Text(mode.name)
                                 .font(Look.smallFont)
@@ -374,6 +378,7 @@ struct ModeStrip: View {
 /// The mode strip in landscape: the same pictures, each turned upright.
 struct CompactModeStrip: View {
     var selection: PictureMode
+    var thumbnails: [PictureMode: CGImage]
     var rotation: Angle
     var onSelect: (PictureMode) -> Void
 
@@ -385,7 +390,7 @@ struct CompactModeStrip: View {
                     onSelect(mode)
                 } label: {
                     VStack(spacing: 3) {
-                        ModeThumbnail(mode: mode, isSelected: isSelected)
+                        ModeThumbnail(mode: mode, image: thumbnails[mode], isSelected: isSelected)
                             .frame(width: 72, height: 51)
                         Text(mode.shortName)
                             .font(Look.smallFont)
@@ -406,12 +411,12 @@ struct CompactModeStrip: View {
 /// One picture in the mode strip, at the TV's 3:2 shape.
 struct ModeThumbnail: View {
     var mode: PictureMode
+    /// The mode's picture, or nil while it is being made.
+    var image: CGImage?
     var isSelected: Bool
 
     var body: some View {
-        Image(mode.sample)
-            .resizable()
-            .interpolation(.none)
+        picture
             .clipShape(RoundedRectangle(cornerRadius: 3))
             .overlay(alignment: .topTrailing) {
                 if mode.isAdvanced {
@@ -430,6 +435,16 @@ struct ModeThumbnail: View {
                         .strokeBorder(Look.ledOn, lineWidth: 2)
                 }
             }
+    }
+
+    @ViewBuilder private var picture: some View {
+        if let image {
+            Image(decorative: image, scale: 1)
+                .resizable()
+                .interpolation(.none)
+        } else {
+            Look.bezel
+        }
     }
 }
 

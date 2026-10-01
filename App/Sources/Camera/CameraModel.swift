@@ -1,11 +1,9 @@
+import C64Core
 import Foundation
 import Observation
 import SwiftUI
 
 /// A graphics mode, as the mode dial and the mode strip offer it.
-///
-/// Placeholder: each mode shows a bundled sample picture until C64Core converts
-/// and renders pictures (plan, milestones 1 and 2).
 enum PictureMode: CaseIterable, Identifiable {
     case hires
     case multicolour
@@ -42,12 +40,21 @@ enum PictureMode: CaseIterable, Identifiable {
     /// Part of the paid "Advanced modes" unlock.
     var isAdvanced: Bool { self == .fli || self == .afli }
 
-    /// The mode's sample picture. The viewfinder and the shot use the same
-    /// converter (plan, section 6), so both show the same one.
-    var sample: String {
+    /// The mode as C64Core describes it, for the modes its converter handles.
+    var spec: ModeSpec? {
         switch self {
-        case .hires: "SampleHires"
-        case .multicolour: "SampleMulticolour"
+        case .hires: .hires
+        case .multicolour: .multicolor
+        case .petscii, .fli, .afli: nil
+        }
+    }
+
+    /// For a mode without a converter yet, a sample picture of the display
+    /// window, in Colodore's colours. Placeholder until its converter comes
+    /// (plan, section 16).
+    var sample: String? {
+        switch self {
+        case .hires, .multicolour: nil
         case .petscii: "SamplePetscii"
         case .fli: "SampleFLI"
         case .afli: "SampleAFLI"
@@ -98,15 +105,15 @@ enum Monitor: CaseIterable, Identifiable {
         }
     }
 
-    var isMono: Bool { self == .blackAndWhite || self == .amber || self == .green }
-
-    /// Placeholder tint for the mono monitors, until C64Core's display models
-    /// draw each monitor properly.
-    var phosphor: Color {
+    /// How the monitor shows a picture, and what the converter optimises for.
+    var display: DisplayModel {
         switch self {
-        case .amber: Color(hex: 0xFFB43C)
-        case .green: Color(hex: 0x5CFF7A)
-        default: .white
+        case .tv: .tv
+        case .commodoreMonitor: .commodoreMonitor
+        case .sharp: .sharp
+        case .blackAndWhite: .blackAndWhite
+        case .amber: .amber
+        case .green: .green
         }
     }
 }
@@ -137,7 +144,8 @@ enum Zoom: CaseIterable, Identifiable {
     }
 }
 
-/// The state of the placeholder camera screen (docs/UX.md, sections 3 to 5).
+/// The state of the camera screen (docs/UX.md, sections 3 to 5). There is no
+/// camera yet: the sample photo stands in for it.
 @Observable
 final class CameraModel {
     enum Stage {

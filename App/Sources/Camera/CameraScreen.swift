@@ -22,10 +22,11 @@ enum ScreenMetrics {
 
 /// The camera screen: a TV above a C64 (docs/UX.md, section 3).
 ///
-/// Placeholder: there is no camera yet. The TV shows sample pictures, and a shot
-/// holds the finished sample for review.
+/// There is no camera yet: the TV shows the sample photo, converted in the
+/// chosen mode for the chosen monitor, and a shot holds that picture for review.
 struct CameraScreen: View {
     @State private var model = CameraModel()
+    @State private var pictures = PictureMaker()
     @State private var held = HeldOrientationObserver()
     @State private var showingSettings = false
     @State private var poweredOn = false
@@ -87,24 +88,41 @@ struct CameraScreen: View {
         .task(id: shareKey) {
             renderShareImage()
         }
+        // Every mode's picture for the monitor, for the mode strip and the last
+        // shot's thumbnail, the TV's first.
+        .task(id: model.monitor) {
+            await pictures.makeAll(for: model.monitor, first: model.mode)
+        }
     }
 
     private func tv(showsZoom: Bool) -> some View {
         let live = model.stage == .live
-        let label = live ? "Viewfinder, \(model.mode.name)" : "Your picture, \(model.reviewMode.name)"
+        let mode = live ? model.mode : model.reviewMode
+        let label = live ? "Viewfinder, \(mode.name)" : "Your picture, \(mode.name)"
         return TVView(
-            picture: live ? model.mode.sample : model.reviewMode.sample,
+            picture: pictures.picture(mode, on: model.monitor),
             fillStart: model.fillStart,
             showsOriginal: showingOriginal,
-            monitor: model.monitor,
             crtOn: model.crtOn,
             poweredOn: poweredOn,
             message: model.message,
             zoom: showsZoom && live ? model.zoom : nil,
             onSelectZoom: { model.select($0) }
         )
+        .task(id: PictureMaker.Key(mode: mode, monitor: model.monitor)) {
+            await pictures.make(mode, for: model.monitor)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
+    }
+
+    /// Each mode's picture of the display window, for the mode strip.
+    private var thumbnails: [PictureMode: CGImage] {
+        var thumbnails: [PictureMode: CGImage] = [:]
+        for mode in PictureMode.allCases {
+            thumbnails[mode] = pictures.picture(mode, on: model.monitor)?.window
+        }
+        return thumbnails
     }
 
     @ViewBuilder
@@ -139,7 +157,7 @@ struct CameraScreen: View {
 
     private func reviewPanel(showsMonitors: Bool) -> some View {
         VStack(spacing: 12) {
-            ModeStrip(selection: model.reviewMode) { model.reviewMode = $0 }
+            ModeStrip(selection: model.reviewMode, thumbnails: thumbnails) { model.reviewMode = $0 }
             if showsMonitors {
                 MonitorBank(selection: model.monitor) { model.select($0) }
                     .padding(.top, 6)
@@ -163,7 +181,9 @@ struct CameraScreen: View {
 
     private func compactReviewPanel(_ rotation: Angle) -> some View {
         VStack(spacing: 8) {
-            CompactModeStrip(selection: model.reviewMode, rotation: rotation) { model.reviewMode = $0 }
+            CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, rotation: rotation) {
+                model.reviewMode = $0
+            }
             ActionRow(shareImage: shareImage, rotation: rotation, showsCaptions: false) { perform($0) }
             shutterRow(rotation: rotation, showsCaption: false)
         }
@@ -174,6 +194,7 @@ struct CameraScreen: View {
         ShutterRow(
             stage: model.stage,
             lastShot: model.lastShot,
+            thumbnail: model.lastShot.flatMap { pictures.picture($0, on: model.monitor)?.window },
             rotation: rotation,
             showsCaption: showsCaption,
             onGallery: { model.showLastShot() },
@@ -227,20 +248,24 @@ struct CameraScreen: View {
         var mode: PictureMode
         var monitor: Monitor
         var crtOn: Bool
+        /// Whether the picture is made yet.
+        var ready: Bool
     }
 
     private var shareKey: ShareKey {
-        ShareKey(stage: model.stage, mode: model.reviewMode, monitor: model.monitor, crtOn: model.crtOn)
+        ShareKey(
+            stage: model.stage, mode: model.reviewMode, monitor: model.monitor, crtOn: model.crtOn,
+            ready: pictures.picture(model.reviewMode, on: model.monitor) != nil)
     }
 
     /// Draws the picture as on TV, border included, for sharing (docs/UX.md, section 6).
     private func renderShareImage() {
-        guard model.stage == .review else {
+        guard model.stage == .review, let picture = pictures.picture(model.reviewMode, on: model.monitor) else {
             shareImage = nil
             return
         }
         let width: CGFloat = 384
-        let tv = TVView(picture: model.reviewMode.sample, monitor: model.monitor, crtOn: model.crtOn)
+        let tv = TVView(picture: picture, crtOn: model.crtOn)
             .frame(width: width, height: width / TVGeometry.aspectRatio)
         let renderer = ImageRenderer(content: tv)
         renderer.scale = 3
