@@ -12,8 +12,13 @@ Camera C64 is being rewritten from scratch as an iOS 26 SwiftUI app that turns c
 swift build --package-path Packages/C64Core
 swift test --package-path Packages/C64Core
 swift test --package-path Packages/C64Core --filter pepto2001AgreesWithLumaRanks   # a single test
+swift test -c release -Xswiftc -enable-testing --package-path Packages/C64Core     # optimised, as CI also runs them
 swift test --package-path Tools        # also compares the renderer with VICE, if x64sc is found
 swift run --package-path Tools c64conv help
+swift run --package-path Tools c64conv convert photo.png -o picture.png --monitor tv --scale 2
+Tools/Benchmark/get-photos.sh          # the quality benchmark's photos, once
+swift run -c release --package-path Tools c64conv benchmark -o /tmp/report   # quality, against Tools/Benchmark/scores.txt
+swift run -c release --package-path Tools c64conv speed                      # how long a viewfinder frame takes here
 C64/build.sh                           # after editing C64/*.s: reassembles DisplayPrograms.swift
 swift format lint --strict --recursive Packages App Tools       # CI fails on any finding
 swift format format --in-place --recursive Packages App Tools   # apply the formatting
@@ -31,8 +36,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Swift and cc65:** web sessions get Swift 6.3.3 and the cc65 assembler from `.claude/hooks/session-start.sh`.
 - **VICE:** `Tools/install-vice.sh` builds a headless `x64sc` into `/opt/vice` (a few minutes; the download may need the user's approval). The tools' tests then compare every mode with VICE. With `VICE_TEST_OUTPUT=<dir>`, a mismatch leaves both screens there as PNGs.
 - **CI:** every push runs `.github/workflows/ci.yml`:
-  - on Linux: lint, build and test `C64Core` and the tools, and check that `DisplayPrograms.swift` matches the assembly sources
-  - on `macos-26`: the app tests in the iOS Simulator, plus an unsigned device build; and the VICE comparison, with Homebrew's VICE
+  - on Linux: lint, build and test `C64Core` (in debug and optimised) and the tools, check that `DisplayPrograms.swift` matches the assembly sources, and run the quality benchmark
+  - on `macos-26`: the app tests in the iOS Simulator, plus an unsigned device build; the VICE comparison, with Homebrew's VICE; and the benchmark with image64 as a baseline, for comparison only
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
@@ -41,31 +46,37 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 ## Architecture
 
 - **`Packages/C64Core`** holds all C64 logic.
-  - Now: palettes (`Colodore`, Pepto), modes described as data (`ModeSpec`, and `ModePicture` with its encoder), `C64Frame`, the renderer (`VICII`), and `.prg`, `.d64`, Koala and Art Studio files.
-  - To come: the converter and display models.
-  - It must keep building and testing on Linux, so no UIKit, SwiftUI, Metal, CoreGraphics or ImageIO; it takes plain pixel buffers.
+  - Palettes (`Colodore`, Pepto) with each colour's PAL signal, modes described as data (`ModeSpec`, and `ModePicture` with its encoder), `C64Frame`, the renderer (`VICII`), and `.prg`, `.d64`, Koala and Art Studio files.
+  - The converter for the bitmap modes: `Target` prepares a photo (crop, linear-light averaging, tones, in `OKLab`), and `Converter` searches every cell's colour sets and dithers. `DisplayModel` shows pictures on the monitor presets, and tells the converter how dithered mixes look there. `SpeedBenchmark` times a viewfinder frame.
+  - It must keep building and testing on Linux, so no UIKit, SwiftUI, Metal, CoreGraphics or ImageIO; it takes plain pixel buffers (`RGBImage`).
   - Its platform floor (iOS 18, macOS 15) is deliberately lower than the app's.
 - **`C64/`** holds the 6502 display programs, written for ca65.
   - `C64/build.sh` assembles them into `C64Core` as `DisplayPrograms.swift`. That file is generated: never edit it, and commit it with the sources.
   - Exported programs copy the VIC-II's memory into the bank at `$C000`.
-- **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, and the tests that run exported programs in VICE.
+- **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app target uses MainActor as its default actor isolation.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
-  - The one exception is temporary: the camera screen (`App/Sources/Camera/`) is a placeholder that shows sample pictures from `App/Resources/Assets.xcassets/Samples` and tints them for the mono monitors. Replace both with C64Core's converter, renderer and display models once the converter and display models exist (milestone 2).
+  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it: converter, renderer, then the monitor's display model. Until the camera comes (milestone 3), it converts the bundled sample photo.
+  - The one exception is temporary: modes without a converter yet (PETSCII, FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
 - **Still to come** (plan section 5):
+  - converters for PETSCII and the character-set modes, which need the character ROM's shapes in `C64Core`
   - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit
-  - display programs for the advanced modes in `C64/`, and the quality benchmark in `Tools/`
+  - display programs for the advanced modes in `C64/`
 
 ## Conventions and pitfalls
 
 - **Style:** Swift 6 language mode, 4-space indent, 120 columns (`.swift-format`). Tests use Swift Testing (`import Testing`, `@Test`, `#expect`), not XCTest.
 - **Spelling:** identifiers in `C64Core` and `Tools` use American spelling as Swift does (`C64Color`, `multicolor`); comments and docs use British spelling.
+- **Fast loops:** the converter's and display models' inner loops are plain loops over `UnsafeMutablePointer` buffers, which the compiler vectorises. Swift's SIMD types, and arrays used inside such loops, were several times slower. Work spreads over the cores with `concurrently` (`Concurrency.swift`); on Linux, `concurrentPerform` takes a `@Sendable` closure, so buffers are shared through `Shared`.
+- **Optimised builds:** the app runs `C64Core` optimised, and an optimised build once got display-model lines wrong that the debug tests got right: arrays that started out sharing storage were swapped while blurring. Give each buffer its own memory in such code. CI runs `C64Core`'s tests both ways.
+- **Quality benchmark:** a change that alters pictures changes the scores in `Tools/Benchmark/scores.txt`. CI fails if they get worse; when the change is meant, run `c64conv benchmark --update-baseline` and commit the scores with it. The photos come from Kodak's suite on a personal website, which sometimes refuses requests; `get-photos.sh` retries, and CI caches them.
 - **VICE** (in `Tools/Sources/C64Tools/VICE.swift`):
   - `x64sc` 3.10 crashes when it logs to a stdout that is not a terminal, so it logs to a file.
   - VICE applies its colour settings even to an external palette. With saturation, contrast, brightness, gamma and tint at 1000, it shows the palette's colours exactly.
   - A `.prg` autostarts with `-autostartprgmode 1`, which puts it straight into memory. VICE's default loads it through an emulated disk, which takes about 30 million cycles.
+  - Its screenshots are taken before the CRT emulation (`-VICIIfilter 1`), so they can't check the display models; the blur widths were matched to its PAL renderer's source instead.
 - **Pinned Swift version.** Swift 6.3.3 is set in three places that must change together:
   - the `swift:6.3.3-noble` container in `ci.yml`
   - `SWIFT_VERSION` in the session hook

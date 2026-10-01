@@ -12,9 +12,10 @@ swift run --package-path Tools c64conv render picture.kla -o picture.png --scale
 swift run --package-path Tools c64conv export picture.kla -o picture.d64 # .prg, .d64, .kla/.koa, .art or .png
 swift run --package-path Tools c64conv vice card.prg -o screen.png       # what VICE shows
 swift run -c release --package-path Tools c64conv benchmark -o report    # the quality benchmark
+swift run -c release --package-path Tools c64conv speed                  # how long a viewfinder frame takes here
 ```
 
-`convert` takes a PNG photo and writes the picture by the output's extension: a C64 file, or a `.png` of the picture as its monitor shows it (`--monitor tv`, `monitor`, `sharp`, `bw`, `green` or `amber`). `--dithering` goes from 0 to 1, and `--neutral` turns the automatic tones off. The other commands read Koala (`.kla`, `.koa`) and Art Studio (`.art`) files.
+`speed` times each stage of a viewfinder frame on this machine, as the app's speed benchmark does on a phone (plan, section 10). `convert` takes a PNG photo and writes the picture by the output's extension: a C64 file, or a `.png` of the picture as its monitor shows it (`--monitor tv`, `monitor`, `sharp`, `bw`, `green` or `amber`). `--dithering` goes from 0 to 1, and `--neutral` turns the automatic tones off. The other commands read Koala (`.kla`, `.koa`) and Art Studio (`.art`) files.
 
 ## Quality benchmark
 

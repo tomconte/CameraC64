@@ -6,11 +6,14 @@
 
 | Job | Runner | Steps |
 |---|---|---|
-| C64Core and tools (Linux) | `ubuntu-latest`, `swift:6.3.3-noble` container | `swift format lint`; reassemble the display programs with cc65 and check that `DisplayPrograms.swift` is unchanged; build and test `C64Core`; test the tools |
+| C64Core and tools (Linux) | `ubuntu-latest`, `swift:6.3.3-noble` container | `swift format lint`; reassemble the display programs with cc65 and check that `DisplayPrograms.swift` is unchanged; build and test `C64Core`, in debug and optimised; test the tools; run the quality benchmark and check its scores against `Tools/Benchmark/scores.txt` |
 | App (iOS) | `macos-26`, Xcode 26.6 | generate the project with XcodeGen, run the tests in the iOS Simulator (iPhone 17), build an unsigned archive for devices |
 | VICE comparison (macOS) | `macos-26`, Xcode 26.6 | install VICE with Homebrew, then run the tools' tests, which run every exported program in VICE and compare its screen with the renderer's |
+| Benchmark with image64 (macOS) | `macos-26`, Xcode 26.6 | after the Linux job: build a fixed version of [image64](https://github.com/nschneir/image64) and run the quality benchmark with it as a baseline. It never fails the run: its scores are for comparison |
 
-If the app tests fail, the job keeps the `.xcresult` bundle as a download on the run page. If the VICE comparison fails, its job keeps the screens that differ, VICE's and the renderer's, as a download.
+If the app tests fail, the job keeps the `.xcresult` bundle as a download on the run page. If the VICE comparison fails, its job keeps the screens that differ, VICE's and the renderer's, as a download. The quality benchmark always keeps its page, with every picture next to its photo, and adds its scores to the run's summary.
+
+The benchmark's photos come from a personal website that sometimes refuses requests. The Linux job downloads them once and keeps them in the Actions cache, saved only when complete, and readable on macOS too, which is why it installs zstd. The cache key follows `Tools/Benchmark/photos.txt`.
 
 When changing the Swift version, update it in three places: the container image in `ci.yml`, `SWIFT_VERSION` in `.claude/hooks/session-start.sh`, and the Xcode version (`DEVELOPER_DIR`) in `ci.yml`.
 
@@ -44,6 +47,8 @@ Each run:
 The archive is left unsigned on purpose. Signing it on CI makes Xcode create a new development certificate through the API key on every run, until Apple's certificate limit stops the job.
 
 After an upload, App Store Connect takes a few minutes to process the build. It then appears under TestFlight, where internal testers can install it with the TestFlight app. The app icon is a placeholder for now.
+
+Builds of the dev app, like debug builds, show Settings → Development → Speed Benchmark: it times each stage of a viewfinder frame on the phone, and shares the results as text (plan, section 10).
 
 ### Setting up the dev app
 
