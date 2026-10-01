@@ -26,12 +26,15 @@ jobs:
     container: swift:6.3.3-noble
     steps:
       - uses: actions/checkout@v7
+      # zstd makes the photo cache readable on macOS too.
+      - name: Install cc65, curl and zstd
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq cc65 curl zstd >/dev/null
       - name: Lint
         run: swift format lint --strict --recursive Packages App Tools
       - name: Check the assembled display programs
         run: |
-          apt-get update -qq
-          apt-get install -y -qq cc65 >/dev/null
           generated=Packages/C64Core/Sources/C64Core/DisplayPrograms.swift
           cp "$generated" /tmp/DisplayPrograms.swift
           C64/build.sh
@@ -50,18 +53,27 @@ jobs:
       - name: Test the tools
         run: swift test --package-path Tools
       # The photos come from a personal website that sometimes refuses
-      # requests, so runs keep them.
-      - name: Keep the benchmark's photos
-        uses: actions/cache@v6
+      # requests, so runs keep them, and share them with the image64 job.
+      - name: Restore the benchmark's photos
+        id: photos
+        uses: actions/cache/restore@v6
         with:
           path: Tools/Benchmark/photos
-          key: benchmark-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+          key: kodak-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+          enableCrossOsArchive: true
+      - name: Get the benchmark's photos
+        run: Tools/Benchmark/get-photos.sh
+      - name: Keep the benchmark's photos
+        if: steps.photos.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: Tools/Benchmark/photos
+          key: kodak-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+          enableCrossOsArchive: true
       # Converts the photo set and fails if the scores get worse than
       # Tools/Benchmark/scores.txt.
       - name: Quality benchmark
         run: |
-          command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null
-          Tools/Benchmark/get-photos.sh
           swift run -c release --package-path Tools c64conv benchmark \
             -o "$RUNNER_TEMP/benchmark" --summary "$GITHUB_STEP_SUMMARY"
       - name: Keep the benchmark's pictures
@@ -98,23 +110,44 @@ jobs:
           name: VICEScreens
           path: ${{ runner.temp }}/vice
           if-no-files-found: ignore
-      - name: Keep the benchmark's photos
-        uses: actions/cache@v6
+
+  # image64 (github.com/nschneir/image64, MIT) is the benchmark's baseline for
+  # the bitmap modes, at a fixed version. It only builds on macOS. Its scores
+  # are for comparison, so this job never fails the run: the Linux job checks
+  # ours, and leaves the photos in the cache for this one.
+  image64:
+    name: Benchmark with image64 (macOS)
+    needs: core
+    continue-on-error: true
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore the benchmark's photos
+        uses: actions/cache/restore@v6
         with:
           path: Tools/Benchmark/photos
-          key: benchmark-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
-      # image64 (github.com/nschneir/image64, MIT) is the benchmark's baseline
-      # for the bitmap modes. It only builds on macOS. Its scores are for
-      # comparison: the Linux job checks ours.
-      - name: Compare the benchmark with image64
-        continue-on-error: true
+          key: kodak-photos-${{ hashFiles('Tools/Benchmark/photos.txt') }}
+          enableCrossOsArchive: true
+      - name: Build image64
         run: |
           git clone -q https://github.com/nschneir/image64.git "$RUNNER_TEMP/image64"
           git -C "$RUNNER_TEMP/image64" checkout -q a7568a455bd0318116474135e6c746a3b3c77b5d
           swift build -c release --package-path "$RUNNER_TEMP/image64" --product image64
+      - name: Run the benchmark with image64
+        run: |
           Tools/Benchmark/get-photos.sh
           IMAGE64="$RUNNER_TEMP/image64/.build/release/image64" \
-            swift run -c release --package-path Tools c64conv benchmark --summary "$GITHUB_STEP_SUMMARY"
+            swift run -c release --package-path Tools c64conv benchmark \
+            -o "$RUNNER_TEMP/benchmark" --summary "$GITHUB_STEP_SUMMARY"
+      - name: Keep the pictures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: QualityBenchmarkWithImage64
+          path: ${{ runner.temp }}/benchmark
+          if-no-files-found: ignore
 
   app:
     name: App (iOS)
