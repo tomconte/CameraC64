@@ -79,4 +79,5 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - Keep the export step's output unfiltered, so App Store Connect errors stay visible.
 - **Borrowed code:**
   - Only from MIT or similarly permissive projects. Keep the original notice in the file and add the project to `THIRD_PARTY_NOTICES.md`.
-  - Never copy GPL code (VICE, Frodo, reSID), and never add Commodore ROMs to the repo. Tests that need the character ROM read it from VICE's installation.
+  - Never copy GPL code (VICE, Frodo, reSID), and never add the KERNAL or BASIC ROMs to the repo.
+  - The character ROM is the one exception (plan, section 17). Its shapes go into `C64Core` as one file with its own notice, outside the MIT licence. Until that file exists, tests that need the ROM read it from VICE's installation.

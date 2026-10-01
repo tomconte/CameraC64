@@ -19,7 +19,7 @@ It reads Koala (`.kla`, `.koa`) and Art Studio (`.art`) files. Converting photos
 
 - every standard mode, with random pictures
 - memory layouts under the I/O area and the KERNAL
-- PETSCII with VICE's own character ROM, read at test time and never stored
+- PETSCII with VICE's own character ROM, read at test time
 - a `.d64` loaded through an emulated 1541
 
 `x64sc` is looked for in `$X64SC`, on the `PATH`, then in Homebrew's and `/opt/vice`'s `bin`. On a Mac, `brew install vice`. On Linux, `install-vice.sh` builds it without a user interface into `/opt/vice`. With `VICE_TEST_OUTPUT=<directory>`, a mismatch leaves both screens there as PNGs. `VICE_SEEDS=<n>` checks n random pictures per mode instead of 2.

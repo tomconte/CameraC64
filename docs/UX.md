@@ -87,5 +87,5 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - For now the camera screen is drawn in code: flat SwiftUI shapes in the 2013 app's colours (beige case, dark monitor, keys with LEDs).
 - Its appearance lives in a few reusable styles (key, LED, case, TV), so a detailed skin can replace them later without touching layout or behaviour: gradients and shadows, Metal shaders for plastic and light, vector images for the badge.
 - The 2013 artwork is the reference. It is at tag `legacy-1.2`, in `examples/SimplePhotoFilter/SimplePhotoFilter/`.
-- C64-style text needs a font we have the rights to (see the character ROM in the plan, section 17).
+- C64-style text can use the character ROM's shapes, which the app includes for PETSCII mode (see the plan, section 17).
 - The gallery, settings and store use standard iOS 26 styling.
