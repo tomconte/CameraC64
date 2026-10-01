@@ -237,6 +237,9 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   - Each picture is scored as its monitor shows it: the mean OKLab distance from the photo after blurring both as the eye does, brightness less than colour, as in S-CIELAB. A page shows every picture next to its photo.
   - `Tools/Benchmark/scores.txt` holds the scores, and CI fails when they get worse, on every push.
   - Baselines: image64's CLI for the standard modes, at a fixed version, on CI's macOS runner; NUFLIX Studio for NUFLI.
+  - At the end of milestone 2, image64's pictures, with its default settings (Colodore and Floyd–Steinberg dithering), score 4.35 on average, and ours 3.46.
+    - Ours score better on every hires picture, on every monitor, and on the black-and-white monitor, which image64 does not convert for.
+    - In multicolour on the colour monitors, the two are about even on the photos: image64 is ahead on four or five of the eleven, depending on the monitor.
 - **Real hardware spot checks**: an Ultimate 64 or C64 Ultimate, and a CRT for the display models.
 
 ## 11. The app
