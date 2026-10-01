@@ -64,6 +64,12 @@ public enum Screen {
     public static let windowY = 35
     public static let windowWidth = 320
     public static let windowHeight = 200
+
+    /// A PAL pixel's width over its height, as VICE has it: pixels are a
+    /// little narrower than tall.
+    public static let pixelAspectRatio = 0.936
+    /// The display window's width over its height as seen: about 3:2.
+    public static let windowAspectRatio = Double(windowWidth) * pixelAspectRatio / Double(windowHeight)
 }
 
 extension IndexedImage {
