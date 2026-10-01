@@ -240,3 +240,13 @@ func viewfinderFramesKeepTheirColours(spec: ModeSpec) {
     other.colors.reverse()
     #expect(changedCells(converter.convert(other, keeping: first)) >= 800)
 }
+
+@Test func speedBenchmarkTimesEveryStage() {
+    #expect(SpeedBenchmark.cases.count == 6)
+    let frame = SpeedBenchmark.cameraFrame(width: 160, height: 120)
+    #expect(frame.layout == .bgra && frame.bytes.count == 160 * 120 * 4)
+    let timing = SpeedBenchmark.measure(SpeedBenchmark.cases[0], frame: frame, runs: 1)
+    #expect([timing.target, timing.conversion, timing.rendering, timing.display].allSatisfy { $0 > 0 })
+    #expect(abs(timing.total - timing.target - timing.conversion - timing.rendering - timing.display) < 1e-9)
+    #expect(SpeedBenchmark.describe(timing).hasSuffix("fps"))
+}
