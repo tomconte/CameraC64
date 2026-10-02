@@ -103,6 +103,14 @@ struct VICETests {
         try expectVICEShows(relocated(extended, screen: 0x0400, graphics: 0x3800), "characters at F800")
     }
 
+    /// The converter's pictures, of a chart with every colour, are frames
+    /// like any other: VICE shows them as the renderer does.
+    @Test(arguments: [ModeSpec.hires, .multicolor])
+    func convertedPicturesLookTheSameInVICE(spec: ModeSpec) throws {
+        let frame = Converter(spec: spec).convert(Benchmark.chart().image).frame
+        try expectVICEShows(frame, "converted \(spec.graphicsMode)")
+    }
+
     @Test func diskImagesStartTheProgram() throws {
         let frame = try C64Frame(TestPictures.random(.multicolor, seed: 21))
         let disk = try D64Image(name: "CAMERA C64", files: [.init(name: "PICTURE", contents: frame.prg())]).bytes()

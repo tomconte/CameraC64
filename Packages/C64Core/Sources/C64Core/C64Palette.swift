@@ -12,15 +12,23 @@ public struct RGB: Hashable, Sendable {
 }
 
 /// The RGB value shown for each of the 16 C64 colours.
-public struct C64Palette: Sendable {
+public struct C64Palette: Hashable, Sendable {
     public let name: String
     /// One entry per `C64Color`, in hardware index order.
     public let colors: [RGB]
+    /// Each colour as the PAL signal that a monitor turns into it, in
+    /// Colodore's units and hardware index order. The display models blend
+    /// colours in this space.
+    public let signals: [YUV]
 
-    public init(name: String, colors: [RGB]) {
+    /// A palette, with the signals Colodore's model gives for its colours, or
+    /// by default the signals a PAL monitor would turn into them.
+    public init(name: String, colors: [RGB], signals: [YUV]? = nil) {
         precondition(colors.count == 16, "A C64 palette has exactly 16 colours")
+        precondition(signals?.count ?? 16 == 16, "One signal per colour")
         self.name = name
         self.colors = colors
+        self.signals = signals ?? colors.map(Colodore.signal(showing:))
     }
 
     public subscript(color: C64Color) -> RGB {

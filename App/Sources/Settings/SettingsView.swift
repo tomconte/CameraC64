@@ -54,6 +54,17 @@ struct SettingsView: View {
                 } footer: {
                     Text("This is a placeholder: nothing here is saved or used yet.")
                 }
+                if BuildKind.isDevelopment {
+                    Section {
+                        NavigationLink("Speed Benchmark") {
+                            SpeedBenchmarkView()
+                        }
+                    } header: {
+                        Text("Development")
+                    } footer: {
+                        Text("Only in development and TestFlight builds.")
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

@@ -26,10 +26,6 @@ enum Look {
     static let pill = Color(hex: 0x2B2925)
     static let pillInk = Color(hex: 0xE9E3D5)
 
-    /// The C64 screen's border. Placeholder: the real border is a C64 colour
-    /// chosen per picture. This is blue in the Colodore palette the samples use.
-    static let c64Border = Color(hex: 0x2E2C9B)
-
     // The badge from the 2013 app's title bar.
     static let badge = Color(hex: 0x3E3A35)
     static let badgeInk = Color(hex: 0xF4F0E6)

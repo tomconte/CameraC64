@@ -1,9 +1,10 @@
+import C64Core
 import SwiftUI
 import Testing
 
 @testable import CameraC64
 
-/// The placeholder camera screen's logic. C64 logic is tested in Packages/C64Core.
+/// The camera screen's logic. C64 logic is tested in Packages/C64Core.
 @MainActor
 struct CameraScreenTests {
     @Test func gravityTellsHowThePhoneIsHeld() {
@@ -36,7 +37,9 @@ struct CameraScreenTests {
         let picture = TVGeometry.pictureFrame(inTV: tv)
         #expect(abs(picture.width / picture.height - 1.4976) < 0.001)
         #expect(abs(picture.midX - tv.width / 2) < 0.001)
-        #expect(abs(picture.midY - tv.height / 2) < 0.001)
+        // The border is 35 lines above the picture and 37 below.
+        #expect(abs(picture.minY - tv.height * 35 / 272) < 0.001)
+        #expect(abs(tv.height - picture.maxY - tv.height * 37 / 272) < 0.001)
     }
 
     @Test func portraitTVSpansTheWidth() {
@@ -77,5 +80,44 @@ struct CameraScreenTests {
         model.deleteShot()
         #expect(model.lastShot == nil)
         #expect(model.stage == .live)
+    }
+
+    @Test func modesConvertOrShowASample() {
+        #expect(PictureMode.allCases.filter { $0.spec != nil } == [.hires, .multicolour])
+        #expect(PictureMode.allCases.allSatisfy { ($0.spec == nil) == ($0.sample != nil) })
+    }
+
+    /// Every mode's picture comes out at the screen's size, border included,
+    /// and its display window at the picture's.
+    @Test func everyModeHasAPicture() async {
+        let maker = PictureMaker()
+        #expect(maker.photo != nil)
+        for mode in PictureMode.allCases {
+            await maker.make(mode, for: .tv)
+            let picture = maker.picture(mode, on: .tv)
+            #expect(picture?.screen.width == 384 && picture?.screen.height == 272, "\(mode.name)")
+            #expect(picture?.window.width == 320 && picture?.window.height == 200, "\(mode.name)")
+        }
+        #expect(maker.picture(.hires, on: .sharp) == nil)
+    }
+
+    /// The black-and-white monitor shows greys, from the display model rather
+    /// than a tint.
+    @Test func blackAndWhiteShowsGreys() async throws {
+        let maker = PictureMaker()
+        await maker.make(.multicolour, for: .blackAndWhite)
+        let screen = try #require(maker.picture(.multicolour, on: .blackAndWhite)?.screen)
+        let pixels = try #require(RGBImage(screen)).bytes
+        #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0] == pixels[$0 + 1] })
+        #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0 + 1] == pixels[$0 + 2] })
+    }
+
+    @Test func picturesRoundTripThroughCoreGraphics() throws {
+        let image = RGBImage(width: 2, height: 1, layout: .rgb, bytes: [255, 0, 0, 10, 200, 30])
+        let cgImage = try #require(image.cgImage)
+        let back = try #require(RGBImage(cgImage))
+        #expect(back.width == 2 && back.height == 1)
+        #expect(Array(back.bytes[0..<3]) == [255, 0, 0])
+        #expect(Array(back.bytes[4..<7]) == [10, 200, 30])
     }
 }

@@ -127,9 +127,9 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
 1. **Target.**
    - Crop the photo to the real screen shape: the display window is about 3:2 (see [UX.md](UX.md) for how the camera frames it).
    - Shrink it to the mode's grid by averaging in linear light, so each C64 pixel's target is the true average of the area it covers.
-   - Then apply the brightness, contrast, saturation and gamma controls, plus optional sharpening.
+   - Then apply the brightness, contrast, saturation and gamma controls, plus optional sharpening, on OKLab's lightness and colourfulness. Automatic tones, the default, first stretch the darkest and brightest 0.5% of the pixels to black and white, by at most 2.5 times.
 2. **Colour distance** is measured in OKLab, a perceptual colour space. Faces and the main subject can optionally be weighted more heavily, using the Vision framework.
-3. **Per-pixel cost table**: the distance from every pixel to each of the 16 colours.
+3. **Per-pixel cost table**: the squared distance from every pixel to each of the 16 colours, and to each pair's mixes (step 5), as 16-bit numbers.
 4. **Exhaustive per-cell search**, which is optimal for the metric before dithering:
    - Hires: 120 colour pairs per 8×8 cell.
    - Multicolour:
@@ -148,14 +148,18 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
    each cell  → best[cell][background].S
    ```
 
-   A full multicolour screen is about 58 million small comparisons. Vectorised Swift should do that in a few milliseconds on an iPhone's CPU, well within the 33 ms of a 30 fps viewfinder frame; the speed benchmark checks it (section 10).
-5. **Dithering-aware scoring.** A pixel can also be matched by mixing two of the set's colours, as in Yliluoma's ordered dithering for arbitrary palettes. Mixes are computed in linear light and compared in OKLab. The penalty for visible texture comes from the display model.
+   With mixes (step 5), each set takes the minimum over its 6 pairs, which include the single colours, so a full multicolour screen takes up to 350 million small comparisons, fewer as sets share pairs. The loops run over plain buffers, which the compiler vectorises, a row of cells per core: with the cost table, a conversion takes about 20 ms on four 2.1 GHz Xeon cores. The speed benchmark measures the phones (section 10).
+5. **Dithering-aware scoring.** A pixel can also be matched by mixing two of the set's colours, as in Yliluoma's ordered dithering for arbitrary palettes: a 4×4 Bayer pattern gives 15 mixes per pair, from 1/16 to 15/16.
+   - A mix is what the monitor shows of the pattern, averaged in linear light, as the eye does from a distance. On a sharp display that is the two colours mixed in linear light. A TV blends colour before its gamma, so the mix differs, and the converter uses the TV's.
+   - Its cost adds the texture the pattern leaves on that monitor, as the mean squared OKLab distance of its pixels from the mix, times 1 minus the dithering setting. On a TV, colours of the same brightness mix with almost no texture.
+   - Dithering defaults to 0.85, chosen with the quality benchmark: its score improves up to 0.95, but close up such pictures start to scatter stray dots.
 6. **Dithering** is ordered, with a pattern fixed to the screen, in the viewfinder and in the shot alike.
    - It stays stable from frame to frame, it is the classic C64 look, and the scoring in step 5 is designed around it.
    - Error diffusion restricted to each cell's colours may come later as an optional look in Edit, if the quality benchmark shows a clear gain.
 7. **Harder modes** (interlace, NUFLI, custom character sets): there are too many combinations to try them all. Start from the per-cell solution and re-optimise one setting at a time until nothing improves. The viewfinder shows the starting solution; the shot runs the refinement passes.
-8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames. A cell keeps the previous frame's colours unless the new ones are clearly better, which prevents flicker.
-9. **Mono monitors** run the same search on brightness only. Within a group of equally bright colours, the converter picks whichever is legal for that cell (e.g. 0–7 in colour memory).
+8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames. A cell keeps the previous frame's colours unless the new ones are clearly better, which prevents flicker: unless the new best set scores more than a twelfth lower, and the background unless the new one's total is more than a thirty-second lower. The margins will be tuned on real video in milestone 3.
+9. **Mono monitors** run the same search on brightness only, with one colour per brightness, so 9 instead of 16. Within a group of equally bright colours, the converter picks a grey where there is one, so the picture also looks right on a colour TV, and otherwise whichever is legal for that cell (e.g. 0–7 in colour memory).
+10. **Border**: the colour most common along the picture's edges, unless the user picks one.
 
 ## 7. Display models ("monitors")
 
@@ -182,9 +186,13 @@ It works in the brightness/colour signal space the VIC-II outputs, which is the 
 | Sharp | No blending: HDMI output, emulators without CRT emulation |
 | TV (default) | Composite: colour blur, delay line, softened brightness |
 | Commodore monitor | Separate brightness and colour: sharper brightness, delay line |
-| Mono: green, amber, B&W | Brightness only |
+| Mono: green, amber, B&W | Brightness only, in the phosphor's colour |
 
-The presets replace the old app's tints and are free. Scanlines, bloom, curvature and the power-off animation form a presentation layer on top. The model is an approximation, since real TVs vary. It is checked against VICE's PAL/CRT emulation and a real CRT, not by pixel-exact tests.
+The presets replace the old app's tints and are free. Scanlines, bloom, curvature and the power-off animation form a presentation layer on top. The model is an approximation, since real TVs vary. It is checked against VICE's PAL/CRT emulation and a real CRT, not by pixel-exact tests:
+
+- The blurs are Gaussian, as wide as those of VICE's PAL renderer with its default settings: brightness over 3 pixels weighted 1/8, 3/4, 1/8 (a standard deviation of 0.5 pixels), colour over 4 (1.1 pixels). That comparison is with VICE's source: its screenshots are taken before the CRT emulation.
+- Palettes other than Colodore's get the signals a PAL monitor would turn into their colours.
+- The check against a real CRT is still to do.
 
 ## 8. Palettes
 
@@ -220,13 +228,20 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   They are Swift tests in `Tools/`, which run wherever `x64sc` is found:
   - on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew
   - in Claude Code web sessions, after `Tools/install-vice.sh` builds VICE without a user interface
-- **Speed benchmark.** A hidden screen in TestFlight builds times each mode's conversion on the phone it runs on.
+- **Speed benchmark.** A hidden screen in TestFlight builds (Settings, Development) times each mode's conversion on the phone it runs on; `c64conv speed` runs the same measurement elsewhere.
+  - It times each stage of a viewfinder frame from a 1920×1440 camera frame: the target, the conversion, the rendering and the display model, for both bitmap modes on a TV, a sharp display and a black-and-white monitor.
   - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
+  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 9.5 to 9.9 ms, 7.7 to 7.9 of them in the conversion, and a black-and-white one 4.0 to 4.6 ms. On four 2.1 GHz Xeon cores, a colour frame takes 25 to 27 ms, and a black-and-white one 13 ms.
+  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 30 ms. The viewfinder's battery use is measured in milestone 3.
   - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
-- **Quality benchmark.**
-  - A fixed photo set (faces, landscapes, low light, high contrast), scored after the display model, with side-by-side sheets.
-  - Baselines: image64's CLI for the standard modes, NUFLIX Studio for NUFLI.
-  - It runs on every converter change.
+- **Quality benchmark** (`c64conv benchmark`, see `Tools/README.md`).
+  - A chart of every hue, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. They are downloaded, with pinned checksums, rather than kept in the repository.
+  - Each picture is scored as its monitor shows it: the mean OKLab distance from the photo after blurring both as the eye does, brightness less than colour, as in S-CIELAB. A page shows every picture next to its photo.
+  - `Tools/Benchmark/scores.txt` holds the scores, and CI fails when they get worse, on every push.
+  - Baselines: image64's CLI for the standard modes, at a fixed version, on CI's macOS runner; NUFLIX Studio for NUFLI.
+  - At the end of milestone 2, image64's pictures, with its default settings (Colodore and Floyd–Steinberg dithering), score 4.35 on average, and ours 3.46.
+    - Ours score better on every hires picture, on every monitor, and on the black-and-white monitor, which image64 does not convert for.
+    - In multicolour on the colour monitors, the two are about even on the photos: image64 is ahead on four or five of the eleven, depending on the monitor.
 - **Real hardware spot checks**: an Ultimate 64 or C64 Ultimate, and a CRT for the display models.
 
 ## 11. The app
@@ -335,9 +350,10 @@ docs/                     this plan, the UX (UX.md) and design notes
    - `C64Core` palettes (Colodore), `ModeSpec` and `C64Frame`, and the renderer for the standard modes.
    - Koala, Art Studio, `.prg` and `.d64` writers, and the standard modes' display program.
    - The `c64conv` CLI and the VICE golden tests in CI.
-2. **Converter**:
-   - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark.
-   - The speed benchmark on real iPhones, which decides whether any search needs a Metal version.
+2. **Converter** (done, but for measuring the oldest phones):
+   - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark, in CI.
+   - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come.
+   - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes under 10 ms, so there is none for now (section 10).
 3. **App at feature parity**:
    - camera and viewfinder
    - capture, review, save, share and export
@@ -368,7 +384,7 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
 - **Display models are approximate.** They are validated against VICE and a CRT, not pixel for pixel.
 - **NUFLI.** Aim to match NUFLIX Studio, not beat it.
-- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10).
+- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10). An iPhone 17 Pro makes a colour frame in under 10 ms, less than a third of the 33 ms of 30 fps, but keeps all six cores busy while it does; an iPhone 11, with 2 fast and 4 slow cores, may only just keep up.
 
 ## 18. References
 
