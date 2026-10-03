@@ -36,3 +36,19 @@ private func crc32(_ bytes: [UInt8]) -> UInt32 {
         }
     }
 }
+
+/// PETSCII's graphics characters are the upper case set's $40–$7F, with the
+/// space and their reverses, and none of them looks like a letter, a digit or
+/// punctuation.
+@Test func graphicsCharactersAreTheUpperCaseSetsGraphics() {
+    let codes = CharacterROM.Selection.graphics.codes(in: .upperCase)
+    #expect(codes == [0x20] + Array(0x40..<0x80) + [0xA0] + Array(0xC0..<0x100))
+    #expect(CharacterROM.Selection.graphics.codes(in: .lowerCase).isEmpty)
+    for set in CharacterROM.Set.allCases {
+        #expect(CharacterROM.Selection.all.codes(in: set) == Array(0..<256))
+    }
+    let characters = CharacterROM.Set.upperCase.characters
+    func shape(_ code: Int) -> [UInt8] { Array(characters[code * 8..<code * 8 + 8]) }
+    let text = Set((0..<0x40).filter { $0 != 0x20 }.flatMap { [shape($0), shape($0 + 0x80)] })
+    #expect(codes.allSatisfy { !text.contains(shape($0)) })
+}

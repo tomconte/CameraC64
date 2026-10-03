@@ -26,9 +26,10 @@ extension C64Color {
 
 extension ModePicture {
     /// A random picture that obeys its mode's limits. In the character ROM's
-    /// characters, it takes them from the given set.
+    /// characters, it takes them from the given set, among a selection.
     static func random(
-        _ spec: ModeSpec, seed: UInt64, characterSet: CharacterROM.Set = .upperCase
+        _ spec: ModeSpec, seed: UInt64, characterSet: CharacterROM.Set = .upperCase,
+        characters: CharacterROM.Selection = .all
     ) -> ModePicture {
         var generator = SeededGenerator(seed: seed)
         var picture = ModePicture(spec: spec)
@@ -52,7 +53,8 @@ extension ModePicture {
         case .characters(.fixed(let set)):
             tiles = pixels(of: set)
         case .characters(.rom):
-            tiles = pixels(of: characterSet.characters)
+            let all = pixels(of: characterSet.characters)
+            tiles = characters.codes(in: characterSet).map { all[$0] }
         case .characters(.own(let limit)):
             tiles = (0..<limit).map { _ in
                 (0..<cellWidth * 8).map { _ in UInt8.random(in: 0..<values, using: &generator) }

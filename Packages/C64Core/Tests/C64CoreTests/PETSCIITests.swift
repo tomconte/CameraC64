@@ -6,23 +6,36 @@ import Testing
 /// PETSCII converters, shared by the tests: making one takes a while in a
 /// debug build.
 private enum Converters {
-    static let tv = Converter(spec: .petscii, settings: Converter.Settings(display: .tv))
-    static let sharp = Converter(spec: .petscii, settings: Converter.Settings(display: .sharp))
-    static let blackAndWhite = Converter(spec: .petscii, settings: Converter.Settings(display: .blackAndWhite))
+    static let tv = make(.tv)
+    static let sharp = make(.sharp)
+    static let blackAndWhite = make(.blackAndWhite)
+    static let graphicsTV = make(.tv, .graphics)
+    static let graphicsSharp = make(.sharp, .graphics)
+    static let graphicsBlackAndWhite = make(.blackAndWhite, .graphics)
 
-    static func converter(for display: DisplayModel) -> Converter {
-        switch display {
-        case .sharp: sharp
-        case .blackAndWhite: blackAndWhite
-        default: tv
+    private static func make(_ display: DisplayModel, _ characters: CharacterROM.Selection = .all) -> Converter {
+        Converter(spec: .petscii, settings: Converter.Settings(display: display, petsciiCharacters: characters))
+    }
+
+    static func converter(for display: DisplayModel, characters: CharacterROM.Selection = .all) -> Converter {
+        switch (display, characters) {
+        case (.sharp, .all): sharp
+        case (.blackAndWhite, .all): blackAndWhite
+        case (_, .all): tv
+        case (.sharp, .graphics): graphicsSharp
+        case (.blackAndWhite, .graphics): graphicsBlackAndWhite
+        case (_, .graphics): graphicsTV
         }
     }
 }
 
 /// Which of the character ROM's sets a frame shows.
-private func characterSet(of frame: C64Frame) -> Int? {
-    CharacterROM.Set.allCases.firstIndex { $0.address == frame.graphicsAddress }
+private func characterSet(of frame: C64Frame) -> CharacterROM.Set? {
+    CharacterROM.Set.allCases.first { $0.address == frame.graphicsAddress }
 }
+
+/// The graphics characters' codes, as a frame's screen holds them.
+private let graphicsCodes = Set(CharacterROM.Selection.graphics.codes(in: .upperCase).map(UInt8.init))
 
 @Test func convertsPETSCII() {
     #expect(Converter.supports(.petscii))
@@ -37,14 +50,19 @@ private func characterSet(of frame: C64Frame) -> Int? {
 
 /// The search finds the set and background with the lowest total by its
 /// model, and each cell's best character and colour for them by the exact
-/// error: the same as trying every character of both sets in every pair of
-/// colours, one by one. The target repeats a few cells, so that trying them
-/// all takes little time.
-@Test(arguments: [DisplayModel.tv, .sharp, .blackAndWhite])
-func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
-    let converter = Converters.converter(for: display)
+/// error: the same as trying every character it may use, of both sets, in
+/// every pair of colours, one by one. The target repeats a few cells, so that
+/// trying them all takes little time.
+@Test(arguments: [
+    (DisplayModel.tv, CharacterROM.Selection.all), (.sharp, .all), (.blackAndWhite, .all), (.tv, .graphics),
+    (.blackAndWhite, .graphics),
+])
+func petsciiSearchFindsTheBestCharacters(display: DisplayModel, characters: CharacterROM.Selection) {
+    let converter = Converters.converter(for: display, characters: characters)
     let tables = converter.characterTables!
-    let (count, sets) = (tables.count, CharacterROM.Set.allCases.count)
+    let sets = CharacterROM.Set.allCases.filter { !characters.codes(in: $0).isEmpty }
+    #expect(tables.sets == sets)
+    let count = tables.count
     let gradient = gradient(for: .petscii)
     let blocks = [0, 137, 413, 520, 777, 999]
     var colors = gradient.colors
@@ -72,7 +90,7 @@ func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
         result.deallocate()
     }
     func error(_ set: Int, _ code: Int, _ foreground: Int, _ background: Int) -> Float {
-        let character = tables.codes[set][code]
+        let character = tables.codes[set][code]!
         let slot = character.inverted ? background * count + foreground : foreground * count + background
         Converter.errors(
             tables.terms + character.shape * Converter.CharacterTables.rows * tables.slots, stride: tables.slots,
@@ -80,35 +98,30 @@ func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
             shapeCount: tables.shapeCount, monochrome: display.isMonochrome, into: result)
         return result[0] + sum[3]
     }
-    var lowest = [[Float]](repeating: [Float](repeating: .infinity, count: sets * count), count: blocks.count)
-    var errors: [[Float]] = []
+    var lowest = [[Float]](repeating: [Float](repeating: .infinity, count: sets.count * count), count: blocks.count)
     for block in blocks.indices {
         eye.see(block, of: target, monochrome: display.isMonochrome, sum: sum)
         eye.correlate(with: tables.basis, shapeCount: tables.shapeCount, into: correlations)
-        var blockErrors = [Float](repeating: .infinity, count: sets * 256 * count * count)
-        for set in 0..<sets {
-            for code in 0..<256 {
+        for (set, characterSet) in sets.enumerated() {
+            for code in characters.codes(in: characterSet) {
                 for foreground in 0..<count {
                     for background in 0..<count where foreground != background {
                         let value = error(set, code, foreground, background)
-                        blockErrors[((set * 256 + code) * count + foreground) * count + background] = value
                         lowest[block][set * count + background] = min(lowest[block][set * count + background], value)
                     }
                 }
             }
         }
-        errors.append(blockErrors)
     }
-    var totals = [Double](repeating: 0, count: sets * count)
+    var totals = [Double](repeating: 0, count: sets.count * count)
     for cell in 0..<1000 {
         for choice in totals.indices {
             totals[choice] += Double(lowest[cell % blocks.count][choice])
         }
     }
     let choice = totals.indices.min { totals[$0] < totals[$1] }!
-    let set = characterSet(of: conversion.frame)
     let background = converter.candidates.firstIndex(of: conversion.picture.colors[0][0])
-    #expect(set == choice / count && background == choice % count)
+    #expect(characterSet(of: conversion.frame) == sets[choice / count] && background == choice % count)
 
     // Each cell takes the character and colour with the lowest exact error:
     // the squared distance between how it looks and how the cell's target
@@ -120,8 +133,9 @@ func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
     for cell in 0..<blocks.count * 2 {
         eye.see(cell % blocks.count, of: target, monochrome: display.isMonochrome, sum: sum)
         view.update(from: eye.seen, count: 192)
+        // Infinite for a character the picture may not use.
         func exact(_ code: Int, _ foreground: Int) -> Float {
-            let character = tables.codes[chosenSet][code]
+            guard let character = tables.codes[chosenSet][code] else { return .infinity }
             let look =
                 character.inverted
                 ? tables.look(character.shape, chosenBackground, foreground, eye: eye)
@@ -129,7 +143,7 @@ func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
             return Converter.distance(look, view)
         }
         var lowestExact = Float.infinity
-        for code in 0..<256 {
+        for code in characters.codes(in: sets[chosenSet]) {
             for foreground in 0..<count where foreground != chosenBackground {
                 lowestExact = min(lowestExact, exact(code, foreground))
             }
@@ -141,17 +155,21 @@ func petsciiSearchFindsTheBestCharacters(display: DisplayModel) {
 
 /// A PETSCII picture, shown on a sharp display, converts back to itself:
 /// the same set and background, and in every cell the same character and
-/// colour, or ones that look the same.
-@Test(arguments: CharacterROM.Set.allCases)
-func petsciiPicturesComeBack(set: CharacterROM.Set) throws {
-    var picture = ModePicture.random(.petscii, seed: 31, characterSet: set)
+/// colour, or ones that look the same. With only the graphics characters, so
+/// does a picture of them.
+@Test(arguments: [
+    (CharacterROM.Set.upperCase, CharacterROM.Selection.all), (.lowerCase, .all), (.upperCase, .graphics),
+])
+func petsciiPicturesComeBack(set: CharacterROM.Set, characters: CharacterROM.Selection) throws {
+    var picture = ModePicture.random(.petscii, seed: 31, characterSet: set, characters: characters)
     // Cells in the background colour show no character, so keep them out.
     for cell in 0..<1000 where picture.colors[1][cell] == picture.colors[0][0] {
         picture.colors[1][cell] = picture.colors[0][0] == .white ? .black : .white
     }
     let image = picture.image()
     let full = Crop(x: 0, y: 0, width: 320, height: 200)
-    let conversion = Converters.sharp.convert(image.rgbImage(.colodore), crop: full, tones: .neutral)
+    let converter = Converters.converter(for: .sharp, characters: characters)
+    let conversion = converter.convert(image.rgbImage(.colodore), crop: full, tones: .neutral)
     #expect(conversion.frame.graphicsAddress == set.address)
     #expect(conversion.picture.colors[0][0] == picture.colors[0][0])
     let shown = conversion.picture.image()
@@ -162,6 +180,32 @@ func petsciiPicturesComeBack(set: CharacterROM.Set) throws {
         }
     }
     #expect(same.count == 1000, "\(same.count) cells of 1,000 come back")
+}
+
+/// With only the graphics characters, a picture takes all its characters from
+/// them, in the upper case set, where with all characters it has letters too.
+/// In the viewfinder, cells drop the previous frame's other characters.
+@Test func petsciiGraphicsPicturesUseOnlyGraphicsCharacters() {
+    let target = gradient(for: .petscii)
+    let conversion = Converters.graphicsTV.convert(target)
+    #expect(characterSet(of: conversion.frame) == .upperCase)
+    #expect(conversion.frame.screen.allSatisfy(graphicsCodes.contains))
+    #expect(VICII.render(conversion.frame).window == conversion.picture.image())
+    #expect(!Converters.tv.convert(target).frame.screen.allSatisfy(graphicsCodes.contains))
+
+    // A picture of letters and graphics in the upper case set, which comes
+    // back as it is with all characters.
+    var letters = ModePicture.random(.petscii, seed: 5)
+    for cell in 0..<1000 where letters.colors[1][cell] == letters.colors[0][0] {
+        letters.colors[1][cell] = letters.colors[0][0] == .white ? .black : .white
+    }
+    let photo = letters.image().rgbImage(.colodore)
+    let full = Crop(x: 0, y: 0, width: 320, height: 200)
+    let previous = Converters.sharp.convert(photo, crop: full, tones: .neutral)
+    #expect(characterSet(of: previous.frame) == .upperCase)
+    #expect(previous.frame.screen.filter { !graphicsCodes.contains($0) }.count > 400)
+    let next = Converters.graphicsSharp.convert(photo, crop: full, tones: .neutral, keeping: previous)
+    #expect(next.frame.screen.allSatisfy(graphicsCodes.contains))
 }
 
 /// In the viewfinder, cells keep their character and colour from one frame to

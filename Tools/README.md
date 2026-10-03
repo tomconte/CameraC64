@@ -8,6 +8,7 @@ A Swift package on top of C64Core, for Linux and macOS, with no other dependenci
 swift run --package-path Tools c64conv convert photo.png -o picture.prg  # a photo in multicolour, made for a TV
 swift run --package-path Tools c64conv convert photo.png -o tv.png --mode hires --monitor tv --scale 2
 swift run --package-path Tools c64conv convert photo.png -o text.prg --mode petscii  # in the C64's own characters
+swift run --package-path Tools c64conv convert photo.png -o art.prg --mode petscii --characters graphics  # no letters
 swift run --package-path Tools c64conv testcard multicolor -o card.prg   # a random picture that obeys the mode's limits
 swift run --package-path Tools c64conv render picture.kla -o picture.png --scale 2
 swift run --package-path Tools c64conv export picture.kla -o picture.d64 # .prg, .d64, .kla/.koa, .art or .png
@@ -20,7 +21,7 @@ swift run -c release --package-path Tools c64conv speed                  # how l
 
 ## Quality benchmark
 
-`c64conv benchmark` converts a fixed set of photos in hires, multicolour and PETSCII, each for four monitors (sharp, TV, Commodore monitor, black and white), and scores every picture as its monitor shows it (plan, section 10).
+`c64conv benchmark` converts a fixed set of photos in hires, multicolour and PETSCII (with all characters, and with only the graphics characters), each for four monitors (sharp, TV, Commodore monitor, black and white), and scores every picture as its monitor shows it (plan, section 10).
 
 - **Photos**: a chart of every hue at every lightness, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite, listed with their SHA-256 in `Benchmark/photos.txt`: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. Kodak released them for unrestricted use; `Benchmark/get-photos.sh` downloads them into `Benchmark/photos/`, which git ignores.
 - **Score**: the mean OKLab distance, times 100, between the picture as shown and the photo, after blurring both as the eye does from a phone's viewing distance, brightness by 1 pixel and colour by 2, as in S-CIELAB. Lower is better; about 2 is just noticeable. For the black-and-white monitor, only lightness counts.

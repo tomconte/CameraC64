@@ -36,16 +36,20 @@ public struct Converter: Sendable {
         /// The border colour, or nil for the colour most common along the
         /// picture's edges.
         public var border: C64Color?
+        /// For PETSCII, which characters the picture may use: all of them, or
+        /// only the graphics characters, for the classic look.
+        public var petsciiCharacters: CharacterROM.Selection
 
         public init(
             palette: C64Palette = .colodore, display: DisplayModel = .tv, dithering: Float = 0.85,
-            border: C64Color? = nil
+            border: C64Color? = nil, petsciiCharacters: CharacterROM.Selection = .all
         ) {
             precondition((0...1).contains(dithering), "Dithering goes from 0 to 1")
             self.palette = palette
             self.display = display
             self.dithering = dithering
             self.border = border
+            self.petsciiCharacters = petsciiCharacters
         }
     }
 
@@ -98,7 +102,8 @@ public struct Converter: Sendable {
     /// The same for each pair's mixes, `levels` per pair, with each mix's
     /// texture penalty added to its squared length.
     let mixTerms: [Float]
-    /// For PETSCII, how every character looks in every pair of candidates.
+    /// For PETSCII, how each character it may use looks in every pair of
+    /// candidates.
     let characterTables: CharacterTables?
 
     public init(spec: ModeSpec, settings: Settings = Settings()) {
@@ -174,7 +179,9 @@ public struct Converter: Sendable {
         mixTerms = mixes
         characterTables =
             spec.pixels == .characters(.rom)
-            ? CharacterTables(candidates: candidates, palette: palette, display: display) : nil
+            ? CharacterTables(
+                candidates: candidates, palette: palette, display: display, characters: settings.petsciiCharacters)
+            : nil
     }
 
     /// Colours that look the same on a colour TV and in monochrome.

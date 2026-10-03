@@ -204,4 +204,23 @@ extension CharacterROM {
             self == .upperCase ? 0x1000 : 0x1800
         }
     }
+
+    /// The characters a PETSCII picture may use.
+    public enum Selection: CaseIterable, Hashable, Sendable {
+        /// All 512 of both sets, letters, digits and punctuation included.
+        case all
+        /// Only the upper case set's graphics characters, $40–$7F, the space,
+        /// and their reverses: blocks, lines and shapes, for the classic
+        /// PETSCII look.
+        case graphics
+
+        /// The codes of the characters it has in a set, in order.
+        public func codes(in set: Set) -> [Int] {
+            switch (self, set) {
+            case (.all, _): Array(0..<256)
+            case (.graphics, .upperCase): [0x20] + Array(0x40..<0x80) + [0xA0] + Array(0xC0..<0x100)
+            case (.graphics, .lowerCase): []
+            }
+        }
+    }
 }

@@ -72,7 +72,7 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - Press and hold the TV to see the original photo. Pinch to see the pixels, with an optional grid of colour cells.
 - The capture key goes back to the camera.
 
-**Settings**: palette, chip revision, saving every shot to Photos, the Ultimate's address, Camera Control behaviour, restoring the purchase, acknowledgements.
+**Settings**: palette, chip revision, PETSCII's characters (all of them, or only the graphics characters for the classic look), saving every shot to Photos, the Ultimate's address, Camera Control behaviour, restoring the purchase, acknowledgements.
 
 ## 6. What gets shared and exported
 

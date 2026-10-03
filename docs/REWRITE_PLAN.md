@@ -142,6 +142,7 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
      - A cell's error is the squared OKLab distance between the cell as the monitor shows it and its target, both blurred as the eye sees them, within the cell: brightness by 1 pixel and colour by 2, as in the quality benchmark.
      - Done plainly, that is about 30 times the work of hires. Instead, the converter first fits each cell's target with a small linear model: its lightness as a constant plus a multiple of the character's pattern, blurred as the monitor and the eye blur brightness, and its colour likewise, with the pattern blurred as they blur colour. Scoring a character in a pair of colours then takes 6 multiplications, 2 on a black-and-white monitor, and the 512 characters of both sets have only 153 different patterns, counting a character and its inverse as one.
      - The model picks the set and the background. Each cell's character and colour are then exact: a bound on how far the model can be off rules out all but about a dozen of the cell's 3,840 choices, and those are scored exactly. So every cell gets the best character and colour for the chosen set and background, which the tests check by trying them all.
+     - Judged this way, about half the cells take letters, digits or punctuation, which makes pictures look like BBS art. A setting keeps to the graphics characters instead, for the classic PETSCII look: the 64 of the upper case set (`$40`–`$7F`), the space, and their reverses, 130 characters with 60 patterns. Those pictures score about 8% worse in the quality benchmark, and convert in half the time.
    - FLI: for each 4×8 cell, try each of the 16 colour-memory values, with the best screen-memory pair on each line.
    - AFLI: 120 pairs per 8×1 strip.
 
@@ -249,7 +250,7 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   - At the end of milestone 2, image64's pictures, with its default settings (Colodore and Floyd–Steinberg dithering), score 4.35 on average, and ours 3.46.
     - Ours score better on every hires picture, on every monitor, and on the black-and-white monitor, which image64 does not convert for.
     - In multicolour on the colour monitors, the two are about even on the photos: image64 is ahead on four or five of the eleven, depending on the monitor.
-  - PETSCII pictures score 5.06 on average, against 3.50 for hires and 3.42 for multicolour: with one colour per cell and fixed characters, they are coarser. image64 has no PETSCII mode, so there is no baseline for it yet.
+  - PETSCII pictures score 5.06 on average, or 5.45 with only the graphics characters, against 3.50 for hires and 3.42 for multicolour: with one colour per cell and fixed characters, they are coarser. image64 has no PETSCII mode, so there is no baseline for it yet.
 - **Real hardware spot checks**: an Ultimate 64 or C64 Ultimate, and a CRT for the display models.
 
 ## 11. The app

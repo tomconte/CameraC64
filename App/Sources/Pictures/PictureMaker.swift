@@ -20,9 +20,19 @@ struct ShownPicture {
 /// models.
 @Observable
 final class PictureMaker {
+    /// A picture: a mode's, for a monitor.
     struct Key: Hashable {
         var mode: PictureMode
         var monitor: Monitor
+        /// The characters a PETSCII picture may use. The other modes have
+        /// none, so for them it is always `.all`.
+        var petsciiCharacters: CharacterROM.Selection
+
+        init(_ mode: PictureMode, on monitor: Monitor, petsciiCharacters: CharacterROM.Selection = .all) {
+            self.mode = mode
+            self.monitor = monitor
+            self.petsciiCharacters = mode == .petscii ? petsciiCharacters : .all
+        }
     }
 
     /// The photo the pictures are made from.
@@ -34,34 +44,33 @@ final class PictureMaker {
         self.photo = photo
     }
 
-    func picture(_ mode: PictureMode, on monitor: Monitor) -> ShownPicture? {
-        pictures[Key(mode: mode, monitor: monitor)]
+    func picture(_ key: Key) -> ShownPicture? {
+        pictures[key]
     }
 
     /// Makes every mode's picture for a monitor, the given mode first, unless
     /// they are made already.
-    func makeAll(for monitor: Monitor, first: PictureMode) async {
+    func makeAll(for monitor: Monitor, petsciiCharacters: CharacterROM.Selection, first: PictureMode) async {
         for mode in [first] + PictureMode.allCases.filter({ $0 != first }) {
             guard !Task.isCancelled else { return }
-            await make(mode, for: monitor)
+            await make(Key(mode, on: monitor, petsciiCharacters: petsciiCharacters))
         }
     }
 
-    /// Makes a mode's picture for a monitor, unless it is made already.
-    func make(_ mode: PictureMode, for monitor: Monitor) async {
-        let key = Key(mode: mode, monitor: monitor)
+    /// Makes a picture, unless it is made already.
+    func make(_ key: Key) async {
         guard pictures[key] == nil, !making.contains(key) else { return }
         let source: Source
-        if let spec = mode.spec, let photo {
-            source = .photo(photo, spec)
-        } else if let name = mode.sample, let sample = UIImage(named: name)?.cgImage.flatMap({ RGBImage($0) }) {
+        if let spec = key.mode.spec, let photo {
+            source = .photo(photo, spec, key.petsciiCharacters)
+        } else if let name = key.mode.sample, let sample = UIImage(named: name)?.cgImage.flatMap({ RGBImage($0) }) {
             source = .sample(sample)
         } else {
             return
         }
         making.insert(key)
         defer { making.remove(key) }
-        let display = monitor.display
+        let display = key.monitor.display
         let shown = await Task.detached(priority: .userInitiated) {
             PictureMaker.screen(of: source, on: display)
         }.value
@@ -73,8 +82,8 @@ final class PictureMaker {
 
     /// What a picture is made from.
     nonisolated enum Source: Sendable {
-        /// A photo, converted in a mode.
-        case photo(RGBImage, ModeSpec)
+        /// A photo, converted in a mode, with the characters PETSCII may use.
+        case photo(RGBImage, ModeSpec, CharacterROM.Selection)
         /// A sample picture of the display window, in Colodore's colours.
         case sample(RGBImage)
     }
@@ -83,8 +92,9 @@ final class PictureMaker {
     nonisolated static func screen(of source: Source, on display: DisplayModel) -> RGBImage {
         let screen: IndexedImage
         switch source {
-        case .photo(let photo, let spec):
-            let converter = Converter(spec: spec, settings: Converter.Settings(display: display))
+        case .photo(let photo, let spec, let petsciiCharacters):
+            let settings = Converter.Settings(display: display, petsciiCharacters: petsciiCharacters)
+            let converter = Converter(spec: spec, settings: settings)
             screen = VICII.render(converter.convert(photo).frame)
         case .sample(let picture):
             screen = sampleScreen(picture)

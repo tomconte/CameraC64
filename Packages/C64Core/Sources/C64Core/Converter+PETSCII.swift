@@ -8,6 +8,8 @@ import Foundation
 /// each of the character ROM's two sets in each of the other colours; the set
 /// and background with the lowest total win, as the background does in
 /// multicolour, and each cell takes its best character and colour for them.
+/// The settings can leave only the graphics characters to try, for the classic
+/// PETSCII look.
 ///
 /// The characters' patterns are PETSCII's only dithering, so they are judged
 /// by how they look from a distance through the monitor. A cell's error is
@@ -30,7 +32,7 @@ import Foundation
 /// so far: about a dozen times a cell. The sets share most of their
 /// characters, and nearly every character's inverse is in its set too,
 /// showing the same in the opposite colours, so 153 shapes stand for all 512
-/// characters.
+/// characters, and 60 for the 130 of `CharacterROM.Selection.graphics`.
 extension Converter {
     /// How far the eye blurs brightness and colour when it judges a character,
     /// in hires pixels: as far as the quality benchmark's eye, which looks at
@@ -39,7 +41,7 @@ extension Converter {
     static let eyeChromaBlur = 2.0
 
     /// What the PETSCII search knows before it sees a picture: how each
-    /// character of the character ROM looks in each pair of colours, through
+    /// character the picture may use looks in each pair of colours, through
     /// the monitor and to the eye. It never changes once made, so threads
     /// share it.
     final class CharacterTables: @unchecked Sendable {
@@ -51,11 +53,15 @@ extension Converter {
             var inverted: Bool
         }
 
-        /// Each set's 256 characters, in `CharacterROM.Set` order.
-        let codes: [[Code]]
+        /// The character ROM's sets that have characters the picture may use,
+        /// in `CharacterROM.Set` order.
+        let sets: [CharacterROM.Set]
+        /// Each of those sets' 256 characters, or nil for those the picture
+        /// may not use.
+        let codes: [[Code?]]
         let shapeCount: Int
         /// For each shape, the sets that have it, and those that have its
-        /// inverse: bit 0 for the upper case set, bit 1 for the lower case set.
+        /// inverse: a bit for each of `sets`, bit 0 for the first.
         let directSets: [UInt8]
         let inverseSets: [UInt8]
         /// How many colours each cell chooses from.
@@ -94,29 +100,34 @@ extension Converter {
         private let sharp: Bool
         private let monochrome: Bool
 
-        init(candidates: [C64Color], palette: C64Palette, display: DisplayModel) {
-            // Each character as a 64-bit number, a line per byte from the top,
-            // and its shape: itself or its inverse, whichever is lower.
+        init(
+            candidates: [C64Color], palette: C64Palette, display: DisplayModel, characters: CharacterROM.Selection
+        ) {
+            // Each character the picture may use as a 64-bit number, a line
+            // per byte from the top, and its shape: itself or its inverse,
+            // whichever is lower.
+            let sets = CharacterROM.Set.allCases.filter { !characters.codes(in: $0).isEmpty }
             var patterns: [UInt64] = []
             var shapes: [UInt64: Int] = [:]
-            var codes: [[Code]] = []
-            for set in CharacterROM.Set.allCases {
-                let characters = set.characters
-                codes.append(
-                    (0..<256).map { code in
-                        let pattern = (0..<8).reduce(UInt64(0)) { $0 << 8 | UInt64(characters[code * 8 + $1]) }
-                        let shape = min(pattern, ~pattern)
-                        if shapes[shape] == nil {
-                            shapes[shape] = patterns.count
-                            patterns.append(shape)
-                        }
-                        return Code(shape: shapes[shape]!, inverted: pattern != shape)
-                    })
+            var codes: [[Code?]] = []
+            for set in sets {
+                let bytes = set.characters
+                var setCodes = [Code?](repeating: nil, count: 256)
+                for code in characters.codes(in: set) {
+                    let pattern = (0..<8).reduce(UInt64(0)) { $0 << 8 | UInt64(bytes[code * 8 + $1]) }
+                    let shape = min(pattern, ~pattern)
+                    if shapes[shape] == nil {
+                        shapes[shape] = patterns.count
+                        patterns.append(shape)
+                    }
+                    setCodes[code] = Code(shape: shapes[shape]!, inverted: pattern != shape)
+                }
+                codes.append(setCodes)
             }
             var directSets = [UInt8](repeating: 0, count: patterns.count)
             var inverseSets = directSets
             for (set, setCodes) in codes.enumerated() {
-                for code in setCodes {
+                for case let code? in setCodes {
                     if code.inverted {
                         inverseSets[code.shape] |= 1 << set
                     } else {
@@ -126,6 +137,7 @@ extension Converter {
             }
             let (shapeCount, count) = (patterns.count, candidates.count)
             let slots = count * count
+            self.sets = sets
             self.codes = codes
             self.directSets = directSets
             self.inverseSets = inverseSets
@@ -334,7 +346,7 @@ extension Converter {
             }
         }
         var choice = totals.indices.min { totals[$0] < totals[$1] }!
-        let kept = previous.flatMap(previousChoice(in:))
+        let kept = previous.flatMap { previousChoice(in: $0, tables: tables) }
         if let kept, totals[kept.set * count + kept.background] <= totals[choice] + totals[choice] / 32 {
             choice = kept.set * count + kept.background
         }
@@ -390,7 +402,7 @@ extension Converter {
         let keptCells = kept.flatMap { $0.set == set && $0.background == background ? $0.cells : nil }
         // Each shape, as it is or inverted, by its first code in the set.
         let firstCodes = (0..<shapeCount * 2).map { index in
-            codes.firstIndex { $0.shape * 2 + ($0.inverted ? 1 : 0) == index } ?? -1
+            codes.firstIndex { $0.map { $0.shape * 2 + ($0.inverted ? 1 : 0) } == index } ?? -1
         }
         let shapes = firstCodes.indices.filter { firstCodes[$0] >= 0 }
         characters.withUnsafeMutableBufferPointer { characters in
@@ -458,8 +470,9 @@ extension Converter {
                         }
                         characters[cell] = bestCode
                         foregrounds[cell] = bestForeground
-                        guard let previous = keptCells?[cell], previous.foreground != background else { continue }
-                        let character = codes[previous.code]
+                        guard let previous = keptCells?[cell], previous.foreground != background,
+                            let character = codes[previous.code]
+                        else { continue }
                         let appearance =
                             (character.shape * 2 + (character.inverted ? 1 : 0)) * count + previous.foreground
                         // The margin grows by a squared distance of 1/8192 per
@@ -474,7 +487,7 @@ extension Converter {
         }
 
         // The picture: each cell's character in its colour.
-        let characterSet = CharacterROM.Set.allCases[set].characters
+        let characterSet = tables.sets[set].characters
         var values = [UInt8](repeating: 0, count: spec.width * spec.height)
         for cell in 0..<cellCount {
             let (left, top) = (cell % 40 * 8, cell / 40 * 8)
@@ -578,13 +591,15 @@ extension Converter {
     }
 
     /// The previous conversion's set, background and cells, if this one can
-    /// keep them: a PETSCII picture, with colours among the candidates.
+    /// keep them: a PETSCII picture, in a set this one may use, with colours
+    /// among the candidates. Its cells' characters may still be ones this one
+    /// may not use.
     private func previousChoice(
-        in previous: Conversion
+        in previous: Conversion, tables: CharacterTables
     ) -> (set: Int, background: Int, cells: [(code: Int, foreground: Int)?])? {
         let (picture, frame) = (previous.picture, previous.frame)
         guard picture.spec == spec, frame.seesCharacterROM,
-            let set = CharacterROM.Set.allCases.firstIndex(where: { $0.address == frame.graphicsAddress }),
+            let set = tables.sets.firstIndex(where: { $0.address == frame.graphicsAddress }),
             let background = candidates.firstIndex(of: picture.colors[0][0])
         else { return nil }
         let screen = frame.screen

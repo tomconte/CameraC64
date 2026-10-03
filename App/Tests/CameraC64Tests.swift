@@ -93,20 +93,37 @@ struct CameraScreenTests {
         let maker = PictureMaker()
         #expect(maker.photo != nil)
         for mode in PictureMode.allCases {
-            await maker.make(mode, for: .tv)
-            let picture = maker.picture(mode, on: .tv)
+            let key = PictureMaker.Key(mode, on: .tv)
+            await maker.make(key)
+            let picture = maker.picture(key)
             #expect(picture?.screen.width == 384 && picture?.screen.height == 272, "\(mode.name)")
             #expect(picture?.window.width == 320 && picture?.window.height == 200, "\(mode.name)")
         }
-        #expect(maker.picture(.hires, on: .sharp) == nil)
+        #expect(maker.picture(PictureMaker.Key(.hires, on: .sharp)) == nil)
+    }
+
+    /// PETSCII pictures can take only the graphics characters, a setting the
+    /// other modes ignore.
+    @Test func petsciiCanUseOnlyTheGraphicsCharacters() async throws {
+        #expect(PictureMaker.Key(.hires, on: .tv, petsciiCharacters: .graphics) == PictureMaker.Key(.hires, on: .tv))
+        let maker = PictureMaker()
+        let all = PictureMaker.Key(.petscii, on: .tv)
+        let graphics = PictureMaker.Key(.petscii, on: .tv, petsciiCharacters: .graphics)
+        await maker.make(all)
+        #expect(maker.picture(graphics) == nil)
+        await maker.make(graphics)
+        let allPixels = try #require(maker.picture(all).flatMap { RGBImage($0.window) }).bytes
+        let graphicsPixels = try #require(maker.picture(graphics).flatMap { RGBImage($0.window) }).bytes
+        #expect(allPixels != graphicsPixels)
     }
 
     /// The black-and-white monitor shows greys, from the display model rather
     /// than a tint.
     @Test func blackAndWhiteShowsGreys() async throws {
         let maker = PictureMaker()
-        await maker.make(.multicolour, for: .blackAndWhite)
-        let screen = try #require(maker.picture(.multicolour, on: .blackAndWhite)?.screen)
+        let key = PictureMaker.Key(.multicolour, on: .blackAndWhite)
+        await maker.make(key)
+        let screen = try #require(maker.picture(key)?.screen)
         let pixels = try #require(RGBImage(screen)).bytes
         #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0] == pixels[$0 + 1] })
         #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0 + 1] == pixels[$0 + 2] })
