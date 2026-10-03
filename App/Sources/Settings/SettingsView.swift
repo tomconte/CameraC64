@@ -10,7 +10,9 @@ enum SettingName {
 /// Settings, in standard iOS styling (docs/UX.md, section 5).
 ///
 /// Mostly a placeholder: apart from PETSCII's characters, the choices are
-/// neither saved nor used yet.
+/// neither saved nor used yet. PETSCII's characters belong in Edit, picture by
+/// picture: the switch here stands in until Edit exists (docs/UX.md, section
+/// 5).
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SettingName.petsciiGraphicsOnly) private var petsciiGraphicsOnly = false
