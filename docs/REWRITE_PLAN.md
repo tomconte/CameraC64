@@ -136,6 +136,9 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
      1. Score all 1,820 four-colour sets once per 4×8 cell.
      2. For each background candidate, keep each cell's best set containing it.
      3. The background with the lowest total wins, and each cell takes its best set containing that background.
+   - PETSCII: for each background, each 8×8 cell tries the 256 characters of a character set in each of the other 15 colours, and the background with the lowest total wins, as in multicolour. Both character sets are tried, and the better one kept.
+     - The characters' patterns are PETSCII's only dithering, so they are judged by how they look from a distance through the monitor. Pixel by pixel, many would score alike, and the search would pick noisy ones.
+     - Done plainly, that is about 30 times the work of hires, so the search needs a faster form, which the speed benchmark checks.
    - FLI: for each 4×8 cell, try each of the 16 colour-memory values, with the best screen-memory pair on each line.
    - AFLI: 120 pairs per 8×1 strip.
 
@@ -355,6 +358,11 @@ docs/                     this plan, the UX (UX.md) and design notes
    - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come.
    - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes under 10 ms, so there is none for now (section 10).
 3. **App at feature parity**:
+   - PETSCII first, since it can all be checked without a phone:
+     - the character ROM's shapes in `C64Core`, in one file with its own notice (section 17)
+     - the converter (section 6)
+     - a viewer that leaves the VIC-II on the C64's own character ROM, so exported files hold only character codes and colours
+     - PETSCII in the quality and speed benchmarks and the VICE tests, and in the app in place of its sample picture
    - camera and viewfinder
    - capture, review, save, share and export
    - gallery, monitors and CRT layer
