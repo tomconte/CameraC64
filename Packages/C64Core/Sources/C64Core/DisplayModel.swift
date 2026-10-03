@@ -254,7 +254,7 @@ public struct DisplayModel: Hashable, Sendable {
 
     /// Normalised weights of a Gaussian blur, from -radius to radius, or nil
     /// for no blur.
-    private static func gaussian(_ deviation: Double) -> [Float]? {
+    static func gaussian(_ deviation: Double) -> [Float]? {
         guard deviation > 0 else { return nil }
         let radius = Int((3 * deviation).rounded(.up))
         let weights = (-radius...radius).map { exp(-Double($0 * $0) / (2 * deviation * deviation)) }
@@ -291,11 +291,11 @@ public struct DisplayModel: Hashable, Sendable {
 
     /// Each signal level's gamma-corrected value, 64 steps per unit, from 0
     /// to 255: Colodore's conversion of one RGB channel, clamped.
-    private static let signalTable: [UInt8] = (0...255 * 64).map {
+    static let signalTable: [UInt8] = (0...255 * 64).map {
         UInt8(Colodore.gammaCorrected(Double($0) / 64).rounded())
     }
 
-    private static func tableIndex(_ level: Float) -> Int {
+    static func tableIndex(_ level: Float) -> Int {
         Int(min(max(level, 0), 255) * 64 + 0.5)
     }
 

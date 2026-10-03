@@ -45,7 +45,8 @@ enum PictureMode: CaseIterable, Identifiable {
         switch self {
         case .hires: .hires
         case .multicolour: .multicolor
-        case .petscii, .fli, .afli: nil
+        case .petscii: .petscii
+        case .fli, .afli: nil
         }
     }
 
@@ -54,8 +55,7 @@ enum PictureMode: CaseIterable, Identifiable {
     /// (plan, section 16).
     var sample: String? {
         switch self {
-        case .hires, .multicolour: nil
-        case .petscii: "SamplePetscii"
+        case .hires, .multicolour, .petscii: nil
         case .fli: "SampleFLI"
         case .afli: "SampleAFLI"
         }

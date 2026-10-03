@@ -6,6 +6,7 @@
   - The file loads at `$0801` and starts with `SYS 2061`.
   - Its parameters follow the code: the VIC-II's register values, and a table of blocks to copy. The picture's data follows them.
   - It copies each block into the bank at `$C000`, switching the I/O area out for blocks under it, sets the registers, and resets the C64 when a key is pressed.
+  - PETSCII pictures go into the bank at `$8000` instead, where the VIC-II sees the character ROM at `$9000`, so their files hold no character shapes.
   - The layout is documented at the top of the file; C64Core's `.prg` writer (`Program.swift`) fills it in.
 - `c64.cfg` is the linker configuration: code at `$0801`, written without a load address.
 - `build.sh` assembles every program with ca65 and writes them into C64Core as `Packages/C64Core/Sources/C64Core/DisplayPrograms.swift`, so the library builds without an assembler. Run it after editing a program and commit both; CI fails if the generated file is out of date.

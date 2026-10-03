@@ -10,7 +10,7 @@ public enum VICII {
     public static func render(_ frame: C64Frame) -> IndexedImage {
         var image = IndexedImage(width: Screen.width, height: Screen.height, fill: frame.borderColor)
         let background = frame.backgroundColors.map(\.rawValue)
-        frame.memory.withUnsafeBufferPointer { memory in
+        frame.visibleMemory.withUnsafeBufferPointer { memory in
             image.pixels.withUnsafeMutableBufferPointer { pixels in
                 for cell in 0..<C64Frame.cellCount {
                     let screenByte = memory[frame.screenAddress + cell]

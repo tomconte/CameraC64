@@ -18,9 +18,12 @@ public struct ModeSpec: Hashable, Sendable {
     public enum Characters: Hashable, Sendable {
         /// The picture's own characters, at most this many.
         case own(limit: Int)
-        /// A given set, 8 bytes per character as the VIC-II reads them, such
-        /// as the character ROM's.
+        /// A given set, 8 bytes per character as the VIC-II reads them, copied
+        /// into RAM.
         case fixed([UInt8])
+        /// The C64's own, which the VIC-II reads from the character ROM: a
+        /// picture takes all its characters from one of the ROM's two sets.
+        case rom
     }
 
     public var graphicsMode: GraphicsMode
@@ -128,8 +131,17 @@ extension ModeSpec {
             ColorMap(.cell(width: 4, height: 8), .any, .colorRAM),
         ], pixels: .bitmap)
 
-    /// Text with a given character set, such as PETSCII with the character
-    /// ROM's: one colour in each cell on a shared background.
+    /// PETSCII: text in the C64's own characters, from either set of its
+    /// character ROM, one colour in each cell on a shared background.
+    public static let petscii = ModeSpec(
+        graphicsMode: .standardText, width: 320, height: 200, pixelWidth: 1,
+        maps: [
+            ColorMap(.global, .any, .backgroundColor(0)),
+            ColorMap(.cell(width: 8, height: 8), .any, .colorRAM),
+        ], pixels: .characters(.rom))
+
+    /// Text with a given character set, copied into RAM: one colour in each
+    /// cell on a shared background.
     public static func text(characters: [UInt8]) -> ModeSpec {
         precondition(characters.count == 256 * 8, "A character set has 256 characters of 8 bytes")
         return ModeSpec(
@@ -170,4 +182,26 @@ extension ModeSpec {
             ColorMap(.cell(width: 8, height: 8), .shared(count: 4), .extendedBackground),
             ColorMap(.cell(width: 8, height: 8), .any, .colorRAM),
         ], pixels: .characters(.own(limit: 64)))
+}
+
+extension CharacterROM {
+    /// One of the character ROM's two sets of 256 characters. The VIC-II
+    /// shows one at a time.
+    public enum Set: CaseIterable, Hashable, Sendable {
+        /// Upper case letters and graphics: the C64's default.
+        case upperCase
+        /// Lower and upper case letters, with fewer graphics.
+        case lowerCase
+
+        /// The set's 2,048 bytes, 8 per character.
+        public var characters: [UInt8] {
+            let start = self == .upperCase ? 0 : 0x800
+            return Array(CharacterROM.bytes[start..<start + 0x800])
+        }
+
+        /// Where the VIC-II sees the set, in a bank that shows the ROM.
+        public var address: Int {
+            self == .upperCase ? 0x1000 : 0x1800
+        }
+    }
 }

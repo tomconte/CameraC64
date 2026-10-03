@@ -1,5 +1,7 @@
-import C64Core
+import Foundation
 import Testing
+
+@testable import C64Core
 
 /// OKLab values of sRGB's primaries, from Björn Ottosson's reference code.
 @Test(arguments: [
@@ -19,6 +21,25 @@ func okLabMatchesTheReference(color: RGB, expected: OKLab) {
         let color = RGB(UInt8(value), UInt8(255 - value), UInt8(value / 2))
         #expect(OKLab(color).linear.rgb == color)
     }
+}
+
+/// OKLab's cube roots are never more than a unit in the last place from the
+/// exact root, on any platform, whatever the number.
+@Test func cubeRootsAreRight() {
+    var generator = SeededGenerator(seed: 27)
+    var values: [Float] = [
+        0, -0, 1, 8, -27, 0.001, .leastNormalMagnitude / 2, .leastNonzeroMagnitude, .infinity, -.infinity,
+    ]
+    values += (0..<100_000).map { index in
+        let value = pow(10, Float.random(in: -37...3, using: &generator))
+        return index % 3 == 0 ? -value : value
+    }
+    for value in values {
+        let exact = Float(cbrt(Double(value)))
+        let root = OKLab.cubeRoot(value)
+        #expect(abs(Int(root.bitPattern) - Int(exact.bitPattern)) <= 1, "\(value)")
+    }
+    #expect(OKLab.cubeRoot(.nan).isNaN)
 }
 
 @Test func srgbRoundTrips() {

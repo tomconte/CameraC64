@@ -1,4 +1,5 @@
 import C64Core
+import Foundation
 
 /// A small seeded generator (SplitMix64), so random tests are repeatable.
 struct SeededGenerator: RandomNumberGenerator {
@@ -24,8 +25,11 @@ extension C64Color {
 }
 
 extension ModePicture {
-    /// A random picture that obeys its mode's limits.
-    static func random(_ spec: ModeSpec, seed: UInt64) -> ModePicture {
+    /// A random picture that obeys its mode's limits. In the character ROM's
+    /// characters, it takes them from the given set.
+    static func random(
+        _ spec: ModeSpec, seed: UInt64, characterSet: CharacterROM.Set = .upperCase
+    ) -> ModePicture {
         var generator = SeededGenerator(seed: seed)
         var picture = ModePicture(spec: spec)
         let values = UInt8(spec.maps.count)
@@ -34,16 +38,21 @@ extension ModePicture {
         // Character modes draw each cell from a set of characters: the fixed
         // set, or a random one within the limit.
         var tiles: [[UInt8]] = []
-        switch spec.pixels {
-        case .bitmap:
-            break
-        case .characters(.fixed(let set)):
-            tiles = (0..<set.count / 8).map { code in
+        func pixels(of set: [UInt8]) -> [[UInt8]] {
+            (0..<set.count / 8).map { code in
                 (0..<8).flatMap { line in
                     let byte = set[code * 8 + line]
                     return (0..<8).map { (byte >> (7 - $0)) & 1 }
                 }
             }
+        }
+        switch spec.pixels {
+        case .bitmap:
+            break
+        case .characters(.fixed(let set)):
+            tiles = pixels(of: set)
+        case .characters(.rom):
+            tiles = pixels(of: characterSet.characters)
         case .characters(.own(let limit)):
             tiles = (0..<limit).map { _ in
                 (0..<cellWidth * 8).map { _ in UInt8.random(in: 0..<values, using: &generator) }
@@ -82,4 +91,17 @@ extension ModePicture {
 func randomCharacterSet(seed: UInt64) -> [UInt8] {
     var generator = SeededGenerator(seed: seed)
     return (0..<2048).map { _ in UInt8.random(in: 0...255, using: &generator) }
+}
+
+/// A smooth, colourful target: hue across, lightness down.
+func gradient(for spec: ModeSpec) -> Target {
+    var colors: [OKLab] = []
+    for y in 0..<spec.height {
+        for x in 0..<spec.width {
+            let angle = Float(x) / Float(spec.width) * 2 * .pi
+            let lightness = 0.1 + 0.8 * Float(y) / Float(spec.height)
+            colors.append(OKLab(l: lightness, a: 0.12 * cos(angle), b: 0.12 * sin(angle)))
+        }
+    }
+    return Target(width: spec.width, height: spec.height, colors: colors)
 }

@@ -7,6 +7,7 @@ A Swift package on top of C64Core, for Linux and macOS, with no other dependenci
 ```sh
 swift run --package-path Tools c64conv convert photo.png -o picture.prg  # a photo in multicolour, made for a TV
 swift run --package-path Tools c64conv convert photo.png -o tv.png --mode hires --monitor tv --scale 2
+swift run --package-path Tools c64conv convert photo.png -o text.prg --mode petscii  # in the C64's own characters
 swift run --package-path Tools c64conv testcard multicolor -o card.prg   # a random picture that obeys the mode's limits
 swift run --package-path Tools c64conv render picture.kla -o picture.png --scale 2
 swift run --package-path Tools c64conv export picture.kla -o picture.d64 # .prg, .d64, .kla/.koa, .art or .png
@@ -19,13 +20,13 @@ swift run -c release --package-path Tools c64conv speed                  # how l
 
 ## Quality benchmark
 
-`c64conv benchmark` converts a fixed set of photos in hires and multicolour, each for four monitors (sharp, TV, Commodore monitor, black and white), and scores every picture as its monitor shows it (plan, section 10).
+`c64conv benchmark` converts a fixed set of photos in hires, multicolour and PETSCII, each for four monitors (sharp, TV, Commodore monitor, black and white), and scores every picture as its monitor shows it (plan, section 10).
 
 - **Photos**: a chart of every hue at every lightness, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite, listed with their SHA-256 in `Benchmark/photos.txt`: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. Kodak released them for unrestricted use; `Benchmark/get-photos.sh` downloads them into `Benchmark/photos/`, which git ignores.
 - **Score**: the mean OKLab distance, times 100, between the picture as shown and the photo, after blurring both as the eye does from a phone's viewing distance, brightness by 1 pixel and colour by 2, as in S-CIELAB. Lower is better; about 2 is just noticeable. For the black-and-white monitor, only lightness counts.
 - **Baseline**: `Benchmark/scores.txt` holds the current scores. The benchmark fails if a picture scores more than 2% worse, or the mean more than 0.5%. After a change that is meant to alter the pictures, run it with `--update-baseline` and commit the new scores with the change.
 - **Report**: `-o <directory>` writes `index.html`, with every picture next to its photo, at the PAL pixel shape. `--summary <file>` adds the score table in Markdown, as CI does for its job summary.
-- **image64**: with [image64](https://github.com/nschneir/image64)'s command-line tool on the `PATH` or in `$IMAGE64` (macOS only), the benchmark also scores its pictures, with its default settings, from the same 320 × 200 pictures. CI's macOS job builds a fixed version of it for the comparison.
+- **image64**: with [image64](https://github.com/nschneir/image64)'s command-line tool on the `PATH` or in `$IMAGE64` (macOS only), the benchmark also scores its pictures, with its default settings, from the same 320 × 200 pictures. CI's macOS job builds a fixed version of it for the comparison. It has no PETSCII mode.
 
 CI runs the benchmark on every push. Its Linux job checks the scores, and keeps the report as a download on the run's page.
 
@@ -34,9 +35,9 @@ CI runs the benchmark on every push. Its Linux job checks the scores, and keeps 
 `swift test --package-path Tools` runs the tools' tests. Where VICE's `x64sc` is found, it also runs each exported program in VICE and requires the screen to match the renderer pixel for pixel, border included (plan, section 10):
 
 - every standard mode, with random pictures
-- the converter's pictures of the benchmark's chart, in hires and multicolour
+- the converter's pictures of the benchmark's chart, in hires, multicolour and PETSCII
 - memory layouts under the I/O area and the KERNAL
-- PETSCII with VICE's own character ROM, read at test time
+- PETSCII in both character sets, shown with the C64's own character ROM in place, and that C64Core's copy of the ROM is the same as VICE's
 - a `.d64` loaded through an emulated 1541
 
 `x64sc` is looked for in `$X64SC`, on the `PATH`, then in Homebrew's and `/opt/vice`'s `bin`. On a Mac, `brew install vice`. On Linux, `install-vice.sh` builds it without a user interface into `/opt/vice`. With `VICE_TEST_OUTPUT=<directory>`, a mismatch leaves both screens there as PNGs. `VICE_SEEDS=<n>` checks n random pictures per mode instead of 2.

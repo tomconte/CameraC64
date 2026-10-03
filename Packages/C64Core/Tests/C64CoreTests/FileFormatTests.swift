@@ -57,16 +57,30 @@ func programsPutTheFrameInPlace(mode: Int) throws {
     #expect(prg[2...13] == [0x0B, 0x08, 0x0A, 0x00, 0x9E, 0x32, 0x30, 0x36, 0x31, 0x00, 0x00, 0x00])
 
     let (memory, registers) = load(prg)
+    // The bank at $8000 if the frame uses the character ROM, else $C000.
+    let bank = frame.seesCharacterROM ? 0x8000 : 0xC000
+    #expect(frame.exportBank == bank)
     for range in frame.usedMemory {
-        #expect(memory[0xC000 + range.lowerBound..<0xC000 + range.upperBound] == frame.memory[range])
+        #expect(memory[bank + range.lowerBound..<bank + range.upperBound] == frame.memory[range])
     }
     if frame.mode != .hiresBitmap {
         #expect(Array(memory[0xD800..<0xD800 + 1000]) == frame.colorRAM)
     }
     let colors = [frame.borderColor] + frame.backgroundColors
     let pointers = [frame.mode.controlRegister1, frame.mode.controlRegister2, frame.memoryPointers]
-    #expect(registers == pointers + colors.map(\.rawValue) + [0])
+    // $DD00's bank bits: 0 for $C000, 1 for $8000.
+    #expect(registers == pointers + colors.map(\.rawValue) + [frame.seesCharacterROM ? 1 : 0])
     #expect(prg.count < 13_000)
+}
+
+/// A PETSCII program holds the viewer, the video matrix and the colours, and
+/// none of the ROM's characters.
+@Test func petsciiProgramsHoldOnlyCodesAndColours() throws {
+    let frame = try C64Frame(ModePicture.random(.petscii, seed: 7, characterSet: .lowerCase))
+    let prg = frame.prg()
+    #expect(prg.count == 2 + DisplayPrograms.viewer.count + 10 + 2 * 7 + 1000 + 1000)
+    let (memory, _) = load(prg)
+    #expect(Array(memory[0x8400..<0x87E8]) == frame.screen)
 }
 
 @Test func programsSwitchOutTheIOAreaUnderIt() throws {

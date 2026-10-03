@@ -25,13 +25,14 @@ public enum SpeedBenchmark {
         public var name: String { "\(mode), \(monitor)" }
     }
 
-    /// Both bitmap modes, for a colour TV, a sharp display and a monochrome
-    /// monitor, which each search differently.
-    public static let cases: [Case] = [("Hires", ModeSpec.hires), ("Multicolour", .multicolor)].flatMap { mode in
-        [("TV", DisplayModel.tv), ("Sharp", .sharp), ("B&W", .blackAndWhite)].map { monitor in
-            Case(mode: mode.0, spec: mode.1, monitor: monitor.0, display: monitor.1)
+    /// Both bitmap modes and PETSCII, for a colour TV, a sharp display and a
+    /// monochrome monitor, which each search differently.
+    public static let cases: [Case] = [("Hires", ModeSpec.hires), ("Multicolour", .multicolor), ("PETSCII", .petscii)]
+        .flatMap { mode in
+            [("TV", DisplayModel.tv), ("Sharp", .sharp), ("B&W", .blackAndWhite)].map { monitor in
+                Case(mode: mode.0, spec: mode.1, monitor: monitor.0, display: monitor.1)
+            }
         }
-    }
 
     /// The median time of each stage of a frame, in seconds.
     public struct Timing: Hashable, Sendable {

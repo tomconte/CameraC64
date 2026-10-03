@@ -1,12 +1,13 @@
 import Foundation
 
-/// Turns photos into pictures in a bitmap mode (plan, section 6).
+/// Turns photos into pictures in hires, multicolour or PETSCII (plan,
+/// section 6). PETSCII has a search of its own, in Converter+PETSCII.swift.
 ///
-/// For each cell, it tries every set of colours the cell can show: the 120
-/// pairs of a hires cell, or the 1,820 sets of four of a multicolour cell,
-/// where it then picks the background that gives the lowest total. The result
-/// is optimal for the converter's measure of the error, which adds up, pixel by
-/// pixel:
+/// In the bitmap modes, for each cell, it tries every set of colours the cell
+/// can show: the 120 pairs of a hires cell, or the 1,820 sets of four of a
+/// multicolour cell, where it then picks the background that gives the lowest
+/// total. The result is optimal for the converter's measure of the error,
+/// which adds up, pixel by pixel:
 ///
 /// - the squared OKLab distance from the target to the closest colour the
 ///   pixel can take in its cell's set, or to a mix of two of the set's colours
@@ -48,9 +49,13 @@ public struct Converter: Sendable {
         }
     }
 
-    /// The modes the converter can search: bitmaps whose pixels take any
-    /// colour from maps of one cell size, and at most one shared background.
+    /// The modes the converter can search: PETSCII, and bitmaps whose pixels
+    /// take any colour from maps of one cell size, and at most one shared
+    /// background.
     public static func supports(_ spec: ModeSpec) -> Bool {
+        if spec == .petscii {
+            return true
+        }
         guard spec.pixels == .bitmap, spec.maps.allSatisfy({ $0.values == .any }) else { return false }
         let shared = spec.maps.filter { $0.granularity == .global }
         let cells = Set(spec.maps.map(\.granularity)).subtracting([.global])
@@ -93,10 +98,13 @@ public struct Converter: Sendable {
     /// The same for each pair's mixes, `levels` per pair, with each mix's
     /// texture penalty added to its squared length.
     let mixTerms: [Float]
+    /// For PETSCII, how every character looks in every pair of candidates.
+    let characterTables: CharacterTables?
 
     public init(spec: ModeSpec, settings: Settings = Settings()) {
         precondition(
-            Self.supports(spec), "The converter handles bitmaps with colours per cell and at most one background")
+            Self.supports(spec),
+            "The converter handles PETSCII, and bitmaps with colours per cell and at most one background")
         self.spec = spec
         self.settings = settings
         backgroundMap = spec.maps.firstIndex { $0.granularity == .global }
@@ -148,7 +156,8 @@ public struct Converter: Sendable {
             return [-2 * color.l, -2 * a, -2 * b, color.l * color.l + a * a + b * b + penalty]
         }
         singleTerms = shown.flatMap { terms(OKLab($0)) }
-        levels = settings.dithering > 0 ? 15 : 0
+        // PETSCII's characters are its only dithering.
+        levels = settings.dithering > 0 && spec.pixels == .bitmap ? 15 : 0
         var mixes: [Float] = []
         if levels > 0 {
             let patterns = display.patterns(pixelWidth: spec.pixelWidth)
@@ -163,6 +172,9 @@ public struct Converter: Sendable {
             }
         }
         mixTerms = mixes
+        characterTables =
+            spec.pixels == .characters(.rom)
+            ? CharacterTables(candidates: candidates, palette: palette, display: display) : nil
     }
 
     /// Colours that look the same on a colour TV and in monochrome.
@@ -188,6 +200,9 @@ public struct Converter: Sendable {
     /// are clearly better, so the picture does not flicker.
     public func convert(_ target: Target, keeping previous: Conversion? = nil) -> Conversion {
         precondition(target.width == spec.width && target.height == spec.height, "The target needs the mode's grid")
+        if let characterTables {
+            return convertCharacters(target, tables: characterTables, keeping: previous)
+        }
         let count = candidates.count
         let cellCount = cellsAcross * cellsDown
         let slots = backgroundMap == nil ? 1 : count

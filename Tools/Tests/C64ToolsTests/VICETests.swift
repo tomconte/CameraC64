@@ -80,14 +80,18 @@ struct VICETests {
         }
     }
 
-    /// PETSCII: text with the C64's own character set, read from VICE's ROM
-    /// at test time and copied into RAM.
-    @Test func petsciiLooksTheSameInVICE() throws {
+    /// PETSCII: the C64's own characters, which the VIC-II reads from VICE's
+    /// character ROM, and the renderer from C64Core's copy of it.
+    @Test(arguments: CharacterROM.Set.allCases)
+    func petsciiLooksTheSameInVICE(set: CharacterROM.Set) throws {
+        let frame = try C64Frame(TestPictures.random(.petscii, seed: 7, characterSet: set))
+        try expectVICEShows(frame, "PETSCII \(set)")
+    }
+
+    /// C64Core's character ROM is the one that comes with VICE.
+    @Test func characterROMIsVICEs() throws {
         let rom = try #require(vice?.characterROM(), "VICE's character ROM")
-        for (name, characters) in [("upper case", rom[0..<2048]), ("lower case", rom[2048..<4096])] {
-            let frame = try C64Frame(TestPictures.random(.text(characters: Array(characters)), seed: 7))
-            try expectVICEShows(frame, "PETSCII \(name)")
-        }
+        #expect(rom == CharacterROM.bytes)
     }
 
     /// Layouts that put data under the I/O area and the KERNAL ROM once
@@ -101,11 +105,15 @@ struct VICETests {
         try expectVICEShows(relocated(text, screen: 0x3C00, graphics: 0x1000), "characters at D000")
         let extended = try C64Frame(TestPictures.random(.extendedColorCharacterSet, seed: 14))
         try expectVICEShows(relocated(extended, screen: 0x0400, graphics: 0x3800), "characters at F800")
+        // PETSCII goes in the bank at $8000: this screen ends up under BASIC.
+        let petscii = try C64Frame(TestPictures.random(.petscii, seed: 15))
+        try expectVICEShows(
+            relocated(petscii, screen: 0x3C00, graphics: petscii.graphicsAddress), "PETSCII screen at BC00")
     }
 
     /// The converter's pictures, of a chart with every colour, are frames
     /// like any other: VICE shows them as the renderer does.
-    @Test(arguments: [ModeSpec.hires, .multicolor])
+    @Test(arguments: [ModeSpec.hires, .multicolor, .petscii])
     func convertedPicturesLookTheSameInVICE(spec: ModeSpec) throws {
         let frame = Converter(spec: spec).convert(Benchmark.chart().image).frame
         try expectVICEShows(frame, "converted \(spec.graphicsMode)")

@@ -2,7 +2,7 @@
 
 An iPhone camera that takes authentic Commodore 64 pictures: real VIC-II graphics modes, every hardware limit respected, and files that run on a real C64.
 
-**Work in progress.** The app is being rewritten from scratch. The converter works, for hires and multicolour: `c64conv convert` turns a photo into a C64 picture, and the app shows a sample photo converted, but it has no camera yet. See the [rewrite plan](docs/REWRITE_PLAN.md).
+**Work in progress.** The app is being rewritten from scratch. The converter works, for hires, multicolour and PETSCII: `c64conv convert` turns a photo into a C64 picture, and the app shows a sample photo converted, but it has no camera yet. See the [rewrite plan](docs/REWRITE_PLAN.md).
 
 The original 2012–2013 app (Objective-C, GPUImage) is preserved at tag `legacy-1.2` ([browse](https://github.com/tomconte/CameraC64/tree/435cf74a414ef75b35dc3ea28039a1f8455f8293)).
 
@@ -35,4 +35,4 @@ Details, including TestFlight setup: [docs/CI.md](docs/CI.md).
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Credits for borrowed code are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT, see [LICENSE](LICENSE), except for the character ROM's shapes in `Packages/C64Core/Sources/C64Core/CharacterROM.swift`, which have their own notice. Credits for borrowed code are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -30,7 +30,9 @@ public enum Benchmark {
         }
     }
 
-    public static let modes: [(name: String, spec: ModeSpec)] = [("hires", .hires), ("multicolour", .multicolor)]
+    public static let modes: [(name: String, spec: ModeSpec)] = [
+        ("hires", .hires), ("multicolour", .multicolor), ("petscii", .petscii),
+    ]
     /// The amber and green monitors make the same pictures as the
     /// black-and-white one, in another tint.
     public static let monitors: [(name: String, display: DisplayModel)] = [
@@ -334,11 +336,14 @@ public struct Image64: Sendable {
         return spec == .hires ? try C64Frame(artStudio: Array(data)) : try C64Frame(koala: Array(data))
     }
 
-    /// Converts each photo in each mode with image64, and scores it on each
-    /// monitor as the benchmark scores the converter's pictures.
+    /// The modes image64 converts: the bitmap modes.
+    public static let modes = Benchmark.modes.filter { $0.spec.pixels == .bitmap }
+
+    /// Converts each photo in each of its modes with image64, and scores it on
+    /// each monitor as the benchmark scores the converter's pictures.
     public func run(_ photos: [Benchmark.Photo]) throws -> [Benchmark.Entry] {
         var entries: [Benchmark.Entry] = []
-        for (modeName, spec) in Benchmark.modes {
+        for (modeName, spec) in Self.modes {
             for photo in photos {
                 let reference = Benchmark.reference(photo)
                 let start = DispatchTime.now().uptimeNanoseconds

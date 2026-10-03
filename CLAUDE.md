@@ -47,21 +47,21 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 
 - **`Packages/C64Core`** holds all C64 logic.
   - Palettes (`Colodore`, Pepto) with each colour's PAL signal, modes described as data (`ModeSpec`, and `ModePicture` with its encoder), `C64Frame`, the renderer (`VICII`), and `.prg`, `.d64`, Koala and Art Studio files.
-  - The converter for the bitmap modes: `Target` prepares a photo (crop, linear-light averaging, tones, in `OKLab`), and `Converter` searches every cell's colour sets and dithers. `DisplayModel` shows pictures on the monitor presets, and tells the converter how dithered mixes look there. `SpeedBenchmark` times a viewfinder frame.
+  - The converter for hires, multicolour and PETSCII: `Target` prepares a photo (crop, linear-light averaging, tones, in `OKLab`), and `Converter` searches every cell's colour sets and dithers, or for PETSCII its characters (`Converter+PETSCII.swift`). `DisplayModel` shows pictures on the monitor presets, and tells the converter how dithered mixes look there. `SpeedBenchmark` times a viewfinder frame.
   - It must keep building and testing on Linux, so no UIKit, SwiftUI, Metal, CoreGraphics or ImageIO; it takes plain pixel buffers (`RGBImage`).
   - Its platform floor (iOS 18, macOS 15) is deliberately lower than the app's.
 - **`C64/`** holds the 6502 display programs, written for ca65.
   - `C64/build.sh` assembles them into `C64Core` as `DisplayPrograms.swift`. That file is generated: never edit it, and commit it with the sources.
-  - Exported programs copy the VIC-II's memory into the bank at `$C000`.
+  - Exported programs copy the VIC-II's memory into the bank at `$C000`, or for PETSCII, which uses the C64's own character ROM, the bank at `$8000`.
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app target uses MainActor as its default actor isolation.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
   - The app's `PictureMaker` (`App/Sources/Pictures/`) does it: converter, renderer, then the monitor's display model. Until the camera comes (milestone 3), it converts the bundled sample photo.
-  - The one exception is temporary: modes without a converter yet (PETSCII, FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
+  - The one exception is temporary: modes without a converter yet (FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
 - **Still to come** (plan section 5):
-  - converters for PETSCII and the character-set modes, which need the character ROM's shapes in `C64Core`
+  - converters for the character-set modes
   - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit
   - display programs for the advanced modes in `C64/`
 
@@ -71,6 +71,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Spelling:** identifiers in `C64Core` and `Tools` use American spelling as Swift does (`C64Color`, `multicolor`); comments and docs use British spelling.
 - **Fast loops:** the converter's and display models' inner loops are plain loops over `UnsafeMutablePointer` buffers, which the compiler vectorises. Swift's SIMD types, and arrays used inside such loops, were several times slower. Work spreads over the cores with `concurrently` (`Concurrency.swift`); on Linux, `concurrentPerform` takes a `@Sendable` closure, so buffers are shared through `Shared`.
 - **Optimised builds:** the app runs `C64Core` optimised, and an optimised build once got display-model lines wrong that the debug tests got right: arrays that started out sharing storage were swapped while blurring. Give each buffer its own memory in such code. CI runs `C64Core`'s tests both ways.
+- **Stale builds:** after files are added to `C64Core`, the `Tools` package's build may not see them until `swift package --package-path Tools clean`.
 - **Quality benchmark:** a change that alters pictures changes the scores in `Tools/Benchmark/scores.txt`. CI fails if they get worse; when the change is meant, run `c64conv benchmark --update-baseline` and commit the scores with it. The photos come from Kodak's suite on a personal website, which sometimes refuses requests; `get-photos.sh` retries, and CI caches them.
 - **VICE** (in `Tools/Sources/C64Tools/VICE.swift`):
   - `x64sc` 3.10 crashes when it logs to a stdout that is not a terminal, so it logs to a file.
@@ -91,4 +92,4 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Borrowed code:**
   - Only from MIT or similarly permissive projects. Keep the original notice in the file and add the project to `THIRD_PARTY_NOTICES.md`.
   - Never copy GPL code (VICE, Frodo, reSID), and never add the KERNAL or BASIC ROMs to the repo.
-  - The character ROM is the one exception (plan, section 17). Its shapes go into `C64Core` as one file with its own notice, outside the MIT licence. Until that file exists, tests that need the ROM read it from VICE's installation.
+  - The character ROM is the one exception (plan, section 17). Its shapes are in `C64Core`'s `CharacterROM.swift`, one file with its own notice, outside the MIT licence; keep them there and nowhere else.

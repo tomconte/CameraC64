@@ -83,7 +83,7 @@ struct CameraScreenTests {
     }
 
     @Test func modesConvertOrShowASample() {
-        #expect(PictureMode.allCases.filter { $0.spec != nil } == [.hires, .multicolour])
+        #expect(PictureMode.allCases.filter { $0.spec != nil } == [.hires, .multicolour, .petscii])
         #expect(PictureMode.allCases.allSatisfy { ($0.spec == nil) == ($0.sample != nil) })
     }
 

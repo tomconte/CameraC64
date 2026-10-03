@@ -62,18 +62,49 @@ public enum ModeEncodingError: Error, Hashable {
     case tooManySharedColors(map: Int, count: Int)
     /// The picture has more distinct characters than the mode allows.
     case tooManyCharacters(count: Int, limit: Int)
-    /// A cell's pixels match none of the mode's fixed characters.
+    /// A cell's pixels match none of the mode's fixed characters, or for the
+    /// character ROM's, the cells need both of its sets.
     case noSuchCharacter(cell: Int)
 }
 
 extension C64Frame {
     /// Encodes a picture into C64 memory, with the usual layout. The picture
     /// must obey its mode's limits.
+    ///
+    /// A picture in the character ROM's characters takes the upper case set
+    /// if that has every cell's character, and the lower case set otherwise.
     public init(_ picture: ModePicture) throws(ModeEncodingError) {
         let spec = picture.spec
         let cellWidth = 8 / spec.pixelWidth
         precondition(picture.pixels.allSatisfy { Int($0) < spec.maps.count }, "A pixel value names a map")
-        self.init(mode: spec.graphicsMode)
+
+        // Each cell's 8 bytes as the VIC-II reads them: a line of 8 pixels of
+        // 1 bit, or 4 pixels of 2 bits, most significant bits on the left.
+        let cellBytes = (0..<Self.cellCount).map { cell in
+            (0..<8).map { line in
+                let start = (cell / 40 * 8 + line) * spec.width + cell % 40 * cellWidth
+                return picture.pixels[start..<start + cellWidth].reduce(UInt8(0)) {
+                    $0 << spec.bitsPerPixel | $1
+                }
+            }
+        }
+
+        var romCodes: [[UInt8]: Int] = [:]
+        if case .characters(.rom) = spec.pixels {
+            let sets = CharacterROM.Set.allCases
+            guard let set = sets.indices.first(where: { set in cellBytes.allSatisfy { Self.romCodes[set][$0] != nil } })
+            else {
+                // A cell that neither set has, or else one the first lacks.
+                let missing =
+                    cellBytes.firstIndex { bytes in Self.romCodes.allSatisfy { $0[bytes] == nil } }
+                    ?? cellBytes.firstIndex { Self.romCodes[0][$0] == nil }!
+                throw .noSuchCharacter(cell: missing)
+            }
+            romCodes = Self.romCodes[set]
+            self.init(characterSet: sets[set])
+        } else {
+            self.init(mode: spec.graphicsMode)
+        }
         borderColor = picture.borderColor
 
         var screen = [UInt8](repeating: 0, count: Self.cellCount)
@@ -117,39 +148,28 @@ extension C64Frame {
             }
         }
 
-        // Each cell's 8 bytes as the VIC-II reads them: a line of 8 pixels of
-        // 1 bit, or 4 pixels of 2 bits, most significant bits on the left.
-        let cellBytes = (0..<Self.cellCount).map { cell in
-            (0..<8).map { line in
-                let start = (cell / 40 * 8 + line) * spec.width + cell % 40 * cellWidth
-                return picture.pixels[start..<start + cellWidth].reduce(UInt8(0)) {
-                    $0 << spec.bitsPerPixel | $1
-                }
-            }
-        }
-
         switch spec.pixels {
         case .bitmap:
             bitmap = cellBytes.flatMap { $0 }
         case .characters(let characters):
             var codes: [[UInt8]: Int] = [:]
-            var set: [UInt8]
+            // The characters to copy into RAM, if any.
+            var set: [UInt8] = []
             switch characters {
             case .fixed(let fixed):
                 set = fixed
-                for code in stride(from: fixed.count / 8 - 1, through: 0, by: -1) {
-                    codes[Array(fixed[code * 8..<code * 8 + 8])] = code
-                }
+                codes = Self.codes(of: fixed)
                 if let missing = cellBytes.firstIndex(where: { codes[$0] == nil }) {
                     throw .noSuchCharacter(cell: missing)
                 }
             case .own(let limit):
-                set = []
                 for bytes in cellBytes where codes[bytes] == nil {
                     codes[bytes] = codes.count
                     set += bytes
                 }
                 guard codes.count <= limit else { throw .tooManyCharacters(count: codes.count, limit: limit) }
+            case .rom:
+                codes = romCodes
             }
             memory.replaceSubrange(graphicsAddress..<graphicsAddress + set.count, with: set)
             for cell in 0..<Self.cellCount {
@@ -159,4 +179,16 @@ extension C64Frame {
         self.screen = screen
         colorRAM = colors
     }
+
+    /// Each character's code in a set, the lowest of those that look the same.
+    private static func codes(of set: [UInt8]) -> [[UInt8]: Int] {
+        var codes: [[UInt8]: Int] = [:]
+        for code in stride(from: set.count / 8 - 1, through: 0, by: -1) {
+            codes[Array(set[code * 8..<code * 8 + 8])] = code
+        }
+        return codes
+    }
+
+    /// The codes of the character ROM's sets, in `CharacterROM.Set` order.
+    private static let romCodes = CharacterROM.Set.allCases.map { codes(of: $0.characters) }
 }

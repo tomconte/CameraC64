@@ -8,8 +8,9 @@ let usage = """
     Commands:
       testcard <mode> -o <file> [--seed <n>]
           A random picture that obeys the mode's limits. Modes: hires,
-          multicolor, charset, multicolor-charset, ecm-charset.
-      convert <photo.png> -o <file> [--mode hires|multicolor] [--monitor <name>]
+          multicolor, petscii, petscii-lower, charset, multicolor-charset,
+          ecm-charset.
+      convert <photo.png> -o <file> [--mode hires|multicolor|petscii] [--monitor <name>]
               [--palette colodore|pepto] [--dithering <0-1>] [--neutral] [--scale <n>]
           Converts a photo into a picture in a mode, multicolour by default,
           made for a monitor: tv (the default), monitor, sharp, bw, green or
@@ -83,7 +84,8 @@ struct Arguments {
         switch options["--mode"] ?? "multicolor" {
         case "hires": .hires
         case "multicolor", "multicolour": .multicolor
-        case let other: throw Failure(description: "Unknown mode \(other): use hires or multicolor")
+        case "petscii": .petscii
+        case let other: throw Failure(description: "Unknown mode \(other): use hires, multicolor or petscii")
         }
     }
 
@@ -148,15 +150,17 @@ func write(
 func run(_ command: String, _ arguments: Arguments) throws {
     switch command {
     case "testcard":
-        let modes: [String: ModeSpec] = [
-            "hires": .hires, "multicolor": .multicolor, "charset": .characterSet,
-            "multicolor-charset": .multicolorCharacterSet, "ecm-charset": .extendedColorCharacterSet,
+        let modes: [String: (ModeSpec, CharacterROM.Set)] = [
+            "hires": (.hires, .upperCase), "multicolor": (.multicolor, .upperCase), "petscii": (.petscii, .upperCase),
+            "petscii-lower": (.petscii, .lowerCase), "charset": (.characterSet, .upperCase),
+            "multicolor-charset": (.multicolorCharacterSet, .upperCase),
+            "ecm-charset": (.extendedColorCharacterSet, .upperCase),
         ]
-        guard let name = arguments.positional.first, let spec = modes[name] else {
+        guard let name = arguments.positional.first, let (spec, set) = modes[name] else {
             throw Failure(description: "testcard needs a mode: \(modes.keys.sorted().joined(separator: ", "))")
         }
         let seed = try arguments.integer("--seed", default: 1)
-        try write(C64Frame(TestPictures.random(spec, seed: UInt64(seed))), to: arguments.output())
+        try write(C64Frame(TestPictures.random(spec, seed: UInt64(seed), characterSet: set)), to: arguments.output())
 
     case "convert":
         guard let input = arguments.positional.first else { throw Failure(description: "convert needs a photo") }
