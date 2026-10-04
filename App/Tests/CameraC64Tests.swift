@@ -249,6 +249,10 @@ struct CameraScreenTests {
         return frame
     }
 
+    /// A corner of the picture. (Declared inside a test, a type makes Swift
+    /// Testing's `#require` warn that nothing in it throws.)
+    private enum Corner { case topLeft, topRight, bottomLeft, bottomRight }
+
     /// The viewfinder converts frames into whole screens, seen as the phone is
     /// held, and mirrored for the front camera. (Without dithering, which
     /// makes the search quicker and changes nothing here.)
@@ -259,7 +263,6 @@ struct CameraScreenTests {
             x < 240 && y < 180 ? RGB(220, 30, 30) : RGB(30, 30, 220)
         }
         let viewfinder = Viewfinder(feed: ViewfinderFeed())
-        enum Corner { case topLeft, topRight, bottomLeft, bottomRight }
         /// The corner of the picture that is red, if only one is.
         func redCorner(_ held: HeldOrientation, frontCamera: Bool) throws -> Corner? {
             let settings = Viewfinder.Settings(
