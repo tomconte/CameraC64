@@ -254,14 +254,26 @@ public struct Target: Hashable, Sendable {
     /// `width` × `height` pixels.
     private static func turned(_ stored: [Float], _ orientation: ImageOrientation, width: Int, height: Int) -> [Float] {
         let storedWidth = orientation.swapsAxes ? height : width
+        // Where a pixel is stored moves by the same step for each pixel
+        // across, and for each row down.
+        func index(_ x: Int, _ y: Int) -> Int {
+            let pixel = orientation.storedPixel(x: x, y: y, width: width, height: height)
+            return (pixel.y * storedWidth + pixel.x) * 3
+        }
+        let (origin, across, down) = (index(0, 0), index(1, 0) - index(0, 0), index(0, 1) - index(0, 0))
         var seen = [Float](repeating: 0, count: stored.count)
-        for y in 0..<height {
-            for x in 0..<width {
-                let (storedX, storedY) = orientation.storedPixel(x: x, y: y, width: width, height: height)
-                let (from, to) = ((storedY * storedWidth + storedX) * 3, (y * width + x) * 3)
-                seen[to] = stored[from]
-                seen[to + 1] = stored[from + 1]
-                seen[to + 2] = stored[from + 2]
+        stored.withUnsafeBufferPointer { stored in
+            seen.withUnsafeMutableBufferPointer { seen in
+                for y in 0..<height {
+                    var (from, to) = (origin + y * down, y * width * 3)
+                    for _ in 0..<width {
+                        seen[to] = stored[from]
+                        seen[to + 1] = stored[from + 1]
+                        seen[to + 2] = stored[from + 2]
+                        from += across
+                        to += 3
+                    }
+                }
             }
         }
         return seen

@@ -26,8 +26,9 @@ let usage = """
       vice <file.prg|file.d64> -o <file.png> [--cycles <n>] [--palette colodore|pepto] [--scale <n>]
           Runs a program in VICE's x64sc and saves its screen.
       speed [--runs <n>]
-          The speed benchmark: how long each stage of a 1920 x 1440 viewfinder
-          frame takes here, as the app's hidden screen shows it on a phone.
+          The speed benchmark: how long each stage of a viewfinder frame takes
+          here, as the app's hidden screen shows it on a phone: a 1440 x 1920
+          frame from the camera, turned as for a phone held sideways.
       benchmark [--photos <dir>] [-o <dir>] [--summary <file.md>] [--dithering <0-1>] [--update-baseline]
           The quality benchmark: converts a chart, the app's sample photo and
           the photos in Tools/Benchmark/photos.txt (from get-photos.sh), and
@@ -219,7 +220,7 @@ func run(_ command: String, _ arguments: Arguments) throws {
     case "speed":
         let runs = try arguments.integer("--runs", default: 9)
         let frame = SpeedBenchmark.cameraFrame()
-        print("A \(frame.width) x \(frame.height) frame, median of \(runs) runs:")
+        print("A \(frame.width) x \(frame.height) frame, held sideways, median of \(runs) runs:")
         print("target + conversion + rendering + display")
         for benchmarkCase in SpeedBenchmark.cases {
             let timing = SpeedBenchmark.measure(benchmarkCase, frame: frame, runs: runs)
