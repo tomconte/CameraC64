@@ -171,3 +171,144 @@ private func photo(width: Int, height: Int, _ color: (Int, Int) -> RGB) -> RGBIm
     #expect(sharp.colors[15].l > soft.colors[15].l)
     #expect(abs(sharp.colors[10].l - soft.colors[10].l) < 0.0001)
 }
+
+// MARK: - Orientations
+
+/// The sides of a picture as seen.
+private enum Side {
+    case top, bottom, left, right
+}
+
+/// Where TIFF 6.0 (tag 274) says each orientation's first stored row and
+/// first stored column are seen.
+private let tiffSides: [ImageOrientation: (row: Side, column: Side)] = [
+    .up: (.top, .left), .upMirrored: (.top, .right), .down: (.bottom, .right), .downMirrored: (.bottom, .left),
+    .leftMirrored: (.left, .top), .right: (.right, .top), .rightMirrored: (.right, .bottom), .left: (.left, .bottom),
+]
+
+/// Where stored pixel (x, y) is seen, in a picture `width` × `height` pixels
+/// as seen: stored row y lies y rows in from the side the first row is on,
+/// and stored column x likewise.
+private func seenPixel(x: Int, y: Int, _ orientation: ImageOrientation, width: Int, height: Int) -> (x: Int, y: Int) {
+    let sides = tiffSides[orientation]!
+    var seen = (x: 0, y: 0)
+    for (side, distance) in [(sides.row, y), (sides.column, x)] {
+        switch side {
+        case .top: seen.y = distance
+        case .bottom: seen.y = height - 1 - distance
+        case .left: seen.x = distance
+        case .right: seen.x = width - 1 - distance
+        }
+    }
+    return seen
+}
+
+/// A photo turned, pixel by pixel, as its orientation says: as it is seen.
+private func turned(_ stored: RGBImage, _ orientation: ImageOrientation) -> RGBImage {
+    let (width, height) = orientation.swapsAxes ? (stored.height, stored.width) : (stored.width, stored.height)
+    var seen = RGBImage(width: width, height: height, fill: RGB(0, 0, 0))
+    for y in 0..<stored.height {
+        for x in 0..<stored.width {
+            let position = seenPixel(x: x, y: y, orientation, width: width, height: height)
+            seen[position.x, position.y] = stored[x, y]
+        }
+    }
+    return seen
+}
+
+/// A photo of random colours.
+private func noise(width: Int, height: Int, seed: UInt64) -> RGBImage {
+    var generator = SeededGenerator(seed: seed)
+    return photo(width: width, height: height) { _, _ in
+        RGB(
+            UInt8.random(in: 0...255, using: &generator), UInt8.random(in: 0...255, using: &generator),
+            UInt8.random(in: 0...255, using: &generator))
+    }
+}
+
+/// Each orientation turns a photo upright as TIFF defines it.
+@Test(arguments: ImageOrientation.allCases)
+func orientationsTurnPhotosAsTIFFDefines(orientation: ImageOrientation) {
+    let stored = photo(width: 3, height: 2) { x, y in
+        let grey = UInt8(20 + 40 * (y * 3 + x))
+        return RGB(grey, grey, grey)
+    }
+    let (width, height) = orientation.swapsAxes ? (2, 3) : (3, 2)
+    let whole = Crop(x: 0, y: 0, width: Double(width), height: Double(height))
+    let target = Target(stored, width: width, height: height, crop: whole, orientation: orientation, tones: .neutral)
+    for y in 0..<2 {
+        for x in 0..<3 {
+            let seen = seenPixel(x: x, y: y, orientation, width: width, height: height)
+            #expect(target.colors[seen.y * width + seen.x].distance(to: OKLab(stored[x, y])) < 0.0001)
+        }
+    }
+}
+
+/// A photo in an orientation makes the same target as the photo turned
+/// upright: crops are measured on the photo as seen, and centred on it by
+/// default.
+@Test(arguments: ImageOrientation.allCases)
+func turnedPhotosAreCroppedAsSeen(orientation: ImageOrientation) {
+    let stored = noise(width: 37, height: 23, seed: UInt64(orientation.rawValue))
+    let upright = turned(stored, orientation)
+    for crop in [Crop(x: 2.3, y: 1.7, width: 15.5, height: 10.2), nil] {
+        let target = Target(stored, width: 16, height: 10, crop: crop, orientation: orientation, tones: .neutral)
+        let expected = Target(upright, width: 16, height: 10, crop: crop, tones: .neutral)
+        let largest = zip(target.colors, expected.colors).map { $0.distance(to: $1) }.max()!
+        #expect(largest < 0.0001, "\(crop.map { "\($0)" } ?? "centred")")
+    }
+}
+
+/// Points map as the pixels around them do.
+@Test(arguments: ImageOrientation.allCases)
+func pointsMapAsPixelsDo(orientation: ImageOrientation) {
+    let (storedWidth, storedHeight) = (5, 3)
+    let (width, height) = orientation.swapsAxes ? (3, 5) : (5, 3)
+    for y in 0..<storedHeight {
+        for x in 0..<storedWidth {
+            let seen = seenPixel(x: x, y: y, orientation, width: width, height: height)
+            let point = orientation.storedPoint(
+                x: (Double(seen.x) + 0.5) / Double(width), y: (Double(seen.y) + 0.5) / Double(height))
+            #expect(abs(point.x - (Double(x) + 0.5) / Double(storedWidth)) < 1e-12)
+            #expect(abs(point.y - (Double(y) + 0.5) / Double(storedHeight)) < 1e-12)
+        }
+    }
+}
+
+/// Mirroring flips the picture as seen, left to right, whatever its
+/// orientation.
+@Test func mirroringFlipsWhatIsSeen() {
+    #expect(ImageOrientation.up.mirrored == .upMirrored)
+    for orientation in ImageOrientation.allCases {
+        #expect(orientation.mirrored.mirrored == orientation)
+        #expect(orientation.mirrored.swapsAxes == orientation.swapsAxes)
+        for (x, y) in [(0.25, 0.1), (0.9, 0.6)] {
+            let flipped = orientation.storedPoint(x: 1 - x, y: y)
+            let mirrored = orientation.mirrored.storedPoint(x: x, y: y)
+            #expect(abs(flipped.x - mirrored.x) < 1e-12 && abs(flipped.y - mirrored.y) < 1e-12)
+        }
+    }
+}
+
+/// Camera frames are read where they are, whatever pads their rows, and make
+/// the same target as the same pixels in a photo.
+@Test func framesAreReadInPlace() {
+    let (width, height, padding) = (400, 260, 12)
+    let photo = noise(width: width, height: height, seed: 64)
+    let bytesPerRow = width * 4 + padding
+    var frame = [UInt8](repeating: 0xAB, count: height * bytesPerRow)
+    for y in 0..<height {
+        for x in 0..<width {
+            let (pixel, color) = (y * bytesPerRow + x * 4, photo[x, y])
+            (frame[pixel], frame[pixel + 1], frame[pixel + 2]) = (color.b, color.g, color.r)
+        }
+    }
+    for orientation in [ImageOrientation.up, .left] {
+        let target = frame.withUnsafeBytes { bytes in
+            Target(
+                bytes, width: width, height: height, bytesPerRow: bytesPerRow, layout: .bgra, for: .hires,
+                orientation: orientation)
+        }
+        #expect(target == Target(photo, for: .hires, orientation: orientation))
+    }
+}

@@ -195,9 +195,10 @@ public struct Converter: Sendable {
 
     /// Converts a photo: prepares its target for the mode, then converts that.
     public func convert(
-        _ photo: RGBImage, crop: Crop? = nil, tones: Tones = Tones(), keeping previous: Conversion? = nil
+        _ photo: RGBImage, crop: Crop? = nil, orientation: ImageOrientation = .up, tones: Tones = Tones(),
+        keeping previous: Conversion? = nil
     ) -> Conversion {
-        convert(Target(photo, for: spec, crop: crop, tones: tones), keeping: previous)
+        convert(Target(photo, for: spec, crop: crop, orientation: orientation, tones: tones), keeping: previous)
     }
 
     /// Converts a target with the mode's pixel grid.

@@ -81,22 +81,62 @@ public struct Target: Hashable, Sendable {
     }
 
     /// Prepares a photo for a mode's pixel grid.
-    public init(_ photo: RGBImage, for spec: ModeSpec, crop: Crop? = nil, tones: Tones = Tones()) {
-        self.init(photo, width: spec.width, height: spec.height, crop: crop, tones: tones)
+    public init(
+        _ photo: RGBImage, for spec: ModeSpec, crop: Crop? = nil, orientation: ImageOrientation = .up,
+        tones: Tones = Tones()
+    ) {
+        self.init(photo, width: spec.width, height: spec.height, crop: crop, orientation: orientation, tones: tones)
     }
 
     /// Prepares a photo: each of the `width` × `height` pixels takes the
-    /// average, in linear light, of the part of the crop it covers. The crop
-    /// is the largest centred one of the display window's shape by default.
-    public init(_ photo: RGBImage, width: Int, height: Int, crop: Crop? = nil, tones: Tones = Tones()) {
-        precondition(width > 0 && height > 0 && photo.width > 0 && photo.height > 0)
-        var crop = crop ?? Crop.centered(width: photo.width, height: photo.height)
-        crop.x = min(max(crop.x, 0), Double(photo.width) - 1)
-        crop.y = min(max(crop.y, 0), Double(photo.height) - 1)
-        crop.width = min(max(crop.width, 1), Double(photo.width) - crop.x)
-        crop.height = min(max(crop.height, 1), Double(photo.height) - crop.y)
+    /// average, in linear light, of the part of the crop it covers. The photo
+    /// is turned upright as its orientation says, and the crop is measured on
+    /// the photo as seen: by default, the largest centred one of the display
+    /// window's shape.
+    public init(
+        _ photo: RGBImage, width: Int, height: Int, crop: Crop? = nil, orientation: ImageOrientation = .up,
+        tones: Tones = Tones()
+    ) {
+        precondition(photo.width > 0 && photo.height > 0)
+        let bytesPerRow = photo.width * photo.layout.bytesPerPixel
+        self = photo.bytes.withUnsafeBytes { bytes in
+            Target(
+                Source(bytes, width: photo.width, height: photo.height, bytesPerRow: bytesPerRow, layout: photo.layout),
+                width: width, height: height, crop: crop, orientation: orientation, tones: tones)
+        }
+    }
 
-        let averages = Self.averaged(photo, crop: crop, width: width, height: height)
+    /// Prepares a picture in memory that something else owns, such as a
+    /// camera frame, for a mode's pixel grid, reading it where it is, without
+    /// a copy: `height` rows of `width` pixels, each row starting
+    /// `bytesPerRow` bytes after the one before. Otherwise as for a photo.
+    public init(
+        _ pixels: UnsafeRawBufferPointer, width: Int, height: Int, bytesPerRow: Int, layout: RGBImage.Layout,
+        for spec: ModeSpec, crop: Crop? = nil, orientation: ImageOrientation = .up, tones: Tones = Tones()
+    ) {
+        self.init(
+            Source(pixels, width: width, height: height, bytesPerRow: bytesPerRow, layout: layout),
+            width: spec.width, height: spec.height, crop: crop, orientation: orientation, tones: tones)
+    }
+
+    private init(_ source: Source, width: Int, height: Int, crop: Crop?, orientation: ImageOrientation, tones: Tones) {
+        precondition(width > 0 && height > 0)
+        // The crop, on the photo as seen.
+        let (seenWidth, seenHeight) =
+            orientation.swapsAxes ? (source.height, source.width) : (source.width, source.height)
+        var crop = crop ?? Crop.centered(width: seenWidth, height: seenHeight)
+        crop.x = min(max(crop.x, 0), Double(seenWidth) - 1)
+        crop.y = min(max(crop.y, 0), Double(seenHeight) - 1)
+        crop.width = min(max(crop.width, 1), Double(seenWidth) - crop.x)
+        crop.height = min(max(crop.height, 1), Double(seenHeight) - crop.y)
+
+        // Average the photo as it is stored, then turn the small grid upright.
+        let (storedWidth, storedHeight) = orientation.swapsAxes ? (height, width) : (width, height)
+        let storedCrop = crop.stored(orientation, width: Double(seenWidth), height: Double(seenHeight))
+        var averages = Self.averaged(source, crop: storedCrop, width: storedWidth, height: storedHeight)
+        if orientation != .up {
+            averages = Self.turned(averages, orientation, width: width, height: height)
+        }
         var colors = (0..<width * height).map { pixel in
             OKLab(LinearRGB(r: averages[pixel * 3], g: averages[pixel * 3 + 1], b: averages[pixel * 3 + 2]))
         }
@@ -117,6 +157,25 @@ public struct Target: Hashable, Sendable {
     }
 
     // MARK: - Averaging
+
+    /// A photo's pixels in memory, row by row.
+    private struct Source {
+        let bytes: UnsafePointer<UInt8>
+        let width: Int
+        let height: Int
+        let bytesPerRow: Int
+        let layout: RGBImage.Layout
+
+        init(_ pixels: UnsafeRawBufferPointer, width: Int, height: Int, bytesPerRow: Int, layout: RGBImage.Layout) {
+            precondition(width > 0 && height > 0 && bytesPerRow >= width * layout.bytesPerPixel)
+            precondition(pixels.count >= (height - 1) * bytesPerRow + width * layout.bytesPerPixel, "Too few bytes")
+            bytes = pixels.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            self.width = width
+            self.height = height
+            self.bytesPerRow = bytesPerRow
+            self.layout = layout
+        }
+    }
 
     /// Which source pixels one output pixel covers along an axis, and how
     /// much of each: weights that add up to 1.
@@ -143,49 +202,45 @@ public struct Target: Hashable, Sendable {
 
     /// The crop averaged down to `width` × `height` pixels in linear light: 3
     /// channels per pixel, row by row.
-    private static func averaged(_ photo: RGBImage, crop: Crop, width: Int, height: Int) -> [Float] {
+    private static func averaged(_ source: Source, crop: Crop, width: Int, height: Int) -> [Float] {
         let columns = footprints(start: crop.x, length: crop.width, count: width)
         let rows = footprints(start: crop.y, length: crop.height, count: height)
-        let (bytesPerPixel, offsets) = (photo.layout.bytesPerPixel, photo.layout.offsets)
-        let lastColumn = photo.width - 1
-        let lastRow = photo.height - 1
+        let (bytesPerPixel, offsets) = (source.layout.bytesPerPixel, source.layout.offsets)
+        let (bytesPerRow, lastColumn, lastRow) = (source.bytesPerRow, source.width - 1, source.height - 1)
 
         var output = [Float](repeating: 0, count: width * height * 3)
         output.withUnsafeMutableBufferPointer { output in
-            photo.bytes.withUnsafeBufferPointer { bytes in
-                let shared = Shared((output.baseAddress!, bytes.baseAddress!))
-                concurrently(height, inChunksOf: 8) { outputRows in
-                    let (output, bytes) = shared.value
-                    // One source row averaged across, kept while the next
-                    // output row needs it too.
-                    var rowAverages = [Float](repeating: 0, count: width * 3)
-                    var cachedRow = -1
-                    SRGB.linear.withUnsafeBufferPointer { linear in
-                        for outputRow in outputRows {
-                            let footprint = rows[outputRow]
-                            for (offset, rowWeight) in footprint.weights.enumerated() {
-                                let sourceRow = min(footprint.first + offset, lastRow)
-                                if sourceRow != cachedRow {
-                                    let rowStart = sourceRow * photo.width
-                                    for (outputColumn, column) in columns.enumerated() {
-                                        var (r, g, b): (Float, Float, Float) = (0, 0, 0)
-                                        for (index, weight) in column.weights.enumerated() {
-                                            let pixel =
-                                                (rowStart + min(column.first + index, lastColumn)) * bytesPerPixel
-                                            r += weight * linear[Int(bytes[pixel + offsets.r])]
-                                            g += weight * linear[Int(bytes[pixel + offsets.g])]
-                                            b += weight * linear[Int(bytes[pixel + offsets.b])]
-                                        }
-                                        rowAverages[outputColumn * 3] = r
-                                        rowAverages[outputColumn * 3 + 1] = g
-                                        rowAverages[outputColumn * 3 + 2] = b
+            let shared = Shared((output.baseAddress!, source.bytes))
+            concurrently(height, inChunksOf: 8) { outputRows in
+                let (output, bytes) = shared.value
+                // One source row averaged across, kept while the next output
+                // row needs it too.
+                var rowAverages = [Float](repeating: 0, count: width * 3)
+                var cachedRow = -1
+                SRGB.linear.withUnsafeBufferPointer { linear in
+                    for outputRow in outputRows {
+                        let footprint = rows[outputRow]
+                        for (offset, rowWeight) in footprint.weights.enumerated() {
+                            let sourceRow = min(footprint.first + offset, lastRow)
+                            if sourceRow != cachedRow {
+                                let rowStart = sourceRow * bytesPerRow
+                                for (outputColumn, column) in columns.enumerated() {
+                                    var (r, g, b): (Float, Float, Float) = (0, 0, 0)
+                                    for (index, weight) in column.weights.enumerated() {
+                                        let pixel = rowStart + min(column.first + index, lastColumn) * bytesPerPixel
+                                        r += weight * linear[Int(bytes[pixel + offsets.r])]
+                                        g += weight * linear[Int(bytes[pixel + offsets.g])]
+                                        b += weight * linear[Int(bytes[pixel + offsets.b])]
                                     }
-                                    cachedRow = sourceRow
+                                    rowAverages[outputColumn * 3] = r
+                                    rowAverages[outputColumn * 3 + 1] = g
+                                    rowAverages[outputColumn * 3 + 2] = b
                                 }
-                                let start = outputRow * width * 3
-                                for index in 0..<width * 3 {
-                                    output[start + index] += rowWeight * rowAverages[index]
-                                }
+                                cachedRow = sourceRow
+                            }
+                            let start = outputRow * width * 3
+                            for index in 0..<width * 3 {
+                                output[start + index] += rowWeight * rowAverages[index]
                             }
                         }
                     }
@@ -193,6 +248,23 @@ public struct Target: Hashable, Sendable {
             }
         }
         return output
+    }
+
+    /// Averages for a grid in an orientation, 3 per pixel, turned to be seen:
+    /// `width` × `height` pixels.
+    private static func turned(_ stored: [Float], _ orientation: ImageOrientation, width: Int, height: Int) -> [Float] {
+        let storedWidth = orientation.swapsAxes ? height : width
+        var seen = [Float](repeating: 0, count: stored.count)
+        for y in 0..<height {
+            for x in 0..<width {
+                let (storedX, storedY) = orientation.storedPixel(x: x, y: y, width: width, height: height)
+                let (from, to) = ((storedY * storedWidth + storedX) * 3, (y * width + x) * 3)
+                seen[to] = stored[from]
+                seen[to + 1] = stored[from + 1]
+                seen[to + 2] = stored[from + 2]
+            }
+        }
+        return seen
     }
 
     // MARK: - Tones
