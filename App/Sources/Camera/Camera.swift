@@ -190,6 +190,11 @@ actor Camera {
             input = newInput
             if let format, (try? device.lockForConfiguration()) != nil {
                 device.activeFormat = format
+                // No faster than the viewfinder converts.
+                let ranges = format.videoSupportedFrameRateRanges
+                if ranges.contains(where: { $0.minFrameRate <= 30 && $0.maxFrameRate >= 30 }) {
+                    device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+                }
                 device.unlockForConfiguration()
             }
         }

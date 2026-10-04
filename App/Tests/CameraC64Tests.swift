@@ -9,6 +9,13 @@ import Testing
 /// The camera screen's logic. C64 logic is tested in Packages/C64Core.
 @MainActor
 struct CameraScreenTests {
+    /// The sample photo, which the app bundles for previews and tests.
+    /// (Passed straight to a `Photo?` parameter, `#require` would check a
+    /// doubly optional value that is never nil.)
+    private func samplePhoto() throws -> Photo {
+        try #require(Photo.sample)
+    }
+
     @Test func gravityTellsHowThePhoneIsHeld() {
         #expect(HeldOrientation(gravityX: 0, y: -1) == .portrait)
         #expect(HeldOrientation(gravityX: -1, y: 0) == .landscapeLeft)
@@ -106,7 +113,7 @@ struct CameraScreenTests {
     /// Every mode's picture comes out at the screen's size, border included,
     /// and its display window at the picture's.
     @Test func everyModeHasAPicture() async throws {
-        let maker = PictureMaker(photo: try #require(Photo.sample))
+        let maker = PictureMaker(photo: try samplePhoto())
         for mode in PictureMode.allCases {
             let key = PictureMaker.Key(mode, on: .tv)
             await maker.make(key)
@@ -121,7 +128,7 @@ struct CameraScreenTests {
     /// other modes ignore.
     @Test func petsciiCanUseOnlyTheGraphicsCharacters() async throws {
         #expect(PictureMaker.Key(.hires, on: .tv, petsciiCharacters: .graphics) == PictureMaker.Key(.hires, on: .tv))
-        let maker = PictureMaker(photo: try #require(Photo.sample))
+        let maker = PictureMaker(photo: try samplePhoto())
         let all = PictureMaker.Key(.petscii, on: .tv)
         let graphics = PictureMaker.Key(.petscii, on: .tv, petsciiCharacters: .graphics)
         await maker.make(all)
@@ -135,7 +142,7 @@ struct CameraScreenTests {
     /// The black-and-white monitor shows greys, from the display model rather
     /// than a tint.
     @Test func blackAndWhiteShowsGreys() async throws {
-        let maker = PictureMaker(photo: try #require(Photo.sample))
+        let maker = PictureMaker(photo: try samplePhoto())
         let key = PictureMaker.Key(.multicolour, on: .blackAndWhite)
         await maker.make(key)
         let screen = try #require(maker.picture(key)?.screen)
@@ -154,13 +161,14 @@ struct CameraScreenTests {
         #expect(maker.picture(PictureMaker.Key(.fli, on: .tv)) != nil)
     }
 
-    /// A new shot replaces the last one's pictures.
+    /// A new shot replaces the last one's pictures. (On the black-and-white
+    /// monitor, whose search is the quickest.)
     @Test func aNewPhotoReplacesThePictures() async throws {
-        let maker = PictureMaker(photo: try #require(Photo.sample))
-        let key = PictureMaker.Key(.hires, on: .tv)
+        let maker = PictureMaker(photo: try samplePhoto())
+        let key = PictureMaker.Key(.hires, on: .blackAndWhite)
         await maker.make(key)
         #expect(maker.picture(key) != nil)
-        let next = try #require(Photo.sample)
+        let next = try samplePhoto()
         maker.use(next)
         #expect(maker.photo?.id == next.id)
         #expect(maker.picture(key) == nil)
@@ -229,14 +237,15 @@ struct CameraScreenTests {
     }
 
     /// The viewfinder converts frames into whole screens, seen as the phone is
-    /// held, and mirrored for the front camera.
+    /// held, and mirrored for the front camera. (Without dithering, which
+    /// makes the search quicker and changes nothing here.)
     @Test func viewfinderTurnsAndMirrorsFrames() throws {
         // Red at the top of a portrait frame, blue at the bottom.
         let frame = try cameraFrame(width: 360, height: 480) { _, y in y < 240 ? RGB(220, 30, 30) : RGB(30, 30, 220) }
         let viewfinder = Viewfinder(feed: ViewfinderFeed())
         func colors(_ orientation: ImageOrientation) throws -> (top: RGB, bottom: RGB, left: RGB, right: RGB) {
             let settings = Viewfinder.Settings(
-                spec: .hires, converter: Converter.Settings(display: .sharp), orientation: orientation)
+                spec: .hires, converter: Converter.Settings(display: .sharp, dithering: 0), orientation: orientation)
             let screen = try #require(viewfinder.picture(of: frame, settings))
             #expect(screen.width == Screen.width && screen.height == Screen.height)
             let (x, y) = (Screen.windowX, Screen.windowY)
