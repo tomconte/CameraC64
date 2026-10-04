@@ -46,10 +46,9 @@ public enum SpeedBenchmark {
         public var total: Double { target + conversion + rendering + display }
     }
 
-    /// A camera frame for the benchmark, as the camera sends them to the
-    /// viewfinder: in BGRA, upright for a phone held in portrait. Gradients
-    /// and fine detail, the same every time.
-    public static func cameraFrame(width: Int = 1440, height: Int = 1920) -> RGBImage {
+    /// A camera frame for the benchmark, laid out as the camera gives them:
+    /// gradients and fine detail, the same every time.
+    public static func cameraFrame(width: Int = 1920, height: Int = 1440) -> RGBImage {
         var bytes = [UInt8](repeating: 255, count: width * height * 4)
         for y in 0..<height {
             for x in 0..<width {
@@ -62,10 +61,6 @@ public enum SpeedBenchmark {
         }
         return RGBImage(width: width, height: height, layout: .bgra, bytes: bytes)
     }
-
-    /// How the benchmark sees its frames: as the viewfinder does with the
-    /// phone held sideways, where the crop is largest.
-    public static let orientation = ImageOrientation.left
 
     /// Times each stage `runs` times on a frame, after one run to warm up,
     /// and keeps the medians.
@@ -80,7 +75,7 @@ public enum SpeedBenchmark {
             var conversion: Conversion?
             var screen: IndexedImage?
             let stages = [
-                clock.measure { target = Target(frame, for: benchmarkCase.spec, orientation: orientation) },
+                clock.measure { target = Target(frame, for: benchmarkCase.spec) },
                 clock.measure { conversion = converter.convert(target!) },
                 clock.measure { screen = VICII.render(conversion!.frame) },
                 clock.measure { _ = benchmarkCase.display.show(screen!, palette: converter.settings.palette) },

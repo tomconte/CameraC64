@@ -196,26 +196,39 @@ struct CameraScreenTests {
         #expect(Photo(data: data as Data, mirrored: true)?.orientation == .leftMirrored)
     }
 
-    /// Frames come upright for a phone held in portrait; held sideways, the
-    /// scene's top is along a side of the frame, and a front camera's frames
-    /// are mirrored once upright.
-    @Test func framesTurnWithThePhone() {
-        #expect(HeldOrientation.portrait.frameOrientation(mirrored: false) == .up)
-        #expect(HeldOrientation.landscapeLeft.frameOrientation(mirrored: false) == .left)
-        #expect(HeldOrientation.landscapeRight.frameOrientation(mirrored: false) == .right)
-        // With the top of the phone to the left, the top of the picture is
-        // the frame's right side.
-        let top = HeldOrientation.landscapeLeft.frameOrientation(mirrored: false).storedPoint(x: 0.5, y: 0)
-        #expect(top.x == 1 && top.y == 0.5)
-        #expect(HeldOrientation.portrait.frameOrientation(mirrored: true) == .upMirrored)
-        #expect(HeldOrientation.landscapeLeft.frameOrientation(mirrored: true) == .rightMirrored)
-        #expect(HeldOrientation.landscapeRight.frameOrientation(mirrored: true) == .leftMirrored)
+    /// The back camera's frames are upright with the top of the phone to the
+    /// left, and need a quarter turn clockwise held upright.
+    @Test func backCameraFramesTurnWithThePhone() {
+        #expect(HeldOrientation.portrait.frameOrientation(frontCamera: false) == .right)
+        #expect(HeldOrientation.landscapeLeft.frameOrientation(frontCamera: false) == .up)
+        #expect(HeldOrientation.landscapeRight.frameOrientation(frontCamera: false) == .down)
+        // Held upright, the top of the picture is the frame's left side.
+        let top = HeldOrientation.portrait.frameOrientation(frontCamera: false).storedPoint(x: 0.5, y: 0)
+        #expect(top.x == 0 && top.y == 0.5)
     }
 
+    /// The front camera's frames are upright with the top of the phone to the
+    /// right, and turn the other way to the back camera's as the phone turns.
+    /// They are mirrored once upright.
+    @Test func frontCameraFramesTurnTheOtherWay() {
+        #expect(HeldOrientation.portrait.frameOrientation(frontCamera: true) == .leftMirrored)
+        #expect(HeldOrientation.landscapeLeft.frameOrientation(frontCamera: true) == .downMirrored)
+        #expect(HeldOrientation.landscapeRight.frameOrientation(frontCamera: true) == .upMirrored)
+        // Held upright, the top of the picture is still the frame's left
+        // side, and its left is the frame's top, as in a mirror.
+        let front = HeldOrientation.portrait.frameOrientation(frontCamera: true)
+        let top = front.storedPoint(x: 0.5, y: 0)
+        let left = front.storedPoint(x: 0, y: 0.5)
+        #expect(top.x == 0 && top.y == 0.5)
+        #expect(left.x == 0.5 && left.y == 0)
+    }
+
+    /// Photos are stored with the turn their camera's frames need, and the
+    /// front camera's are mirrored when they are decoded.
     @Test func photosAreStoredAsThePhoneIsHeld() {
-        #expect(HeldOrientation.portrait.photoRotationAngle == 90)
-        #expect(HeldOrientation.landscapeLeft.photoRotationAngle == 0)
-        #expect(HeldOrientation.landscapeRight.photoRotationAngle == 180)
+        let held: [HeldOrientation] = [.portrait, .landscapeLeft, .landscapeRight]
+        #expect(held.map { $0.photoRotationAngle(frontCamera: false) } == [90, 0, 180])
+        #expect(held.map { $0.photoRotationAngle(frontCamera: true) } == [90, 180, 0])
     }
 
     /// A camera frame in BGRA, as the camera sends them.
@@ -240,51 +253,65 @@ struct CameraScreenTests {
     /// held, and mirrored for the front camera. (Without dithering, which
     /// makes the search quicker and changes nothing here.)
     @Test func viewfinderTurnsAndMirrorsFrames() throws {
-        // Red at the top of a portrait frame, blue at the bottom.
-        let frame = try cameraFrame(width: 360, height: 480) { _, y in y < 240 ? RGB(220, 30, 30) : RGB(30, 30, 220) }
+        // A frame as the camera sends them, sideways: red in its top left
+        // quarter, blue elsewhere.
+        let frame = try cameraFrame(width: 480, height: 360) { x, y in
+            x < 240 && y < 180 ? RGB(220, 30, 30) : RGB(30, 30, 220)
+        }
         let viewfinder = Viewfinder(feed: ViewfinderFeed())
-        func colors(_ orientation: ImageOrientation) throws -> (top: RGB, bottom: RGB, left: RGB, right: RGB) {
+        enum Corner { case topLeft, topRight, bottomLeft, bottomRight }
+        /// The corner of the picture that is red, if only one is.
+        func redCorner(_ held: HeldOrientation, frontCamera: Bool) throws -> Corner? {
             let settings = Viewfinder.Settings(
-                spec: .hires, converter: Converter.Settings(display: .sharp, dithering: 0), orientation: orientation)
+                spec: .hires, converter: Converter.Settings(display: .sharp, dithering: 0),
+                orientation: held.frameOrientation(frontCamera: frontCamera))
             let screen = try #require(viewfinder.picture(of: frame, settings))
             #expect(screen.width == Screen.width && screen.height == Screen.height)
-            let (x, y) = (Screen.windowX, Screen.windowY)
-            return (
-                screen[x + 160, y + 20], screen[x + 160, y + 180], screen[x + 20, y + 100], screen[x + 300, y + 100]
-            )
+            let corners: [(Corner, x: Int, y: Int)] = [
+                (.topLeft, 20, 20), (.topRight, 300, 20), (.bottomLeft, 20, 180), (.bottomRight, 300, 180),
+            ]
+            let red = corners.filter { _, x, y in
+                let color = screen[Screen.windowX + x, Screen.windowY + y]
+                return color.r > color.b
+            }
+            return red.count == 1 ? red[0].0 : nil
         }
-        func isRed(_ color: RGB) -> Bool { color.r > color.b }
 
-        let upright = try colors(.up)
-        #expect(isRed(upright.top) && !isRed(upright.bottom))
-        // Top to the left: the frame's top is on the left of the picture.
-        let sideways = try colors(.left)
-        #expect(isRed(sideways.left) && !isRed(sideways.right))
-        let otherWay = try colors(.right)
-        #expect(!isRed(otherWay.left) && isRed(otherWay.right))
-        let mirrored = try colors(HeldOrientation.landscapeLeft.frameOrientation(mirrored: true))
-        #expect(!isRed(mirrored.left) && isRed(mirrored.right))
+        #expect(try redCorner(.portrait, frontCamera: false) == .topRight)
+        #expect(try redCorner(.landscapeLeft, frontCamera: false) == .topLeft)
+        #expect(try redCorner(.landscapeRight, frontCamera: false) == .bottomRight)
+        // The front camera's pictures are mirrored, and turn the other way
+        // with the phone sideways.
+        #expect(try redCorner(.portrait, frontCamera: true) == .topLeft)
+        #expect(try redCorner(.landscapeLeft, frontCamera: true) == .bottomLeft)
+        #expect(try redCorner(.landscapeRight, frontCamera: true) == .topRight)
     }
 
     /// A tap focuses where it lands: the centre of the picture is the centre
-    /// of the camera's view, and its corners map into the sensor's own
-    /// orientation, which is upright with the top of the phone to the left.
+    /// of the camera's view, and its corners map into the frame as the camera
+    /// sends it, which is how the camera measures points of interest.
     @Test func tapsFocusWhereTheyLand() {
         for orientation in ImageOrientation.allCases {
             let centre = Viewfinder.cameraPoint(
-                ofPicturePoint: CGPoint(x: 0.5, y: 0.5), frameWidth: 1440, frameHeight: 1920, orientation: orientation)
+                ofPicturePoint: CGPoint(x: 0.5, y: 0.5), frameWidth: 1920, frameHeight: 1440, orientation: orientation)
             #expect(abs(centre.x - 0.5) < 1e-9 && abs(centre.y - 0.5) < 1e-9)
         }
         let topLeft = CGPoint(x: 0, y: 0)
-        // Held upright, the picture is a band across the middle of the
-        // portrait frame, along the sensor's bottom edge.
+        // Held upright, the picture is a band down the middle of the frame,
+        // and its top is along the frame's left side.
         let upright = Viewfinder.cameraPoint(
-            ofPicturePoint: topLeft, frameWidth: 1440, frameHeight: 1920, orientation: .up)
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .right)
         #expect(abs(upright.x - 0.2496) < 0.001 && abs(upright.y - 1) < 1e-9)
-        // Held with the top to the left, the sensor sees the picture upright.
+        // Held with the top to the left, the back camera sees the picture
+        // upright.
         let sideways = Viewfinder.cameraPoint(
-            ofPicturePoint: topLeft, frameWidth: 1440, frameHeight: 1920, orientation: .left)
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .up)
         #expect(abs(sideways.x) < 1e-9 && abs(sideways.y - 0.0548) < 0.001)
+        // The front camera's mirrored picture, held upright, starts at the
+        // frame's top.
+        let front = Viewfinder.cameraPoint(
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .leftMirrored)
+        #expect(abs(front.x - 0.2496) < 0.001 && abs(front.y) < 1e-9)
     }
 
     /// The camera picks a 4:3 format with frames no larger than 1920 × 1440,

@@ -92,7 +92,8 @@ final class LiveCamera {
     /// camera's photo is mirrored, like its viewfinder.
     func takePhoto(flash: Bool, held: HeldOrientation) async throws -> Photo {
         let mirrored = capabilities?.position == .front
-        let data = try await camera.takePhoto(flash: flash, rotationAngle: held.photoRotationAngle)
+        let angle = held.photoRotationAngle(frontCamera: mirrored)
+        let data = try await camera.takePhoto(flash: flash, rotationAngle: angle)
         let photo = await Task.detached(priority: .userInitiated) {
             Photo(data: data, mirrored: mirrored)
         }.value

@@ -10,11 +10,13 @@ import CoreMedia
 /// configuring a camera can block. Frames go to the viewfinder on another
 /// queue, so converting them never holds the camera up.
 ///
-/// Frames come turned upright for a phone held in portrait, which is a video
-/// rotation angle of 90° for either camera, and never mirrored: the
-/// viewfinder turns them as the phone is held and mirrors the front camera's
-/// itself. Photos are stored as the sensor reads them, with an orientation
-/// for the way the phone was held.
+/// Frames come sideways, in the orientation AVFoundation gives them by
+/// default, and never mirrored: the viewfinder turns them as the phone is held
+/// and mirrors the front camera's itself (`HeldOrientation.uprightTurns`).
+/// Their rotation angle is left alone: the iPhone 17's front camera, whose
+/// sensor is mounted upright, needs a different angle from other cameras to
+/// keep the usual orientation, and AVFoundation sets it. Photos are stored
+/// sideways too, with an orientation for the way the phone was held.
 actor Camera {
     /// Which way a camera faces.
     nonisolated enum Position: Sendable {
@@ -216,8 +218,8 @@ actor Camera {
         if let dimensions = Self.photoDimensions(of: device.activeFormat) {
             photoOutput.maxPhotoDimensions = dimensions
         }
-        Self.setUp(videoOutput.connection(with: .video), rotationAngle: 90)
-        Self.setUp(photoOutput.connection(with: .video), rotationAngle: nil)
+        Self.unmirror(videoOutput.connection(with: .video))
+        Self.unmirror(photoOutput.connection(with: .video))
 
         let low = Double(device.minAvailableVideoZoomFactor / mainZoomFactor)
         let high = Double(
@@ -230,17 +232,12 @@ actor Camera {
             position: position, zoomRange: range, zoomPresets: CameraZoom.presets(in: range, lenses: lenses))
     }
 
-    /// Turns an output's pictures by an angle, if any, and never mirrors
-    /// them.
-    private nonisolated static func setUp(_ connection: AVCaptureConnection?, rotationAngle: CGFloat?) {
-        guard let connection else { return }
-        if let rotationAngle, connection.isVideoRotationAngleSupported(rotationAngle) {
-            connection.videoRotationAngle = rotationAngle
-        }
-        if connection.isVideoMirroringSupported {
-            connection.automaticallyAdjustsVideoMirroring = false
-            connection.isVideoMirrored = false
-        }
+    /// Keeps an output's pictures unmirrored: the viewfinder mirrors the front
+    /// camera's itself, once they are upright.
+    private nonisolated static func unmirror(_ connection: AVCaptureConnection?) {
+        guard let connection, connection.isVideoMirroringSupported else { return }
+        connection.automaticallyAdjustsVideoMirroring = false
+        connection.isVideoMirrored = false
     }
 
     /// The camera facing a way: at the back, a set of cameras that hand over

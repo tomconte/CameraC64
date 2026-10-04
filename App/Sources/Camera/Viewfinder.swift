@@ -19,8 +19,8 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
     nonisolated struct Settings: Hashable, Sendable {
         var spec: ModeSpec
         var converter: Converter.Settings
-        /// How frames are seen. The camera sends them upright for a phone
-        /// held in portrait, and unmirrored.
+        /// How frames are seen. The camera sends them sideways, as
+        /// AVFoundation does by default, and unmirrored.
         var orientation: ImageOrientation
     }
 
@@ -88,8 +88,8 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
     }
 
     /// Where a point of the picture lies in the camera's view, as the camera
-    /// measures points of interest: across and down from 0 to 1, in the
-    /// sensor's own landscape orientation. The point goes across and down the
+    /// measures points of interest: across and down from 0 to 1, in the frame
+    /// as the camera sends it, sideways. The point goes across and down the
     /// picture from 0 to 1, and the picture is the centred crop of a frame
     /// `frameWidth` × `frameHeight` pixels, seen in an orientation.
     static func cameraPoint(
@@ -102,10 +102,7 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
             y: (crop.y + point.y * crop.height) / Double(seenHeight)
         )
         let inFrame = orientation.storedPoint(x: seen.x, y: seen.y)
-        // Frames are the sensor's picture turned a quarter turn clockwise,
-        // to portrait.
-        let inCamera = ImageOrientation.right.storedPoint(x: inFrame.x, y: inFrame.y)
-        return CGPoint(x: inCamera.x, y: inCamera.y)
+        return CGPoint(x: inFrame.x, y: inFrame.y)
     }
 
     // MARK: - Converters and pictures

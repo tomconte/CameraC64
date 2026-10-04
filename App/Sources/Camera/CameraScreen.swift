@@ -192,7 +192,7 @@ struct CameraScreen: View {
 
     /// How the camera's frames are seen, as the phone is held.
     private var frameOrientation: ImageOrientation {
-        held.orientation.frameOrientation(mirrored: camera.capabilities?.position == .front)
+        held.orientation.frameOrientation(frontCamera: camera.capabilities?.position == .front)
     }
 
     private func tv(showsZoom: Bool) -> some View {

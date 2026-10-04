@@ -28,8 +28,7 @@ struct SpeedBenchmarkView: View {
 
     @State private var results: [Result] = []
     @State private var running = false
-    /// As the camera sends them, turned as for a phone held sideways.
-    private let frameSize = (width: 1440, height: 1920)
+    private let frameSize = (width: 1920, height: 1440)
 
     var body: some View {
         List {
@@ -46,7 +45,7 @@ struct SpeedBenchmarkView: View {
                     ProgressView()
                 }
             } header: {
-                Text("A \(frameSize.width) × \(frameSize.height) frame, held sideways")
+                Text("A \(frameSize.width) × \(frameSize.height) frame")
             } footer: {
                 Text(
                     "Target + conversion + rendering + display, in milliseconds: the median of 9 runs. "
@@ -98,7 +97,7 @@ struct SpeedBenchmarkView: View {
             "Camera C64 speed benchmark",
             "\(Self.model), iOS \(UIDevice.current.systemVersion), "
                 + "\(ProcessInfo.processInfo.activeProcessorCount) cores",
-            "A \(frameSize.width) x \(frameSize.height) frame, held sideways: target + conversion + rendering + display",
+            "A \(frameSize.width) x \(frameSize.height) frame: target + conversion + rendering + display",
         ]
         lines += results.map { "\($0.name): \(SpeedBenchmark.describe($0.timing))" }
         return lines.joined(separator: "\n")
