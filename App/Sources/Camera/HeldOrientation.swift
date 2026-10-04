@@ -1,3 +1,4 @@
+import C64Core
 import CoreMotion
 import Observation
 import SwiftUI
@@ -56,6 +57,34 @@ enum HeldOrientation {
         case .portrait: translation
         case .landscapeLeft: CGSize(width: translation.height, height: -translation.width)
         case .landscapeRight: CGSize(width: -translation.height, height: translation.width)
+        }
+    }
+
+    /// How the camera's frames are seen with the phone held this way, so the
+    /// picture is upright (docs/UX.md, section 1). The camera sends them
+    /// upright for a phone held in portrait. A front camera's are then
+    /// mirrored, as a mirror shows the scene: mirroring them before they are
+    /// turned would show it upside down with the phone held sideways.
+    func frameOrientation(mirrored: Bool) -> ImageOrientation {
+        let upright: ImageOrientation =
+            switch self {
+            case .portrait: .up
+            // The top of the phone points left, so the scene's top is along
+            // the frame's right side.
+            case .landscapeLeft: .left
+            case .landscapeRight: .right
+            }
+        return mirrored ? upright.mirrored : upright
+    }
+
+    /// The video rotation angle that stores photos upright as the phone is
+    /// held. AVFoundation measures it from the phone held sideways with its
+    /// top to the left, for either camera.
+    var photoRotationAngle: CGFloat {
+        switch self {
+        case .portrait: 90
+        case .landscapeLeft: 0
+        case .landscapeRight: 180
         }
     }
 }

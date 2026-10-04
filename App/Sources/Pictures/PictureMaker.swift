@@ -11,13 +11,22 @@ struct ShownPicture {
     let window: CGImage
 }
 
-/// Makes the camera screen's pictures with C64Core (CLAUDE.md, core rule): the
-/// converter turns the photo into C64 memory, the renderer draws that memory as
-/// the VIC-II shows it, and the monitor's display model shows the result.
+extension ShownPicture {
+    /// A whole screen as a monitor shows it, border included.
+    init?(_ screen: RGBImage) {
+        let windowArea = CGRect(
+            x: Screen.windowX, y: Screen.windowY, width: Screen.windowWidth, height: Screen.windowHeight)
+        guard let image = screen.cgImage, let window = image.cropping(to: windowArea) else { return nil }
+        self.init(screen: image, window: window)
+    }
+}
+
+/// Makes the pictures of a shot with C64Core (CLAUDE.md, core rule): the
+/// converter turns the photo into C64 memory, the renderer draws that memory
+/// as the VIC-II shows it, and the monitor's display model shows the result.
 ///
-/// Until the camera comes (plan, milestone 3), the photo is the bundled sample.
-/// Modes without a converter yet show sample pictures, through the same display
-/// models.
+/// Modes without a converter yet show sample pictures, through the same
+/// display models.
 @Observable
 final class PictureMaker {
     /// A picture: a mode's, for a monitor.
@@ -35,17 +44,30 @@ final class PictureMaker {
         }
     }
 
-    /// The photo the pictures are made from.
-    let photo: RGBImage?
+    /// The photo the pictures are made from: the last shot, or nil before
+    /// the first.
+    private(set) var photo: Photo?
     private(set) var pictures: [Key: ShownPicture] = [:]
-    @ObservationIgnored private var making: Set<Key> = []
+    /// The pictures being made, each with the photo it is made from.
+    @ObservationIgnored private var making: Set<Job> = []
 
-    init(photo: RGBImage? = UIImage(named: "SamplePhoto")?.cgImage.flatMap { RGBImage($0) }) {
+    private struct Job: Hashable {
+        var key: Key
+        var photo: UUID?
+    }
+
+    init(photo: Photo? = nil) {
         self.photo = photo
     }
 
     func picture(_ key: Key) -> ShownPicture? {
         pictures[key]
+    }
+
+    /// Makes the pictures from another photo, forgetting the last one's.
+    func use(_ photo: Photo) {
+        self.photo = photo
+        pictures = [:]
     }
 
     /// Makes every mode's picture for a monitor, the given mode first, unless
@@ -57,33 +79,36 @@ final class PictureMaker {
         }
     }
 
-    /// Makes a picture, unless it is made already.
+    /// Makes a picture, unless it is made already. A picture of a photo
+    /// needs one.
     func make(_ key: Key) async {
-        guard pictures[key] == nil, !making.contains(key) else { return }
+        let job = Job(key: key, photo: photo?.id)
+        guard pictures[key] == nil, !making.contains(job) else { return }
         let source: Source
-        if let spec = key.mode.spec, let photo {
-            source = .photo(photo, spec, key.petsciiCharacters)
+        if let spec = key.mode.spec {
+            guard let photo else { return }
+            source = .photo(photo.image, photo.orientation, spec, key.petsciiCharacters)
         } else if let name = key.mode.sample, let sample = UIImage(named: name)?.cgImage.flatMap({ RGBImage($0) }) {
             source = .sample(sample)
         } else {
             return
         }
-        making.insert(key)
-        defer { making.remove(key) }
+        making.insert(job)
+        defer { making.remove(job) }
         let display = key.monitor.display
         let shown = await Task.detached(priority: .userInitiated) {
             PictureMaker.screen(of: source, on: display)
         }.value
-        let windowArea = CGRect(
-            x: Screen.windowX, y: Screen.windowY, width: Screen.windowWidth, height: Screen.windowHeight)
-        guard let screen = shown.cgImage, let window = screen.cropping(to: windowArea) else { return }
-        pictures[key] = ShownPicture(screen: screen, window: window)
+        // A picture of a photo since replaced is dropped.
+        guard photo?.id == job.photo, let picture = ShownPicture(shown) else { return }
+        pictures[key] = picture
     }
 
     /// What a picture is made from.
     nonisolated enum Source: Sendable {
-        /// A photo, converted in a mode, with the characters PETSCII may use.
-        case photo(RGBImage, ModeSpec, CharacterROM.Selection)
+        /// A photo, seen in an orientation, converted in a mode, with the
+        /// characters PETSCII may use.
+        case photo(RGBImage, ImageOrientation, ModeSpec, CharacterROM.Selection)
         /// A sample picture of the display window, in Colodore's colours.
         case sample(RGBImage)
     }
@@ -92,10 +117,10 @@ final class PictureMaker {
     nonisolated static func screen(of source: Source, on display: DisplayModel) -> RGBImage {
         let screen: IndexedImage
         switch source {
-        case .photo(let photo, let spec, let petsciiCharacters):
+        case .photo(let photo, let orientation, let spec, let petsciiCharacters):
             let settings = Converter.Settings(display: display, petsciiCharacters: petsciiCharacters)
             let converter = Converter(spec: spec, settings: settings)
-            screen = VICII.render(converter.convert(photo).frame)
+            screen = VICII.render(converter.convert(photo, orientation: orientation).frame)
         case .sample(let picture):
             screen = sampleScreen(picture)
         }

@@ -1,4 +1,5 @@
 import C64Core
+import PhotosUI
 import SwiftUI
 
 /// The C64 screen's proportions (docs/UX.md, section 2).
@@ -34,17 +35,30 @@ struct TVView: View {
     /// How long the finished picture takes to fill in after a shot.
     static let fillDuration: TimeInterval = 0.8
 
-    /// The screen as the monitor shows it, or nil while it is being made.
-    var picture: ShownPicture?
+    /// What the TV shows.
+    enum Content {
+        /// The viewfinder's live picture.
+        case live(ViewfinderFeed)
+        /// A finished picture, or nil while it is being made.
+        case picture(ShownPicture?)
+        /// Static: there is no camera to show.
+        case noSignal
+    }
+
+    var content: Content
     /// When the picture started filling in on a cleared screen, or nil to show it whole.
     var fillStart: Date?
+    /// The photo the picture was made from, shown instead while `showsOriginal`.
+    var original: Photo?
     var showsOriginal = false
     var crtOn = false
     var poweredOn = true
     var message: CameraModel.Message?
+    /// Where the camera was just asked to focus, if it was.
+    var focus: CameraModel.FocusMark?
     /// The zoom buttons to show on the border, or nil for none.
-    var zoom: Zoom?
-    var onSelectZoom: (Zoom) -> Void = { _ in }
+    var zoom: ZoomButtons?
+    var onSelectZoom: (Double) -> Void = { _ in }
 
     var body: some View {
         GeometryReader { geometry in
@@ -53,8 +67,9 @@ struct TVView: View {
                 Color.black
                 screen(window: frame)
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                if showsOriginal {
-                    Image("SamplePhoto")
+                if showsOriginal, let original {
+                    // Cropped as the converter crops it: the centre, in the window's shape.
+                    Image(decorative: original.preview, scale: 1, orientation: original.mirrored ? .upMirrored : .up)
                         .resizable()
                         .scaledToFill()
                         .frame(width: frame.width, height: frame.height)
@@ -68,6 +83,13 @@ struct TVView: View {
             }
             .scaleEffect(x: 1, y: poweredOn ? 1 : 0.005)
             .brightness(poweredOn ? 0 : 0.5)
+            .overlay(alignment: .topLeading) {
+                if let focus {
+                    FocusMarkView()
+                        .position(
+                            x: frame.minX + focus.point.x * frame.width, y: frame.minY + focus.point.y * frame.height)
+                }
+            }
             .overlay(alignment: .top) {
                 if let message {
                     MessageView(message: message)
@@ -76,7 +98,7 @@ struct TVView: View {
             }
             .overlay(alignment: .bottom) {
                 if let zoom {
-                    ZoomPills(selection: zoom, onSelect: onSelectZoom)
+                    ZoomPills(buttons: zoom, onSelect: onSelectZoom)
                         .padding(.bottom, max(0, (geometry.size.height - frame.maxY - 34) / 2))
                 }
             }
@@ -86,22 +108,91 @@ struct TVView: View {
 
     /// The whole screen, border included, filling in cell by cell after a shot.
     @ViewBuilder private func screen(window: CGRect) -> some View {
-        if let picture {
-            let image = Image(decorative: picture.screen, scale: 1)
+        switch content {
+        case .live(let feed):
+            LiveScreen(feed: feed)
+        case .picture(let picture):
+            if let picture {
+                let image = Image(decorative: picture.screen, scale: 1)
+                    .resizable()
+                    .interpolation(.none)
+                    .accessibilityLabel("C64 picture")
+                if let fillStart {
+                    TimelineView(.animation) { context in
+                        let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
+                        image.mask {
+                            CellFill(progress: progress, window: window)
+                        }
+                    }
+                } else {
+                    image
+                }
+            }
+        case .noSignal:
+            NoSignal()
+        }
+    }
+}
+
+/// The viewfinder's newest picture. Only this view reads it, so only this
+/// view redraws for each frame.
+private struct LiveScreen: View {
+    var feed: ViewfinderFeed
+
+    var body: some View {
+        if let picture = feed.picture {
+            Image(decorative: picture.screen, scale: 1)
                 .resizable()
                 .interpolation(.none)
                 .accessibilityLabel("C64 picture")
-            if let fillStart {
-                TimelineView(.animation) { context in
-                    let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
-                    image.mask {
-                        CellFill(progress: progress, window: window)
-                    }
-                }
-            } else {
-                image
+        }
+    }
+}
+
+/// What a TV shows with no signal: static. It is the TV's own noise, not a C64
+/// picture. With Reduce Motion on, it stands still.
+struct NoSignal: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 25, paused: reduceMotion)) { context in
+            let frame = UInt64(max(0, context.date.timeIntervalSinceReferenceDate * 25))
+            if let noise = Self.noise(seed: frame) {
+                Image(decorative: noise, scale: 1)
+                    .resizable()
+                    .interpolation(.none)
             }
         }
+        .accessibilityHidden(true)
+    }
+
+    /// One frame of static: random greys, a little larger than C64 pixels.
+    static func noise(seed: UInt64, width: Int = 192, height: Int = 136) -> CGImage? {
+        var state = (seed &+ 1) &* 0x9E37_79B9_7F4A_7C15
+        var bytes = [UInt8](repeating: 0, count: width * height)
+        for index in bytes.indices {
+            // Xorshift: plenty for static.
+            state ^= state << 13
+            state ^= state >> 7
+            state ^= state << 17
+            bytes[index] = UInt8(truncatingIfNeeded: state >> 32)
+        }
+        guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
+        return CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: width,
+            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+    }
+}
+
+/// Where the camera focuses, for a moment after a tap on the picture.
+struct FocusMarkView: View {
+    var body: some View {
+        Rectangle()
+            .strokeBorder(Look.ledOn, lineWidth: 1.5)
+            .frame(width: 52, height: 52)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 
@@ -178,28 +269,123 @@ struct MessageView: View {
     }
 }
 
+/// The zoom buttons: the values they offer, and the zoom now.
+struct ZoomButtons: Equatable {
+    var presets: [Double]
+    var zoom: Double
+
+    /// The button lit: the highest at or below the zoom.
+    var lit: Double? { presets.last { $0 <= zoom + 0.01 } ?? presets.first }
+
+    /// What a button shows: its value, as in ".5", "1" or "2", or for the lit
+    /// one, the zoom now with a ×.
+    func label(_ preset: Double) -> String {
+        preset == lit ? Self.format(zoom) + "×" : Self.format(preset)
+    }
+
+    /// A zoom as the buttons write it: ".5", "1", "1.4".
+    static func format(_ value: Double) -> String {
+        let tenths = Int((value * 10).rounded())
+        if tenths < 10 {
+            return ".\(tenths)"
+        }
+        return tenths % 10 == 0 ? "\(tenths / 10)" : "\(tenths / 10).\(tenths % 10)"
+    }
+
+    /// A zoom as VoiceOver reads it, and messages show it: "0.5×".
+    static func name(_ value: Double) -> String {
+        (value < 0.95 ? "0" : "") + format(value) + "×"
+    }
+}
+
 /// The zoom buttons: below the TV in portrait, on its border in landscape.
 struct ZoomPills: View {
-    var selection: Zoom
-    var onSelect: (Zoom) -> Void
+    var buttons: ZoomButtons
+    var onSelect: (Double) -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(Zoom.allCases) { zoom in
-                let isSelected = zoom == selection
+            ForEach(buttons.presets, id: \.self) { preset in
+                let isLit = preset == buttons.lit
                 Button {
-                    onSelect(zoom)
+                    onSelect(preset)
                 } label: {
-                    Text(zoom.label)
-                        .font(.system(size: 12, weight: isSelected ? .heavy : .semibold))
-                        .foregroundStyle(isSelected ? Look.ledOn : Look.pillInk)
+                    Text(buttons.label(preset))
+                        .font(.system(size: 12, weight: isLit ? .heavy : .semibold))
+                        .foregroundStyle(isLit ? Look.ledOn : Look.pillInk)
                         .frame(width: 34, height: 34)
                         .background(Circle().fill(Look.pill))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Zoom \(zoom.name)")
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .accessibilityLabel("Zoom \(ZoomButtons.name(preset))")
+                .accessibilityAddTraits(isLit ? .isSelected : [])
             }
         }
+    }
+}
+
+/// On the static, when there is no camera to show: why, and what to do
+/// instead (docs/UX.md, section 3).
+struct NoCameraPanel: View {
+    var trouble: LiveCamera.State
+    @Binding var importedItem: PhotosPickerItem?
+    var onAllow: () -> Void
+
+    var body: some View {
+        VStack(spacing: 10) {
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .heavy).width(.condensed))
+                    .tracking(1)
+                Text(detail)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            HStack(spacing: 8) {
+                if trouble == .notAllowed {
+                    Button("ALLOW CAMERA", action: onAllow)
+                }
+                if trouble != .interrupted {
+                    PhotosPicker(selection: $importedItem, matching: .images) {
+                        Text("IMPORT A PHOTO")
+                    }
+                }
+            }
+            .buttonStyle(TVButtonStyle())
+        }
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.center)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.72)))
+        .padding(.horizontal, 16)
+    }
+
+    private var title: String {
+        switch trouble {
+        case .notAllowed: "CAMERA NOT ALLOWED"
+        case .interrupted: "CAMERA IN USE"
+        default: "NO CAMERA"
+        }
+    }
+
+    private var detail: String {
+        switch trouble {
+        case .notAllowed: "Allow it in Settings, or convert a photo."
+        case .interrupted: "Another app has the camera for now."
+        default: "Convert a photo from your library instead."
+        }
+    }
+}
+
+/// A button on the TV's glass.
+struct TVButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .heavy).width(.condensed))
+            .tracking(0.8)
+            .foregroundStyle(Look.ledOn)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(Capsule().fill(Look.pill))
+            .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

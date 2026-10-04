@@ -118,34 +118,8 @@ enum Monitor: CaseIterable, Identifiable {
     }
 }
 
-/// The zoom buttons.
-enum Zoom: CaseIterable, Identifiable {
-    case half
-    case one
-    case two
-
-    var id: Self { self }
-
-    /// The label on the button.
-    var label: String {
-        switch self {
-        case .half: ".5"
-        case .one: "1×"
-        case .two: "2"
-        }
-    }
-
-    var name: String {
-        switch self {
-        case .half: "0.5×"
-        case .one: "1×"
-        case .two: "2×"
-        }
-    }
-}
-
-/// The state of the camera screen (docs/UX.md, sections 3 to 5). There is no
-/// camera yet: the sample photo stands in for it.
+/// The state of the camera screen (docs/UX.md, sections 3 to 5). The camera
+/// itself is `LiveCamera`.
 @Observable
 final class CameraModel {
     enum Stage {
@@ -162,12 +136,23 @@ final class CameraModel {
         var detail: String?
     }
 
+    /// Where the camera was asked to focus, shown on the TV for a moment.
+    struct FocusMark: Equatable {
+        let id = UUID()
+        /// Across and down the picture, from 0 to 1.
+        var point: CGPoint
+    }
+
     private(set) var stage = Stage.live
     private(set) var mode = PictureMode.multicolour
     /// The mode the review shows. The mode strip changes it.
     var reviewMode = PictureMode.multicolour
     private(set) var monitor = Monitor.tv
-    private(set) var zoom = Zoom.one
+    /// The zoom as the buttons show it: 1 for the main camera.
+    private(set) var zoom = 1.0
+    /// How much brighter or darker than the camera's own exposure, in stops.
+    private(set) var exposureBias: Float = 0
+    private(set) var focus: FocusMark?
     private(set) var flashOn = false
     private(set) var crtOn = true
     private(set) var frontCamera = false
@@ -196,9 +181,35 @@ final class CameraModel {
         show(newMonitor.name, newMonitor.summary)
     }
 
-    func select(_ newZoom: Zoom) {
+    /// Zooms to a button's value.
+    func select(zoom newZoom: Double) {
         zoom = newZoom
-        show("\(newZoom.name) ZOOM", "Comes with the camera")
+        show("\(ZoomButtons.name(newZoom)) ZOOM")
+    }
+
+    /// Zooms as a pinch does, without a message.
+    func pinch(to newZoom: Double) {
+        zoom = newZoom
+    }
+
+    func setExposureBias(_ bias: Float) {
+        guard bias != exposureBias else { return }
+        exposureBias = bias
+        show(String(format: "EXPOSURE %+.1f", bias))
+    }
+
+    /// Marks where the camera focuses, for a moment. Focusing also sets the
+    /// exposure back to the camera's own.
+    func showFocus(at point: CGPoint) {
+        let mark = FocusMark(point: point)
+        focus = mark
+        exposureBias = 0
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            if self.focus == mark {
+                self.focus = nil
+            }
+        }
     }
 
     func toggleFlash() {
@@ -211,23 +222,36 @@ final class CameraModel {
         show(crtOn ? "CRT EFFECT ON" : "CRT EFFECT OFF")
     }
 
+    /// Turns the camera round, back to 1× and the camera's own exposure.
     func flipCamera() {
         frontCamera.toggle()
-        show(frontCamera ? "FRONT CAMERA" : "BACK CAMERA", "Comes with the camera")
+        zoom = 1
+        exposureBias = 0
+        show(frontCamera ? "FRONT CAMERA" : "BACK CAMERA")
     }
 
-    /// Takes a picture and holds it for review. Unless `animated` is false, the
-    /// finished picture fills in cell by cell, the way a C64 stores it.
-    func capture(animated: Bool) {
+    /// Takes a picture: the TV holds a cleared screen for review until the
+    /// picture is made.
+    func capture() {
         lastShot = mode
         reviewMode = mode
         shotCount += 1
         stage = .review
-        if animated {
-            startFill()
-        } else {
-            fillStart = nil
-        }
+        fillStart = nil
+    }
+
+    /// The shot's picture is made. Unless `animated` is false, it fills in
+    /// cell by cell, the way a C64 stores it.
+    func pictureReady(animated: Bool) {
+        guard stage == .review, animated else { return }
+        startFill()
+    }
+
+    /// The camera took no photo: back to it, with the last picture as it was.
+    func captureFailed(lastShot previous: PictureMode?) {
+        lastShot = previous
+        backToLive()
+        show("NO PICTURE", "The camera took none")
     }
 
     /// Opens the last picture for review, as the gallery will.
