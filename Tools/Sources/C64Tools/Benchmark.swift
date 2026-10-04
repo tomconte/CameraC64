@@ -30,7 +30,12 @@ public enum Benchmark {
         }
     }
 
-    public static let modes: [(name: String, spec: ModeSpec)] = [("hires", .hires), ("multicolour", .multicolor)]
+    /// Each mode, and for PETSCII, the characters it may use: all of them,
+    /// or only the graphics characters.
+    public static let modes: [(name: String, spec: ModeSpec, petsciiCharacters: CharacterROM.Selection)] = [
+        ("hires", .hires, .all), ("multicolour", .multicolor, .all), ("petscii", .petscii, .all),
+        ("petscii-graphics", .petscii, .graphics),
+    ]
     /// The amber and green monitors make the same pictures as the
     /// black-and-white one, in another tint.
     public static let monitors: [(name: String, display: DisplayModel)] = [
@@ -115,10 +120,11 @@ public enum Benchmark {
     /// picture.
     public static func run(_ photos: [Photo], dithering: Float = Converter.Settings().dithering) -> [Entry] {
         var entries: [Entry] = []
-        for (modeName, spec) in modes {
+        for (modeName, spec, characters) in modes {
             for (monitorName, display) in monitors {
                 let converter = Converter(
-                    spec: spec, settings: Converter.Settings(display: display, dithering: dithering))
+                    spec: spec,
+                    settings: Converter.Settings(display: display, dithering: dithering, petsciiCharacters: characters))
                 for photo in photos {
                     let start = DispatchTime.now().uptimeNanoseconds
                     let frame = converter.convert(photo.image).frame
@@ -259,7 +265,7 @@ public enum Benchmark {
             """
         html += "<table><tr><th>Photo</th><th>Mode</th>" + monitors.map { "<th>\($0.name)</th>" }.joined() + "</tr>"
         for photo in photos {
-            for (mode, _) in modes {
+            for mode in modes.map(\.name) {
                 html += "<tr><td>\(photo.name)</td><td>\(mode)</td>"
                 for (monitor, _) in monitors {
                     let entry = entries.first { $0.photo == photo.name && $0.mode == mode && $0.monitor == monitor }
@@ -272,7 +278,7 @@ public enum Benchmark {
         for photo in photos {
             html += "<h2>\(photo.name): \(photo.description)</h2>\n"
             let original = try save(reference(photo).rgbImage, "\(photo.name).png")
-            for (mode, _) in modes {
+            for mode in modes.map(\.name) {
                 html += "<div class=\"row\">" + figure(original, "Photo")
                 for entry in entries where entry.photo == photo.name && entry.mode == mode {
                     let file = try save(entry.shown, "\(entry.key.replacingOccurrences(of: " ", with: "-")).png")
@@ -334,11 +340,14 @@ public struct Image64: Sendable {
         return spec == .hires ? try C64Frame(artStudio: Array(data)) : try C64Frame(koala: Array(data))
     }
 
-    /// Converts each photo in each mode with image64, and scores it on each
-    /// monitor as the benchmark scores the converter's pictures.
+    /// The modes image64 converts: the bitmap modes.
+    public static let modes = Benchmark.modes.filter { $0.spec.pixels == .bitmap }
+
+    /// Converts each photo in each of its modes with image64, and scores it on
+    /// each monitor as the benchmark scores the converter's pictures.
     public func run(_ photos: [Benchmark.Photo]) throws -> [Benchmark.Entry] {
         var entries: [Benchmark.Entry] = []
-        for (modeName, spec) in Benchmark.modes {
+        for (modeName, spec, _) in Self.modes {
             for photo in photos {
                 let reference = Benchmark.reference(photo)
                 let start = DispatchTime.now().uptimeNanoseconds

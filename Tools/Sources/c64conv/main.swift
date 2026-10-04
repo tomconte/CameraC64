@@ -8,13 +8,16 @@ let usage = """
     Commands:
       testcard <mode> -o <file> [--seed <n>]
           A random picture that obeys the mode's limits. Modes: hires,
-          multicolor, charset, multicolor-charset, ecm-charset.
-      convert <photo.png> -o <file> [--mode hires|multicolor] [--monitor <name>]
-              [--palette colodore|pepto] [--dithering <0-1>] [--neutral] [--scale <n>]
+          multicolor, petscii, petscii-lower, charset, multicolor-charset,
+          ecm-charset.
+      convert <photo.png> -o <file> [--mode hires|multicolor|petscii] [--characters all|graphics]
+              [--monitor <name>] [--palette colodore|pepto] [--dithering <0-1>] [--neutral] [--scale <n>]
           Converts a photo into a picture in a mode, multicolour by default,
           made for a monitor: tv (the default), monitor, sharp, bw, green or
-          amber. --neutral turns the automatic tones off. A .png output shows
-          the picture on that monitor, border included.
+          amber. In PETSCII, --characters graphics uses only the graphics
+          characters, for the classic look. --neutral turns the automatic
+          tones off. A .png output shows the picture on that monitor, border
+          included.
       render <picture> -o <file.png> [--palette colodore|pepto] [--scale <n>] [--window]
           Draws a picture as the VIC-II shows it, border included unless
           --window is given.
@@ -83,7 +86,16 @@ struct Arguments {
         switch options["--mode"] ?? "multicolor" {
         case "hires": .hires
         case "multicolor", "multicolour": .multicolor
-        case let other: throw Failure(description: "Unknown mode \(other): use hires or multicolor")
+        case "petscii": .petscii
+        case let other: throw Failure(description: "Unknown mode \(other): use hires, multicolor or petscii")
+        }
+    }
+
+    func petsciiCharacters() throws -> CharacterROM.Selection {
+        switch options["--characters"] ?? "all" {
+        case "all": .all
+        case "graphics": .graphics
+        case let other: throw Failure(description: "Unknown characters \(other): use all or graphics")
         }
     }
 
@@ -148,15 +160,17 @@ func write(
 func run(_ command: String, _ arguments: Arguments) throws {
     switch command {
     case "testcard":
-        let modes: [String: ModeSpec] = [
-            "hires": .hires, "multicolor": .multicolor, "charset": .characterSet,
-            "multicolor-charset": .multicolorCharacterSet, "ecm-charset": .extendedColorCharacterSet,
+        let modes: [String: (ModeSpec, CharacterROM.Set)] = [
+            "hires": (.hires, .upperCase), "multicolor": (.multicolor, .upperCase), "petscii": (.petscii, .upperCase),
+            "petscii-lower": (.petscii, .lowerCase), "charset": (.characterSet, .upperCase),
+            "multicolor-charset": (.multicolorCharacterSet, .upperCase),
+            "ecm-charset": (.extendedColorCharacterSet, .upperCase),
         ]
-        guard let name = arguments.positional.first, let spec = modes[name] else {
+        guard let name = arguments.positional.first, let (spec, set) = modes[name] else {
             throw Failure(description: "testcard needs a mode: \(modes.keys.sorted().joined(separator: ", "))")
         }
         let seed = try arguments.integer("--seed", default: 1)
-        try write(C64Frame(TestPictures.random(spec, seed: UInt64(seed))), to: arguments.output())
+        try write(C64Frame(TestPictures.random(spec, seed: UInt64(seed), characterSet: set)), to: arguments.output())
 
     case "convert":
         guard let input = arguments.positional.first else { throw Failure(description: "convert needs a photo") }
@@ -166,7 +180,9 @@ func run(_ command: String, _ arguments: Arguments) throws {
         let photo = try PNG.decodeImage(Array(data))
         let (palette, monitor) = (try arguments.palette(), try arguments.monitor())
         let dithering = try arguments.number("--dithering", default: Converter.Settings().dithering)
-        let settings = Converter.Settings(palette: palette, display: monitor, dithering: dithering)
+        let settings = Converter.Settings(
+            palette: palette, display: monitor, dithering: dithering,
+            petsciiCharacters: try arguments.petsciiCharacters())
         let converter = Converter(spec: try arguments.mode(), settings: settings)
         let tones = arguments.flags.contains("--neutral") ? Tones.neutral : Tones()
         let conversion = converter.convert(photo, tones: tones)
@@ -235,7 +251,7 @@ func benchmark(_ arguments: Arguments) throws {
     let baselineFile = URL(fileURLWithPath: "Tools/Benchmark/scores.txt")
     let baseline = try? Benchmark.scores(in: baselineFile)
     var summary = Benchmark.markdown(entries, baseline: baseline)
-    for (mode, _) in Benchmark.modes {
+    for mode in Benchmark.modes.map(\.name) {
         let times = entries.filter { $0.mode == mode && $0.monitor != "bw" }.map(\.seconds).sorted()
         summary += String(
             format: "Converting a photo in %@ takes %.0f ms (median).\n", mode, times[times.count / 2] * 1000)

@@ -1,15 +1,20 @@
 extension C64Frame {
     /// Where exported programs put the VIC-II's 16 KB: the bank at $C000,
-    /// where the VIC-II sees no character ROM and which a program loaded at
-    /// $0801 never reaches.
-    static let exportBank = 0xC000
+    /// where the VIC-II sees no character ROM, or for a frame that uses the
+    /// ROM, the bank at $8000, where it sees the ROM at $9000–$9FFF. A program
+    /// loaded at $0801 reaches neither.
+    var exportBank: Int {
+        seesCharacterROM ? 0x8000 : 0xC000
+    }
 
     /// The frame as a program: a .prg file that loads at $0801, runs with
     /// RUN, shows the picture, and resets the C64 when a key is pressed.
     ///
     /// The program is the viewer in C64/viewer.s, followed by its parameters
     /// and the frame's data. The viewer copies each block of data into place,
-    /// so the file holds only the memory the picture uses.
+    /// so the file holds only the memory the picture uses: for a PETSCII
+    /// picture, which the C64 shows with its own character ROM, just the
+    /// video matrix and the colours.
     public func prg() -> [UInt8] {
         struct Block {
             var destination: Int
@@ -25,10 +30,10 @@ extension C64Frame {
             var start = range.lowerBound
             while start < range.upperBound {
                 let end = [0x1000, 0x2000, range.upperBound].filter { $0 > start }.min()!
-                let underIO = (0x1000..<0x2000).contains(start)
+                let underIO = (0xD000..<0xE000).contains(exportBank + start)
                 blocks.append(
                     Block(
-                        destination: Self.exportBank + start, bytes: Array(memory[start..<end]),
+                        destination: exportBank + start, bytes: Array(memory[start..<end]),
                         memoryConfiguration: underIO ? 0x34 : 0x37))
                 start = end
             }
@@ -43,7 +48,8 @@ extension C64Frame {
             mode.controlRegister1, mode.controlRegister2, memoryPointers, borderColor.rawValue,
         ]
         parameters += backgroundColors.map(\.rawValue)
-        parameters.append(0)  // $dd00 bits for the bank at $C000
+        // $DD00's bits 0-1 select the bank inverted: 0 for $C000, 1 for $8000.
+        parameters.append(UInt8(3 - exportBank / 0x4000))
         parameters.append(UInt8(blocks.count))
 
         var address = 0x0801 + viewer.count + parameters.count + 7 * blocks.count
@@ -56,8 +62,9 @@ extension C64Frame {
             data += block.bytes
             address += block.bytes.count
         }
-        // The viewer reads its data with BASIC's ROM in place.
-        precondition(address <= 0xA000, "The picture's data must end below $A000")
+        // The viewer reads its data with BASIC's ROM in place, and must not
+        // copy over data it has yet to copy.
+        precondition(address <= min(0xA000, exportBank), "The picture's data must end below $A000 and the bank")
         return [0x01, 0x08] + viewer + parameters + data
     }
 

@@ -5,19 +5,6 @@ import Testing
 
 private let bitmapModes: [ModeSpec] = [.hires, .multicolor]
 
-/// A smooth, colourful target: hue across, lightness down.
-private func gradient(for spec: ModeSpec) -> Target {
-    var colors: [OKLab] = []
-    for y in 0..<spec.height {
-        for x in 0..<spec.width {
-            let angle = Float(x) / Float(spec.width) * 2 * .pi
-            let lightness = 0.1 + 0.8 * Float(y) / Float(spec.height)
-            colors.append(OKLab(l: lightness, a: 0.12 * cos(angle), b: 0.12 * sin(angle)))
-        }
-    }
-    return Target(width: spec.width, height: spec.height, colors: colors)
-}
-
 /// Every set of `size` numbers below `count`.
 private func combinations(_ count: Int, _ size: Int) -> [[Int]] {
     guard size > 0 else { return [[]] }
@@ -242,7 +229,7 @@ func viewfinderFramesKeepTheirColours(spec: ModeSpec) {
 }
 
 @Test func speedBenchmarkTimesEveryStage() {
-    #expect(SpeedBenchmark.cases.count == 6)
+    #expect(SpeedBenchmark.cases.count == 9)
     let frame = SpeedBenchmark.cameraFrame(width: 160, height: 120)
     #expect(frame.layout == .bgra && frame.bytes.count == 160 * 120 * 4)
     let timing = SpeedBenchmark.measure(SpeedBenchmark.cases[0], frame: frame, runs: 1)

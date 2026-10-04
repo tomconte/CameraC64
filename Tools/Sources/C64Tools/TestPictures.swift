@@ -21,20 +21,21 @@ public struct SeededGenerator: RandomNumberGenerator, Sendable {
 /// Random pictures that obey their mode's limits, for test cards and the VICE
 /// tests: random data reaches every colour, every bit pattern and every cell.
 public enum TestPictures {
-    public static func random(_ spec: ModeSpec, seed: UInt64) -> ModePicture {
+    /// A random picture in a mode. In the character ROM's characters, it
+    /// takes them from the given set.
+    public static func random(
+        _ spec: ModeSpec, seed: UInt64, characterSet: CharacterROM.Set = .upperCase
+    ) -> ModePicture {
         var generator = SeededGenerator(seed: seed)
         var picture = ModePicture(spec: spec)
         let values = UInt8(spec.maps.count)
         let cellWidth = 8 / spec.pixelWidth
 
         // A character mode draws each cell from a set of characters: its fixed
-        // set, or random ones up to its limit.
+        // set, the ROM's, or random ones up to its limit.
         var characters: [[UInt8]] = []
-        switch spec.pixels {
-        case .bitmap:
-            break
-        case .characters(.fixed(let set)):
-            characters = (0..<set.count / 8).map { code in
+        func pixels(of set: [UInt8]) -> [[UInt8]] {
+            (0..<set.count / 8).map { code in
                 (0..<8).flatMap { line in
                     (0..<cellWidth).map { column in
                         let shift = 8 - (column + 1) * spec.bitsPerPixel
@@ -42,6 +43,14 @@ public enum TestPictures {
                     }
                 }
             }
+        }
+        switch spec.pixels {
+        case .bitmap:
+            break
+        case .characters(.fixed(let set)):
+            characters = pixels(of: set)
+        case .characters(.rom):
+            characters = pixels(of: characterSet.characters)
         case .characters(.own(let limit)):
             characters = (0..<limit).map { _ in
                 (0..<cellWidth * 8).map { _ in UInt8.random(in: 0..<values, using: &generator) }

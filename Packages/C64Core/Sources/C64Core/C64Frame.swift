@@ -51,10 +51,14 @@ public enum GraphicsMode: Hashable, Sendable, CaseIterable {
 public struct C64Frame: Hashable, Sendable {
     public static let memorySize = 0x4000
     public static let cellCount = 1000
+    /// Where the VIC-II sees the character ROM in banks 0 and 2, as offsets
+    /// from the start of the bank.
+    public static let characterROMArea = 0x1000..<0x2000
 
     public let mode: GraphicsMode
-    /// The 16 KB the VIC-II reads from, as offsets from the start of its
-    /// bank. Exported programs place it in a bank without the character ROM.
+    /// The RAM the VIC-II reads from: 16 KB, as offsets from the start of
+    /// its bank. Exported programs place it in a bank without the character
+    /// ROM, unless the frame uses the ROM.
     public var memory: [UInt8] {
         didSet { precondition(memory.count == Self.memorySize, "The VIC-II reads 16 KB") }
     }
@@ -74,6 +78,11 @@ public struct C64Frame: Hashable, Sendable {
     public var backgroundColors: [C64Color] {
         didSet { precondition(backgroundColors.count == 4, "The VIC-II has 4 background colours") }
     }
+    /// Whether the VIC-II sees the character ROM at $1000–$1FFF, as it does in
+    /// banks 0 and 2, rather than the RAM there. PETSCII pictures take their
+    /// characters from it, so their programs hold only the video matrix and
+    /// the colours.
+    public let seesCharacterROM: Bool
 
     /// A frame with blank memory, black colours and the usual layout: the
     /// screen at $0000 and the character set at $0800, or the bitmap at $2000.
@@ -85,9 +94,20 @@ public struct C64Frame: Hashable, Sendable {
             backgroundColors: Array(repeating: .black, count: 4))
     }
 
+    /// A text frame with blank memory and black colours that shows one of the
+    /// character ROM's sets, laid out as the C64 itself has it: the screen at
+    /// $0400 and the set at $1000 or $1800.
+    public init(characterSet: CharacterROM.Set) {
+        self.init(
+            mode: .standardText, memory: Array(repeating: 0, count: Self.memorySize),
+            colorRAM: Array(repeating: 0, count: Self.cellCount), screenAddress: 0x0400,
+            graphicsAddress: characterSet.address, borderColor: .black,
+            backgroundColors: Array(repeating: .black, count: 4), seesCharacterROM: true)
+    }
+
     public init(
         mode: GraphicsMode, memory: [UInt8], colorRAM: [UInt8], screenAddress: Int, graphicsAddress: Int,
-        borderColor: C64Color, backgroundColors: [C64Color]
+        borderColor: C64Color, backgroundColors: [C64Color], seesCharacterROM: Bool = false
     ) {
         precondition(memory.count == Self.memorySize, "The VIC-II reads 16 KB")
         precondition(colorRAM.count == Self.cellCount, "The colour RAM has 1,000 cells")
@@ -100,20 +120,29 @@ public struct C64Frame: Hashable, Sendable {
         self.graphicsAddress = graphicsAddress
         self.borderColor = borderColor
         self.backgroundColors = backgroundColors
+        self.seesCharacterROM = seesCharacterROM
     }
 
     /// Moves the video matrix and the character set or bitmap to other
     /// addresses, with their contents, so the picture stays the same. Memory
-    /// the picture does not use is cleared.
+    /// the picture does not use is cleared. Where the VIC-II sees the
+    /// character ROM, the graphics stay where they are, and the video matrix
+    /// cannot move into the ROM.
     public mutating func relocate(screen: Int, graphics: Int) {
         Self.checkLayout(mode, screen: screen, graphics: graphics)
-        let (oldScreen, oldGraphics) = (usedMemory[0], usedMemory[1])
-        let newScreen = screen..<screen + oldScreen.count
-        let newGraphics = graphics..<graphics + oldGraphics.count
+        precondition(!seesCharacterROM || graphics == graphicsAddress, "Characters in the ROM stay where they are")
+        let newScreen = screen..<screen + Self.cellCount
+        let newGraphics = graphics..<graphics + graphicsSize
         precondition(!newScreen.overlaps(newGraphics), "The video matrix and the graphics would overlap")
+        precondition(
+            !seesCharacterROM || !newScreen.overlaps(Self.characterROMArea),
+            "The video matrix would be under the character ROM")
+        let oldScreen = screenAddress..<screenAddress + Self.cellCount
         var moved = [UInt8](repeating: 0, count: Self.memorySize)
-        moved.replaceSubrange(newGraphics, with: memory[oldGraphics])
-        moved.replaceSubrange(newScreen, with: memory[oldScreen])
+        for range in usedMemory {
+            let offset = oldScreen.contains(range.lowerBound) ? screen - screenAddress : graphics - graphicsAddress
+            moved.replaceSubrange(range.lowerBound + offset..<range.upperBound + offset, with: memory[range])
+        }
         memory = moved
         screenAddress = screen
         graphicsAddress = graphics
@@ -134,16 +163,37 @@ public struct C64Frame: Hashable, Sendable {
         UInt8(screenAddress >> 10) << 4 | UInt8(graphicsAddress >> 11) << 1
     }
 
+    /// How many bytes of graphics the mode reads: a bitmap, or a set of
+    /// characters.
+    private var graphicsSize: Int {
+        switch mode {
+        case .hiresBitmap, .multicolorBitmap: 8000
+        case .standardText, .multicolorText: 256 * 8
+        case .extendedColorText: 64 * 8
+        }
+    }
+
     /// The parts of `memory` the VIC-II reads for this frame, as ranges of
-    /// offsets. Nothing else in `memory` changes the picture.
+    /// offsets: the video matrix and the graphics, except what it reads from
+    /// the character ROM instead. Nothing else in `memory` changes the
+    /// picture.
     public var usedMemory: [Range<Int>] {
-        let screen = screenAddress..<screenAddress + Self.cellCount
-        let graphicsSize =
-            switch mode {
-            case .hiresBitmap, .multicolorBitmap: 8000
-            case .standardText, .multicolorText: 256 * 8
-            case .extendedColorText: 64 * 8
-            }
-        return [screen, graphicsAddress..<graphicsAddress + graphicsSize]
+        let ranges = [screenAddress..<screenAddress + Self.cellCount, graphicsAddress..<graphicsAddress + graphicsSize]
+        guard seesCharacterROM else { return ranges }
+        let rom = Self.characterROMArea
+        return ranges.flatMap { range in
+            let below = range.lowerBound..<max(range.lowerBound, min(range.upperBound, rom.lowerBound))
+            let above = min(range.upperBound, max(range.lowerBound, rom.upperBound))..<range.upperBound
+            return [below, above].filter { !$0.isEmpty }
+        }
+    }
+
+    /// The 16 KB as the VIC-II sees them: `memory`, with the character ROM at
+    /// $1000–$1FFF if the frame sees it there.
+    public var visibleMemory: [UInt8] {
+        guard seesCharacterROM else { return memory }
+        var visible = memory
+        visible.replaceSubrange(Self.characterROMArea, with: CharacterROM.bytes)
+        return visible
     }
 }

@@ -6,6 +6,7 @@ let standardModes: [(name: String, spec: ModeSpec)] = [
     ("hires", .hires),
     ("multicolour", .multicolor),
     ("text", .text(characters: randomCharacterSet(seed: 64))),
+    ("PETSCII", .petscii),
     ("character set", .characterSet),
     ("multicolour character set", .multicolorCharacterSet),
     ("extended colour character set", .extendedColorCharacterSet),
@@ -49,6 +50,48 @@ func encodedPicturesRenderAsDescribed(mode: Int) throws {
     var picture = ModePicture(spec: .text(characters: blank))
     picture.pixels[320 * 8 + 3] = 1  // cell 40 is not blank
     #expect(throws: ModeEncodingError.noSuchCharacter(cell: 40)) {
+        try C64Frame(picture)
+    }
+}
+
+/// PETSCII pictures leave their characters in the ROM: the frame sees it,
+/// and its memory holds only the video matrix.
+@Test(arguments: CharacterROM.Set.allCases)
+func petsciiCharactersStayInTheROM(set: CharacterROM.Set) throws {
+    let picture = ModePicture.random(.petscii, seed: 4, characterSet: set)
+    let frame = try C64Frame(picture)
+    #expect(frame.mode == .standardText && frame.seesCharacterROM)
+    #expect(frame.screenAddress == 0x0400 && frame.graphicsAddress == set.address)
+    #expect(frame.usedMemory == [0x0400..<0x07E8])
+    #expect(frame.memory[C64Frame.characterROMArea].allSatisfy { $0 == 0 })
+    #expect(VICII.render(frame).window == picture.image())
+}
+
+/// A picture takes all its characters from one set: the upper case one if it
+/// can.
+@Test func petsciiPicturesUseOneSet() throws {
+    /// Draws a character of a set into a cell.
+    func draw(_ code: Int, of set: CharacterROM.Set, at cell: Int, in picture: inout ModePicture) {
+        for line in 0..<8 {
+            let byte = set.characters[code * 8 + line]
+            for x in 0..<8 {
+                picture.pixels[(cell / 40 * 8 + line) * 320 + cell % 40 * 8 + x] = (byte >> (7 - x)) & 1
+            }
+        }
+    }
+    var picture = ModePicture(spec: .petscii)
+    draw(0, of: .upperCase, at: 3, in: &picture)  // @, in both sets
+    #expect(try C64Frame(picture).graphicsAddress == 0x1000)
+    draw(1, of: .lowerCase, at: 5, in: &picture)  // a, only in the lower case set
+    let lower = try C64Frame(picture)
+    #expect(lower.graphicsAddress == 0x1800)
+    #expect(lower.screen[3] == 0 && lower.screen[5] == 1)
+    draw(65, of: .upperCase, at: 7, in: &picture)  // a spade, only in the upper case set
+    #expect(throws: ModeEncodingError.noSuchCharacter(cell: 5)) {
+        try C64Frame(picture)
+    }
+    picture.pixels[320 * 8 * 2 + 4] = 1  // a dot, in neither set
+    #expect(throws: ModeEncodingError.noSuchCharacter(cell: 80)) {
         try C64Frame(picture)
     }
 }

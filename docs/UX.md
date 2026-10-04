@@ -67,7 +67,8 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - Mode strip: the photo in every mode. Paid modes show their result with a lock; tapping one opens the store.
 - Monitor bank. Changing the monitor converts the picture again, for that monitor.
 - Share, Save to Photos, Edit, Send to C64, Delete.
-  - Edit: framing, tones (automatic by default), border colour, and C64 file export (`.prg` first).
+  - Edit: framing, tones (automatic by default), border colour, PETSCII's characters, and C64 file export (`.prg` first).
+  - PETSCII's characters: all of them, or only the graphics characters. With letters, digits and punctuation, pictures look like BBS art; graphics alone give the classic PETSCII look. Idea, to settle when Edit is built: graphics only as the default in the viewfinder and the shot, with all characters a choice in Edit afterwards. Until then, a switch in Settings stands in.
   - Send to C64 appears once an Ultimate is set up. Its first use triggers iOS's local-network permission prompt.
 - Press and hold the TV to see the original photo. Pinch to see the pixels, with an optional grid of colour cells.
 - The capture key goes back to the camera.

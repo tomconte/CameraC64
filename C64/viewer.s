@@ -7,7 +7,9 @@
 ;
 ;   parameters+0   values for $d011, $d016, $d018, $d020, $d021, $d022,
 ;                  $d023 and $d024
-;   parameters+8   the VIC-II bank, as bits 0-1 of $dd00 (0 is $c000-$ffff)
+;   parameters+8   the VIC-II bank, as bits 0-1 of $dd00: 0 for $c000-$ffff,
+;                  or 1 for $8000-$bfff, where the VIC-II sees the character
+;                  ROM at $9000, as PETSCII pictures need
 ;   parameters+9   the number of blocks to copy, at least 1
 ;   parameters+10  per block, 7 bytes: source, destination, length (each
 ;                  low byte first), then the value for $01 during the copy

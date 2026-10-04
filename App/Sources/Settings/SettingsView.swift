@@ -1,11 +1,21 @@
 import SwiftUI
 import UIKit
 
+/// The names settings are saved under, in the app's user defaults.
+enum SettingName {
+    /// Whether PETSCII pictures use only the graphics characters.
+    static let petsciiGraphicsOnly = "petsciiGraphicsOnly"
+}
+
 /// Settings, in standard iOS styling (docs/UX.md, section 5).
 ///
-/// Placeholder: the choices are neither saved nor used yet.
+/// Mostly a placeholder: apart from PETSCII's characters, the choices are
+/// neither saved nor used yet. PETSCII's characters belong in Edit, picture by
+/// picture: the switch here stands in until Edit exists (docs/UX.md, section
+/// 5).
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(SettingName.petsciiGraphicsOnly) private var petsciiGraphicsOnly = false
     @State private var palette = "Colodore"
     @State private var brightnessLevels = 9
     @State private var saveEveryShot = false
@@ -28,6 +38,13 @@ struct SettingsView: View {
                     Text("Picture")
                 } footer: {
                     Text("Pictures are PAL: 320 × 200 pixels at 50 Hz.")
+                }
+                Section {
+                    Toggle("Graphics characters only", isOn: $petsciiGraphicsOnly)
+                } header: {
+                    Text("PETSCII")
+                } footer: {
+                    Text("Only blocks, lines and shapes, for the classic look: no letters, digits or punctuation.")
                 }
                 Section("Saving") {
                     Toggle("Save every shot to Photos", isOn: $saveEveryShot)
@@ -52,7 +69,7 @@ struct SettingsView: View {
                     Button("Restore Purchase") {}
                         .disabled(true)
                 } footer: {
-                    Text("This is a placeholder: nothing here is saved or used yet.")
+                    Text("Apart from PETSCII's characters, nothing here is saved or used yet.")
                 }
                 if BuildKind.isDevelopment {
                     Section {
