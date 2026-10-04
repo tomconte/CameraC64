@@ -15,7 +15,7 @@ _Agreed September 2026. This is a living document: update it when decisions chan
   - With the phone held sideways, the crop uses 89% of the frame.
   - With the phone held upright, the frame is 3:4 and the crop is a band using 50% of it: the same scene, 1.33× closer. The 0.5× lens and zoom make up for it.
 - Zoom costs almost nothing here: at 4×, a 12 MP photo still has 3 camera pixels per C64 pixel.
-- The crop can be moved and zoomed after the shot. Photos imported from the library, which come in any shape, always open in this framing step, centred on faces.
+- The crop can be moved and zoomed after the shot. Photos imported from the library, which come in any shape, always open in this framing step, centred on faces. Until it is built, they open straight in review, cropped at their centre.
 
 ## 3. The camera screen
 
@@ -40,8 +40,9 @@ A TV above a C64, as in the 2013 app, but with a TV of the right shape.
 **What the TV shows**:
 
 - The live picture, drawn from real C64 memory through the chosen monitor, with its border. The border colour is automatic: it matches the picture's edges.
-- At launch, a short CRT warm-up while the camera starts, so it costs no time.
-- Without a camera (permission denied, or the Simulator): static, with "Import a photo" and "Allow camera" buttons.
+- At launch, a short CRT warm-up while the camera starts, so it costs no time: it ends with the camera's first frame.
+- Without a camera (permission denied, or the Simulator): static, with "Import a photo" and "Allow camera" buttons. "Allow camera" opens the app's page in Settings. While another app or a call has the camera, static with "Camera in use".
+- The front camera's pictures are mirrored, as a mirror shows the scene, in the viewfinder and the shot alike, so the shot is what the viewfinder showed.
 
 ## 4. Taking a picture
 
@@ -56,11 +57,11 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 **Camera**:
 
 - Shutter: the capture key, the volume buttons, and a click of the Camera Control.
-- Mode dial: swipe on the TV, or slide on the Camera Control. Real names (Hires, Multicolour, PETSCII, FLI…), each with a one-line description. Paid modes show a lock.
+- Mode dial: swipe across the TV, or slide on the Camera Control (still to come). Real names (Hires, Multicolour, PETSCII, FLI…), each with a one-line description. Paid modes show a lock.
 - Monitor bank: TV, Commodore monitor, Sharp, B&W, Amber, Green.
 - The last picture, which opens the gallery.
-- Flash, front/back camera, zoom (pinch, plus the lens buttons), the CRT switch (scanlines, glow and curvature; presentation only), settings.
-- Tap to focus and expose; drag to set exposure, which matters a lot with only 9 brightness levels.
+- Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch (scanlines, glow and curvature; presentation only), settings.
+- Tap to focus and expose; drag up or down to set exposure, which matters a lot with only 9 brightness levels: two stops either way, in thirds. A tap sets it back to the camera's own.
 
 **Review**, after a shot or when a picture is opened from the gallery:
 

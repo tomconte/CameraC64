@@ -56,9 +56,12 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
-  - The app target uses MainActor as its default actor isolation.
+  - The app target uses MainActor as its default actor isolation: code that runs anywhere else is marked `nonisolated`, types included.
+  - The camera (`App/Sources/Camera/`): `Camera`, an actor whose executor is its own queue, owns the capture session; `Viewfinder` converts frames on another queue; `LiveCamera` is the screen's side of both.
+  - The session turns frames upright for a phone held in portrait and never mirrors them. `Target`'s `ImageOrientation` turns them as the phone is held, and mirrors the front camera's once upright; mirrored first, they would be upside down with the phone sideways.
+  - Only a phone can check the camera: the Simulator, and so CI, has none, and shows static. The app tests feed the viewfinder synthetic frames.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
-  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it: converter, renderer, then the monitor's display model. Until the camera comes (milestone 3), it converts the bundled sample photo.
+  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it for each shot's photo: converter, renderer, then the monitor's display model. `Viewfinder` does the same for each camera frame.
   - The one exception is temporary: modes without a converter yet (FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
 - **Still to come** (plan section 5):
   - converters for the character-set modes
