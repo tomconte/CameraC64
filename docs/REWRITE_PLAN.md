@@ -246,10 +246,10 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 - **Speed benchmark.** A hidden screen in TestFlight builds (Settings, Development) times each mode's conversion on the phone it runs on; `c64conv speed` runs the same measurement elsewhere.
   - It times each stage of a viewfinder frame, from a 1920 × 1440 camera frame as the viewfinder gets it with the phone held sideways, where the crop is largest: the target, the conversion, the rendering and the display model, for hires, multicolour and PETSCII on a TV, a sharp display and a black-and-white monitor.
   - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
-  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 9.5 to 9.9 ms, 7.7 to 7.9 of them in the conversion, and a black-and-white one 4.0 to 4.6 ms, in hires or multicolour.
-  - PETSCII was first timed there while the viewfinder most likely went on converting the camera's frames behind the Settings sheet, which it no longer does. In that run, a colour frame took 18 ms in PETSCII against 12 to 15 in hires or multicolour, and a black-and-white one 8.0 ms against 4.8 to 5.7. So PETSCII takes about a third longer in colour, and half as long again in black and white, which would put a colour frame at about 13 ms on an otherwise idle phone.
+  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 10 to 11 ms, 8.3 to 8.5 of them in the conversion, and a black-and-white one 4.4 to 5.0 ms, in hires or multicolour. PETSCII takes 15 ms in colour, 12 to 13 of them in the conversion, and 7.1 in black and white.
+  - The benchmark runs with the camera on, but the viewfinder drops its frames while Settings is open. When it went on converting them, colour frames took 12 to 15 ms, and 18 in PETSCII. Before the camera came, hires and multicolour took 9.5 to 9.9 ms in colour and 4.0 to 4.6 in black and white.
   - On four 2.1 GHz Xeon cores, whose times vary more from run to run, a colour frame takes 17 to 27 ms in hires or multicolour and 20 to 32 ms in PETSCII, and a black-and-white one 8 to 13 ms. Making a PETSCII converter takes another 20 to 30 ms, 8 in black and white, for its tables of how the characters look on the monitor.
-  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 30 ms, and a PETSCII one at about 33 to 39 ms, a little below 30 frames a second. The viewfinder's battery use is still to be measured, now that the camera works.
+  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 33 ms in hires or multicolour, and 38 to 45 ms in PETSCII, 22 to 26 frames a second. The viewfinder's battery use is still to be measured, now that the camera works.
   - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
 - **Quality benchmark** (`c64conv benchmark`, see `Tools/README.md`).
   - A chart of every hue, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. They are downloaded, with pinned checksums, rather than kept in the repository.
@@ -371,7 +371,7 @@ docs/                     this plan, the UX (UX.md) and design notes
 2. **Converter** (done, but for measuring the oldest phones):
    - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark, in CI.
    - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3).
-   - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes under 10 ms, so there is none for now (section 10).
+   - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes 10 to 11 ms, so there is none for now (section 10).
 3. **App at feature parity**:
    - PETSCII first, since it can all be checked without a phone (done, but for timing it on older phones):
      - the character ROM's shapes in `C64Core`, in one file with its own notice (section 17)
@@ -411,7 +411,7 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
 - **Display models are approximate.** They are validated against VICE and a CRT, not pixel for pixel.
 - **NUFLI.** Aim to match NUFLIX Studio, not beat it.
-- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10). An iPhone 17 Pro makes a colour frame in under 10 ms, less than a third of the 33 ms of 30 fps, but keeps all six cores busy while it does; an iPhone 11, with 2 fast and 4 slow cores, may only just keep up.
+- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10). An iPhone 17 Pro makes a colour frame in 10 to 11 ms, about a third of the 33 ms of 30 fps, or 15 in PETSCII, but keeps all six cores busy while it does; an iPhone 11, with 2 fast and 4 slow cores, may only just keep up, and not in PETSCII.
 
 ## 18. References
 
