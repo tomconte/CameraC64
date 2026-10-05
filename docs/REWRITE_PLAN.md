@@ -216,7 +216,7 @@ The presets replace the old app's tints and are free. The model is an approximat
 - **Curvature**: the glass bulges, so the picture's edges curve, its corners are rounded, and it darkens towards them.
 - **Afterglow**: in the viewfinder, the amber and green monitors' phosphor glows on after each frame, so whatever moves leaves a fading trail.
 
-On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation is still to come.
+On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on: SwiftUI's `ImageRenderer` runs the same shader. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation is still to come.
 
 ## 8. Palettes
 
