@@ -164,7 +164,15 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
    - It stays stable from frame to frame, it is the classic C64 look, and the scoring in step 5 is designed around it.
    - Error diffusion restricted to each cell's colours may come later as an optional look in Edit, if the quality benchmark shows a clear gain.
 7. **Harder modes** (interlace, NUFLI, custom character sets): there are too many combinations to try them all. Start from the per-cell solution and re-optimise one setting at a time until nothing improves. The viewfinder shows the starting solution; the shot runs the refinement passes.
-8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames. A cell keeps the previous frame's colours, and in PETSCII its character, unless the new ones are clearly better, which prevents flicker: unless the new best set scores more than a twelfth lower, and the background unless the new one's total is more than a thirty-second lower. The margins will be tuned on real video in milestone 3.
+8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames.
+   - The camera works in a 4:3 format, the sensor's own shape, with frames of at most 1920 × 1440 at 30 fps, in BGRA, and photos of 12 megapixels.
+   - Frames come sideways, as AVFoundation sends them by default, and are never mirrored. `Target` reads each frame where it is, without a copy, and turns it as the phone is held, so the converter sees the picture as the user does. It turns only the small grid of averages, so turning costs next to nothing.
+     - The back camera's frames are upright with the top of the phone to the left, and the front camera's with it to the right. The front camera faces the user, so as the phone turns, its pictures turn the other way to the back camera's.
+     - The app leaves the frames' rotation angle as AVFoundation sets it. The Center Stage front camera of the iPhone 17, 17 Pro and Air has a square sensor mounted upright, so AVFoundation sets an angle that keeps its frames as earlier front cameras sent them; an angle the app set would count from the new sensor, and turn the picture a quarter turn too far ([WWDC26, session 341](https://developer.apple.com/videos/play/wwdc2026/341/), and an [Apple engineer on the forums](https://developer.apple.com/forums/thread/825928)).
+     - Photos are stored as the sensor reads them, with an orientation that turns them as the frames are turned. A photo's rotation angle counts from the sensor, so the camera adds the turn AVFoundation gives the frames, which on the iPhone 17's front camera makes its angles a quarter turn less than earlier front cameras'. AVFoundation can instead turn that camera's photos to match earlier front cameras', at a cost, but those cameras' angles left the app's shots a quarter turn off there, so the app turns that off.
+   - The front camera's pictures are mirrored, as a mirror shows the scene, in the viewfinder and the shot alike. They are mirrored once upright: mirrored before being turned, they would show the scene upside down with the phone held upright.
+   - A frame that comes while the last one is converting is dropped, so the viewfinder runs as fast as the phone converts.
+   - A cell keeps the previous frame's colours, and in PETSCII its character, unless the new ones are clearly better, which prevents flicker: unless the new best set scores more than a twelfth lower, and the background unless the new one's total is more than a thirty-second lower. The margins are still to be tuned on real video.
 9. **Mono monitors** run the same search on brightness only, with one colour per brightness, so 9 instead of 16. Within a group of equally bright colours, the converter picks a grey where there is one, so the picture also looks right on a colour TV, and otherwise whichever is legal for that cell (e.g. 0–7 in colour memory).
 10. **Border**: the colour most common along the picture's edges, unless the user picks one.
 
@@ -236,11 +244,12 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
   - on GitHub Actions macOS runners, which are free for public repositories, with VICE installed from Homebrew
   - in Claude Code web sessions, after `Tools/install-vice.sh` builds VICE without a user interface
 - **Speed benchmark.** A hidden screen in TestFlight builds (Settings, Development) times each mode's conversion on the phone it runs on; `c64conv speed` runs the same measurement elsewhere.
-  - It times each stage of a viewfinder frame from a 1920×1440 camera frame: the target, the conversion, the rendering and the display model, for hires, multicolour and PETSCII on a TV, a sharp display and a black-and-white monitor.
+  - It times each stage of a viewfinder frame, from a 1920 × 1440 camera frame as the viewfinder gets it with the phone held sideways, where the crop is largest: the target, the conversion, the rendering and the display model, for hires, multicolour and PETSCII on a TV, a sharp display and a black-and-white monitor.
   - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
-  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 9.5 to 9.9 ms, 7.7 to 7.9 of them in the conversion, and a black-and-white one 4.0 to 4.6 ms, in hires or multicolour. PETSCII is still to be timed on a phone.
+  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 10 to 11 ms, 8.3 to 8.5 of them in the conversion, and a black-and-white one 4.4 to 5.0 ms, in hires or multicolour. PETSCII takes 15 ms in colour, 12 to 13 of them in the conversion, and 7.1 in black and white.
+  - The benchmark runs with the camera on, but the viewfinder drops its frames while Settings is open. When it went on converting them, colour frames took 12 to 15 ms, and 18 in PETSCII. Before the camera came, hires and multicolour took 9.5 to 9.9 ms in colour and 4.0 to 4.6 in black and white.
   - On four 2.1 GHz Xeon cores, whose times vary more from run to run, a colour frame takes 17 to 27 ms in hires or multicolour and 20 to 32 ms in PETSCII, and a black-and-white one 8 to 13 ms. Making a PETSCII converter takes another 20 to 30 ms, 8 in black and white, for its tables of how the characters look on the monitor.
-  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 30 ms. The viewfinder's battery use is measured in milestone 3.
+  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 33 ms in hires or multicolour, and 38 to 45 ms in PETSCII, 22 to 26 frames a second. The viewfinder's battery use is still to be measured, now that the camera works.
   - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
 - **Quality benchmark** (`c64conv benchmark`, see `Tools/README.md`).
   - A chart of every hue, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. They are downloaded, with pinned checksums, rather than kept in the repository.
@@ -362,15 +371,19 @@ docs/                     this plan, the UX (UX.md) and design notes
 2. **Converter** (done, but for measuring the oldest phones):
    - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark, in CI.
    - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3).
-   - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes under 10 ms, so there is none for now (section 10).
+   - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes 10 to 11 ms, so there is none for now (section 10).
 3. **App at feature parity**:
-   - PETSCII first, since it can all be checked without a phone (done, but for timing it on phones):
+   - PETSCII first, since it can all be checked without a phone (done, but for timing it on older phones):
      - the character ROM's shapes in `C64Core`, in one file with its own notice (section 17)
      - the converter (section 6)
      - a viewer that leaves the VIC-II on the C64's own character ROM, so exported files hold only character codes and colours
      - PETSCII in the quality and speed benchmarks and the VICE tests, and in the app in place of its sample picture
-   - camera and viewfinder
-   - capture, review, save, share and export
+   - camera and viewfinder (done, but for checking it on more phones):
+     - the camera in a 4:3 format, its frames converted live, turned as the phone is held, and mirrored for the front camera (section 6)
+     - zoom buttons for each lens, pinch, tap to focus, drag for exposure, flash, and the volume buttons and Camera Control as shutter
+     - without a camera or permission, static, with a way to Settings and to a photo from the library
+     - tried on an iPhone 17 Pro, where both cameras' pictures and shots come out upright; still to check: the frame rate, the flicker margins, battery use and older phones
+   - capture, review, save, share and export: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip, and the picture as on TV can be shared; saving to Photos and C64 file export are still to come
    - gallery, monitors and CRT layer
    - photo import, and StoreKit 2 with the legacy entitlement
 
@@ -398,7 +411,7 @@ Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, 
 - **Interlace preview.** iPhone screens can't refresh at exactly 50 Hz, so the preview shows the blended picture. The `.prg` is the real thing.
 - **Display models are approximate.** They are validated against VICE and a CRT, not pixel for pixel.
 - **NUFLI.** Aim to match NUFLIX Studio, not beat it.
-- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10). An iPhone 17 Pro makes a colour frame in under 10 ms, less than a third of the 33 ms of 30 fps, but keeps all six cores busy while it does; an iPhone 11, with 2 fast and 4 slow cores, may only just keep up.
+- **Viewfinder speed and battery life** on the oldest supported iPhones, with the converter on the CPU. The speed benchmark shows early whether some searches need a Metal version (section 10). An iPhone 17 Pro makes a colour frame in 10 to 11 ms, about a third of the 33 ms of 30 fps, or 15 in PETSCII, but keeps all six cores busy while it does; an iPhone 11, with 2 fast and 4 slow cores, may only just keep up, and not in PETSCII.
 
 ## 18. References
 

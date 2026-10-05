@@ -1,3 +1,4 @@
+import C64Core
 import CoreMotion
 import Observation
 import SwiftUI
@@ -57,6 +58,40 @@ enum HeldOrientation {
         case .landscapeLeft: CGSize(width: translation.height, height: -translation.width)
         case .landscapeRight: CGSize(width: -translation.height, height: translation.width)
         }
+    }
+
+    /// How many quarter turns clockwise a camera's pictures need to be upright
+    /// with the phone held this way (docs/UX.md, section 1).
+    ///
+    /// AVFoundation sends both cameras' pictures sideways by default, as it
+    /// always has: the back camera's are upright with the top of the phone to
+    /// the left, the front camera's with it to the right. The front camera
+    /// faces the user, so as the phone turns, its pictures turn the other way
+    /// to the back camera's. The iPhone 17's front camera has a square sensor
+    /// mounted upright, but AVFoundation turns its frames to match the earlier
+    /// front cameras' while their rotation angle is left as it is, so the same
+    /// turns hold (WWDC26, session 341).
+    func uprightTurns(frontCamera: Bool) -> Int {
+        switch self {
+        case .portrait: 1
+        case .landscapeLeft: frontCamera ? 2 : 0
+        case .landscapeRight: frontCamera ? 0 : 2
+        }
+    }
+
+    /// The turns a camera's frames need to be upright, as a rotation angle in
+    /// degrees clockwise.
+    func uprightAngle(frontCamera: Bool) -> CGFloat {
+        CGFloat(uprightTurns(frontCamera: frontCamera) * 90)
+    }
+
+    /// How a camera's frames are seen with the phone held this way: turned
+    /// upright, then, for the front camera, mirrored as a mirror shows the
+    /// scene.
+    func frameOrientation(frontCamera: Bool) -> ImageOrientation {
+        let turns: [ImageOrientation] = [.up, .right, .down, .left]
+        let upright = turns[uprightTurns(frontCamera: frontCamera)]
+        return frontCamera ? upright.mirrored : upright
     }
 }
 

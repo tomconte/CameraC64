@@ -1,4 +1,6 @@
 import C64Core
+import CoreVideo
+import ImageIO
 import SwiftUI
 import Testing
 
@@ -7,6 +9,13 @@ import Testing
 /// The camera screen's logic. C64 logic is tested in Packages/C64Core.
 @MainActor
 struct CameraScreenTests {
+    /// The sample photo, which the app bundles for previews and tests.
+    /// (Passed straight to a `Photo?` parameter, `#require` would check a
+    /// doubly optional value that is never nil.)
+    private func samplePhoto() throws -> Photo {
+        try #require(Photo.sample)
+    }
+
     @Test func gravityTellsHowThePhoneIsHeld() {
         #expect(HeldOrientation(gravityX: 0, y: -1) == .portrait)
         #expect(HeldOrientation(gravityX: -1, y: 0) == .landscapeLeft)
@@ -65,10 +74,12 @@ struct CameraScreenTests {
     @Test func aShotIsHeldForReviewAndKept() {
         let model = CameraModel()
         model.select(PictureMode.hires)
-        model.capture(animated: false)
+        model.capture()
         #expect(model.stage == .review)
         #expect(model.lastShot == .hires)
         #expect(model.reviewMode == .hires)
+        model.pictureReady(animated: false)
+        #expect(model.fillStart == nil)
 
         model.backToLive()
         #expect(model.stage == .live)
@@ -87,11 +98,22 @@ struct CameraScreenTests {
         #expect(PictureMode.allCases.allSatisfy { ($0.spec == nil) == ($0.sample != nil) })
     }
 
+    /// When the camera takes no photo, the last picture stays as it was.
+    @Test func aFailedShotKeepsTheLastPicture() {
+        let model = CameraModel()
+        model.capture()
+        let previous = model.lastShot
+        model.select(PictureMode.hires)
+        model.capture()
+        model.captureFailed(lastShot: previous)
+        #expect(model.stage == .live)
+        #expect(model.lastShot == .multicolour)
+    }
+
     /// Every mode's picture comes out at the screen's size, border included,
     /// and its display window at the picture's.
-    @Test func everyModeHasAPicture() async {
-        let maker = PictureMaker()
-        #expect(maker.photo != nil)
+    @Test func everyModeHasAPicture() async throws {
+        let maker = PictureMaker(photo: try samplePhoto())
         for mode in PictureMode.allCases {
             let key = PictureMaker.Key(mode, on: .tv)
             await maker.make(key)
@@ -106,7 +128,7 @@ struct CameraScreenTests {
     /// other modes ignore.
     @Test func petsciiCanUseOnlyTheGraphicsCharacters() async throws {
         #expect(PictureMaker.Key(.hires, on: .tv, petsciiCharacters: .graphics) == PictureMaker.Key(.hires, on: .tv))
-        let maker = PictureMaker()
+        let maker = PictureMaker(photo: try samplePhoto())
         let all = PictureMaker.Key(.petscii, on: .tv)
         let graphics = PictureMaker.Key(.petscii, on: .tv, petsciiCharacters: .graphics)
         await maker.make(all)
@@ -120,13 +142,240 @@ struct CameraScreenTests {
     /// The black-and-white monitor shows greys, from the display model rather
     /// than a tint.
     @Test func blackAndWhiteShowsGreys() async throws {
-        let maker = PictureMaker()
+        let maker = PictureMaker(photo: try samplePhoto())
         let key = PictureMaker.Key(.multicolour, on: .blackAndWhite)
         await maker.make(key)
         let screen = try #require(maker.picture(key)?.screen)
         let pixels = try #require(RGBImage(screen)).bytes
         #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0] == pixels[$0 + 1] })
         #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0 + 1] == pixels[$0 + 2] })
+    }
+
+    /// Before the first shot, only the modes without a converter have
+    /// pictures: their samples.
+    @Test func withoutAPhotoOnlySamplesHavePictures() async {
+        let maker = PictureMaker()
+        await maker.make(PictureMaker.Key(.hires, on: .tv))
+        await maker.make(PictureMaker.Key(.fli, on: .tv))
+        #expect(maker.picture(PictureMaker.Key(.hires, on: .tv)) == nil)
+        #expect(maker.picture(PictureMaker.Key(.fli, on: .tv)) != nil)
+    }
+
+    /// A new shot replaces the last one's pictures. (On the black-and-white
+    /// monitor, whose search is the quickest.)
+    @Test func aNewPhotoReplacesThePictures() async throws {
+        let maker = PictureMaker(photo: try samplePhoto())
+        let key = PictureMaker.Key(.hires, on: .blackAndWhite)
+        await maker.make(key)
+        #expect(maker.picture(key) != nil)
+        let next = try samplePhoto()
+        maker.use(next)
+        #expect(maker.photo?.id == next.id)
+        #expect(maker.picture(key) == nil)
+        await maker.make(key)
+        #expect(maker.picture(key) != nil)
+    }
+
+    /// A photo keeps its pixels as stored, with the orientation its file
+    /// gives, mirrored for the front camera.
+    @Test func photosKeepTheirOrientation() throws {
+        // A 40 × 30 JPEG whose EXIF orientation says it is seen after a
+        // quarter turn clockwise, as a photo taken upright is stored.
+        let image = try #require(RGBImage(width: 40, height: 30, fill: RGB(200, 120, 40)).cgImage)
+        let data = NSMutableData()
+        let destination = try #require(
+            CGImageDestinationCreateWithData(data as CFMutableData, "public.jpeg" as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, [kCGImagePropertyOrientation: 6] as CFDictionary)
+        #expect(CGImageDestinationFinalize(destination))
+
+        let photo = try #require(Photo(data: data as Data, mirrored: false))
+        #expect(photo.image.width == 40 && photo.image.height == 30)
+        #expect(photo.orientation == .right)
+        // The preview is upright.
+        #expect(photo.preview.width == 30 && photo.preview.height == 40)
+        #expect(Photo(data: data as Data, mirrored: true)?.orientation == .leftMirrored)
+    }
+
+    /// The back camera's frames are upright with the top of the phone to the
+    /// left, and need a quarter turn clockwise held upright.
+    @Test func backCameraFramesTurnWithThePhone() {
+        #expect(HeldOrientation.portrait.frameOrientation(frontCamera: false) == .right)
+        #expect(HeldOrientation.landscapeLeft.frameOrientation(frontCamera: false) == .up)
+        #expect(HeldOrientation.landscapeRight.frameOrientation(frontCamera: false) == .down)
+        // Held upright, the top of the picture is the frame's left side.
+        let top = HeldOrientation.portrait.frameOrientation(frontCamera: false).storedPoint(x: 0.5, y: 0)
+        #expect(top.x == 0 && top.y == 0.5)
+    }
+
+    /// The front camera's frames are upright with the top of the phone to the
+    /// right, and turn the other way to the back camera's as the phone turns.
+    /// They are mirrored once upright.
+    @Test func frontCameraFramesTurnTheOtherWay() {
+        #expect(HeldOrientation.portrait.frameOrientation(frontCamera: true) == .leftMirrored)
+        #expect(HeldOrientation.landscapeLeft.frameOrientation(frontCamera: true) == .downMirrored)
+        #expect(HeldOrientation.landscapeRight.frameOrientation(frontCamera: true) == .upMirrored)
+        // Held upright, the top of the picture is still the frame's left
+        // side, and its left is the frame's top, as in a mirror.
+        let front = HeldOrientation.portrait.frameOrientation(frontCamera: true)
+        let top = front.storedPoint(x: 0.5, y: 0)
+        let left = front.storedPoint(x: 0, y: 0.5)
+        #expect(top.x == 0 && top.y == 0.5)
+        #expect(left.x == 0.5 && left.y == 0)
+    }
+
+    /// A photo is stored with the turn its camera's frames need, counted from
+    /// the sensor, so it gets the turn AVFoundation gives the frames as well.
+    /// On the iPhone 17's front camera, whose frames AVFoundation turns by 270°
+    /// to send them sideways, the angles are a quarter turn less than on
+    /// earlier front cameras, as AVFoundation's rotation coordinator gives
+    /// them there.
+    @Test func photosAreStoredAsThePhoneIsHeld() {
+        let held: [HeldOrientation] = [.portrait, .landscapeLeft, .landscapeRight]
+        func angles(frontCamera: Bool, framesRotationAngle: CGFloat = 0) -> [CGFloat] {
+            held.map {
+                Camera.photoRotationAngle(
+                    upright: $0.uprightAngle(frontCamera: frontCamera), framesRotationAngle: framesRotationAngle)
+            }
+        }
+        #expect(angles(frontCamera: false) == [90, 0, 180])
+        #expect(angles(frontCamera: true) == [90, 180, 0])
+        #expect(angles(frontCamera: true, framesRotationAngle: 270) == [0, 90, 270])
+    }
+
+    /// A camera frame in BGRA, as the camera sends them.
+    private func cameraFrame(width: Int, height: Int, _ color: (Int, Int) -> RGB) throws -> CVPixelBuffer {
+        var buffer: CVPixelBuffer?
+        CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, nil, &buffer)
+        let frame = try #require(buffer)
+        CVPixelBufferLockBaseAddress(frame, [])
+        defer { CVPixelBufferUnlockBaseAddress(frame, []) }
+        let base = try #require(CVPixelBufferGetBaseAddress(frame)).assumingMemoryBound(to: UInt8.self)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(frame)
+        for y in 0..<height {
+            for x in 0..<width {
+                let (pixel, rgb) = (base + y * bytesPerRow + x * 4, color(x, y))
+                (pixel[0], pixel[1], pixel[2], pixel[3]) = (rgb.b, rgb.g, rgb.r, 255)
+            }
+        }
+        return frame
+    }
+
+    /// A corner of the picture. (Declared inside a test, a type makes Swift
+    /// Testing's `#require` warn that nothing in it throws.)
+    private enum Corner { case topLeft, topRight, bottomLeft, bottomRight }
+
+    /// The viewfinder converts frames into whole screens, seen as the phone is
+    /// held, and mirrored for the front camera. (Without dithering, which
+    /// makes the search quicker and changes nothing here.)
+    @Test func viewfinderTurnsAndMirrorsFrames() throws {
+        // A frame as the camera sends them, sideways: red in its top left
+        // quarter, blue elsewhere.
+        let frame = try cameraFrame(width: 480, height: 360) { x, y in
+            x < 240 && y < 180 ? RGB(220, 30, 30) : RGB(30, 30, 220)
+        }
+        let viewfinder = Viewfinder(feed: ViewfinderFeed())
+        /// The corner of the picture that is red, if only one is.
+        func redCorner(_ held: HeldOrientation, frontCamera: Bool) throws -> Corner? {
+            let settings = Viewfinder.Settings(
+                spec: .hires, converter: Converter.Settings(display: .sharp, dithering: 0),
+                orientation: held.frameOrientation(frontCamera: frontCamera))
+            let screen = try #require(viewfinder.picture(of: frame, settings))
+            #expect(screen.width == Screen.width && screen.height == Screen.height)
+            let corners: [(Corner, x: Int, y: Int)] = [
+                (.topLeft, 20, 20), (.topRight, 300, 20), (.bottomLeft, 20, 180), (.bottomRight, 300, 180),
+            ]
+            let red = corners.filter { _, x, y in
+                let color = screen[Screen.windowX + x, Screen.windowY + y]
+                return color.r > color.b
+            }
+            return red.count == 1 ? red[0].0 : nil
+        }
+
+        #expect(try redCorner(.portrait, frontCamera: false) == .topRight)
+        #expect(try redCorner(.landscapeLeft, frontCamera: false) == .topLeft)
+        #expect(try redCorner(.landscapeRight, frontCamera: false) == .bottomRight)
+        // The front camera's pictures are mirrored, and turn the other way
+        // with the phone sideways.
+        #expect(try redCorner(.portrait, frontCamera: true) == .topLeft)
+        #expect(try redCorner(.landscapeLeft, frontCamera: true) == .bottomLeft)
+        #expect(try redCorner(.landscapeRight, frontCamera: true) == .topRight)
+    }
+
+    /// A tap focuses where it lands: the centre of the picture is the centre
+    /// of the camera's view, and its corners map into the frame as the camera
+    /// sends it, which is how the camera measures points of interest.
+    @Test func tapsFocusWhereTheyLand() {
+        for orientation in ImageOrientation.allCases {
+            let centre = Viewfinder.cameraPoint(
+                ofPicturePoint: CGPoint(x: 0.5, y: 0.5), frameWidth: 1920, frameHeight: 1440, orientation: orientation)
+            #expect(abs(centre.x - 0.5) < 1e-9 && abs(centre.y - 0.5) < 1e-9)
+        }
+        let topLeft = CGPoint(x: 0, y: 0)
+        // Held upright, the picture is a band down the middle of the frame,
+        // and its top is along the frame's left side.
+        let upright = Viewfinder.cameraPoint(
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .right)
+        #expect(abs(upright.x - 0.2496) < 0.001 && abs(upright.y - 1) < 1e-9)
+        // Held with the top to the left, the back camera sees the picture
+        // upright.
+        let sideways = Viewfinder.cameraPoint(
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .up)
+        #expect(abs(sideways.x) < 1e-9 && abs(sideways.y - 0.0548) < 0.001)
+        // The front camera's mirrored picture, held upright, starts at the
+        // frame's top.
+        let front = Viewfinder.cameraPoint(
+            ofPicturePoint: topLeft, frameWidth: 1920, frameHeight: 1440, orientation: .leftMirrored)
+        #expect(abs(front.x - 0.2496) < 0.001 && abs(front.y) < 1e-9)
+    }
+
+    /// The camera picks a 4:3 format with frames no larger than 1920 × 1440,
+    /// taking the largest photos.
+    @Test func cameraPicksA4By3Format() {
+        typealias Candidate = CameraFormats.Candidate
+        let twelveMegapixels = 4032 * 3024
+        let formats = [
+            Candidate(
+                width: 1920, height: 1080, maxFrameRate: 60, photoPixels: twelveMegapixels, binned: false,
+                fullRange: true),
+            Candidate(
+                width: 4032, height: 3024, maxFrameRate: 30, photoPixels: twelveMegapixels, binned: false,
+                fullRange: true),
+            Candidate(
+                width: 1440, height: 1080, maxFrameRate: 60, photoPixels: twelveMegapixels, binned: true,
+                fullRange: true),
+            Candidate(
+                width: 1920, height: 1440, maxFrameRate: 30, photoPixels: twelveMegapixels, binned: false,
+                fullRange: false),
+            Candidate(
+                width: 1920, height: 1440, maxFrameRate: 30, photoPixels: twelveMegapixels, binned: false,
+                fullRange: true),
+            Candidate(
+                width: 640, height: 480, maxFrameRate: 30, photoPixels: 640 * 480, binned: false, fullRange: true),
+        ]
+        #expect(CameraFormats.best(formats) == 4)
+        // Larger photos come first, then frames that are not binned.
+        #expect(CameraFormats.best([formats[5], formats[2]]) == 1)
+        #expect(CameraFormats.best([formats[0], formats[1]]) == nil)
+    }
+
+    @Test func zoomButtonsFollowTheLenses() {
+        // Ultra wide, wide and a 5× telephoto lens.
+        #expect(CameraZoom.presets(in: 0.5...10, lenses: [1, 5]) == [0.5, 1, 2, 5])
+        #expect(CameraZoom.presets(in: 0.5...10, lenses: [1]) == [0.5, 1, 2])
+        // A front camera, and an older pair of wide and 2× lenses.
+        #expect(CameraZoom.presets(in: 1...10, lenses: []) == [1, 2])
+        #expect(CameraZoom.presets(in: 1...10, lenses: [2]) == [1, 2])
+        #expect(CameraZoom.presets(in: 0.5...10, lenses: [1, 2.9999]) == [0.5, 1, 2, 3])
+    }
+
+    @Test func zoomButtonsShowTheZoom() {
+        let buttons = ZoomButtons(presets: [0.5, 1, 2], zoom: 1)
+        #expect(buttons.lit == 1)
+        #expect([0.5, 1, 2].map(buttons.label) == [".5", "1×", "2"])
+        // Between buttons, the one below shows the zoom.
+        #expect(ZoomButtons(presets: [0.5, 1, 2], zoom: 1.4).label(1) == "1.4×")
+        #expect(ZoomButtons(presets: [0.5, 1, 2], zoom: 0.7).label(0.5) == ".7×")
+        #expect(ZoomButtons.name(0.5) == "0.5×" && ZoomButtons.name(2) == "2×")
     }
 
     @Test func picturesRoundTripThroughCoreGraphics() throws {
