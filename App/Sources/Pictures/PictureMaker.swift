@@ -3,21 +3,24 @@ import CoreGraphics
 import Observation
 import UIKit
 
-/// A picture as the TV shows it, through the chosen monitor.
-struct ShownPicture {
+/// A picture as the TV shows it, through the chosen monitor. (CGImage is
+/// immutable, so threads can share it.)
+nonisolated struct ShownPicture: @unchecked Sendable {
     /// The whole screen, border included: 384 × 272 C64 pixels.
     let screen: CGImage
     /// The display window alone: the 320 × 200 picture.
     let window: CGImage
+    /// The whole screen as the CRT layer reads it.
+    let crt: CRTSource
 }
 
-extension ShownPicture {
+nonisolated extension ShownPicture {
     /// A whole screen as a monitor shows it, border included.
     init?(_ screen: RGBImage) {
         let windowArea = CGRect(
             x: Screen.windowX, y: Screen.windowY, width: Screen.windowWidth, height: Screen.windowHeight)
         guard let image = screen.cgImage, let window = image.cropping(to: windowArea) else { return nil }
-        self.init(screen: image, window: window)
+        self.init(screen: image, window: window, crt: CRTSource(screen))
     }
 }
 
@@ -96,11 +99,11 @@ final class PictureMaker {
         making.insert(job)
         defer { making.remove(job) }
         let display = key.monitor.display
-        let shown = await Task.detached(priority: .userInitiated) {
-            PictureMaker.screen(of: source, on: display)
+        let picture = await Task.detached(priority: .userInitiated) {
+            ShownPicture(PictureMaker.screen(of: source, on: display))
         }.value
         // A picture of a photo since replaced is dropped.
-        guard photo?.id == job.photo, let picture = ShownPicture(shown) else { return }
+        guard photo?.id == job.photo, let picture else { return }
         pictures[key] = picture
     }
 

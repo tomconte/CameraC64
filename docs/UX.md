@@ -60,13 +60,15 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - Mode dial: swipe across the TV, or slide on the Camera Control (still to come). Real names (Hires, Multicolour, PETSCII, FLI…), each with a one-line description. Paid modes show a lock.
 - Monitor bank: TV, Commodore monitor, Sharp, B&W, Amber, Green.
 - The last picture, which opens the gallery.
-- Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch (scanlines, glow and curvature; presentation only), settings.
+- Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch, settings.
+- The CRT switch shows the TV's tube: scanlines, glow and curvature, and on the amber and green monitors, a fading trail behind whatever moves in the viewfinder. It is presentation only (plan, section 7). Sharp is a flat screen, so it has none: there, the switch says so.
 - Tap to focus and expose; drag up or down to set exposure, which matters a lot with only 9 brightness levels: two stops either way, in thirds. A tap sets it back to the camera's own.
 
 **Review**, after a shot or when a picture is opened from the gallery:
 
 - Mode strip: the photo in every mode. Paid modes show their result with a lock; tapping one opens the store.
 - Monitor bank. Changing the monitor converts the picture again, for that monitor.
+- The CRT switch stays in the top bar: it decides whether the picture as on TV, which is shared, shows the tube.
 - Share, Save to Photos, Edit, Send to C64, Delete.
   - Edit: framing, tones (automatic by default), border colour, PETSCII's characters, and C64 file export (`.prg` first).
   - PETSCII's characters: all of them, or only the graphics characters. With letters, digits and punctuation, pictures look like BBS art; graphics alone give the classic PETSCII look. Idea, to settle when Edit is built: graphics only as the default in the viewfinder and the shot, with all characters a choice in Edit afterwards. Until then, a switch in Settings stands in.
@@ -78,7 +80,7 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 
 ## 6. What gets shared and exported
 
-- **As on TV**, shared by default: the real pixel shape, the monitor's display model, the CRT layer when it is on, and the border, so about 4:3. The border makes it read as a C64 screen at a glance.
+- **As on TV**, shared by default: the real pixel shape, the monitor's display model, the CRT layer when it is on (never with Sharp), and the border, so about 4:3. The border makes it read as a C64 screen at a glance.
 - **Pixel-exact PNG**: square pixels, so 8:5, 7% wider than a PAL TV shows it. It is meant for C64 tools.
 - **C64 files**: see the plan, section 9.
 - A picture made for a mono monitor is still colour data: its `.prg` shows odd colours on a colour TV. Warn at export, or have the converter prefer greys where it can.

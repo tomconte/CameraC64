@@ -203,11 +203,20 @@ It works in the brightness/colour signal space the VIC-II outputs, which is the 
 | Commodore monitor | Separate brightness and colour: sharper brightness, delay line |
 | Mono: green, amber, B&W | Brightness only, in the phosphor's colour |
 
-The presets replace the old app's tints and are free. Scanlines, bloom, curvature and the power-off animation form a presentation layer on top. The model is an approximation, since real TVs vary. It is checked against VICE's PAL/CRT emulation and a real CRT, not by pixel-exact tests:
+The presets replace the old app's tints and are free. The model is an approximation, since real TVs vary. It is checked against VICE's PAL/CRT emulation and a real CRT, not by pixel-exact tests:
 
 - The blurs are Gaussian, as wide as those of VICE's PAL renderer with its default settings: brightness over 3 pixels weighted 1/8, 3/4, 1/8 (a standard deviation of 0.5 pixels), colour over 4 (1.1 pixels). That comparison is with VICE's source: its screenshots are taken before the CRT emulation.
 - Palettes other than Colodore's get the signals a PAL monitor would turn into their colours.
 - The check against a real CRT is still to do.
+
+**The CRT layer** is the tube itself, a presentation layer on top of the display model, which the CRT switch turns on and off. A Metal shader draws it from the display model's picture, in linear light, at the phone's own pixels:
+
+- **Scanlines.** A C64's picture is not interlaced, so the beam draws the same lines every frame and the gaps between them stay dark. Each line is a beam whose height grows with its brightness: dark lines are thin, with black gaps between them, and bright ones nearly fill the gaps. A beam spreads its light without adding any, so the picture keeps its brightness, where a fixed overlay of dark lines only dims it.
+- **Glow**: the glass scatters some of the light, so bright areas spill into the dark around them.
+- **Curvature**: the glass bulges, so the picture's edges curve, its corners are rounded, and it darkens towards them.
+- **Afterglow**: in the viewfinder, the amber and green monitors' phosphor glows on after each frame, so whatever moves leaves a fading trail.
+
+On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation is still to come.
 
 ## 8. Palettes
 
@@ -384,7 +393,8 @@ docs/                     this plan, the UX (UX.md) and design notes
      - without a camera or permission, static, with a way to Settings and to a photo from the library
      - tried on an iPhone 17 Pro, where both cameras' pictures and shots come out upright; still to check: the frame rate, the flicker margins, battery use and older phones
    - capture, review, save, share and export: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip, and the picture as on TV can be shared; saving to Photos and C64 file export are still to come
-   - gallery, monitors and CRT layer
+   - the CRT layer: scanlines, glow and curvature, and the amber and green monitors' afterglow, drawn by a Metal shader in the viewfinder, the review and the shared picture (done, but for tuning its look on a phone; section 7)
+   - gallery and monitors
    - photo import, and StoreKit 2 with the legacy entitlement
 
    Then release 3.0 on the restored listing.

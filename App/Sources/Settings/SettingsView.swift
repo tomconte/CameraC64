@@ -5,6 +5,11 @@ import UIKit
 enum SettingName {
     /// Whether PETSCII pictures use only the graphics characters.
     static let petsciiGraphicsOnly = "petsciiGraphicsOnly"
+    /// In development builds, the CRT layer's look as tuned (`CRT.text`).
+    static let crtLook = "crtLook"
+    /// In development builds, whether the camera screen shows the CRT tuning
+    /// panel.
+    static let crtTuning = "crtTuning"
 }
 
 /// Settings, in standard iOS styling (docs/UX.md, section 5).
@@ -16,6 +21,7 @@ enum SettingName {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SettingName.petsciiGraphicsOnly) private var petsciiGraphicsOnly = false
+    @AppStorage(SettingName.crtTuning) private var showsCRTTuning = false
     @State private var palette = "Colodore"
     @State private var brightnessLevels = 9
     @State private var saveEveryShot = false
@@ -76,10 +82,13 @@ struct SettingsView: View {
                         NavigationLink("Speed Benchmark") {
                             SpeedBenchmarkView()
                         }
+                        Toggle("CRT Tuning", isOn: $showsCRTTuning)
                     } header: {
                         Text("Development")
                     } footer: {
-                        Text("Only in development and TestFlight builds.")
+                        Text(
+                            "Only in development and TestFlight builds. CRT Tuning shows sliders for the CRT effect "
+                                + "on the camera screen, below the TV.")
                     }
                 }
             }

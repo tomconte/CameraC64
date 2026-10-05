@@ -1,6 +1,7 @@
 import C64Core
 import PhotosUI
 import SwiftUI
+import UIKit
 
 /// The C64 screen's proportions (docs/UX.md, section 2).
 enum TVGeometry {
@@ -30,7 +31,8 @@ enum TVGeometry {
     }
 }
 
-/// The TV: a C64 picture inside its border, as it looks on the chosen monitor.
+/// The TV: a C64 picture inside its border, as it looks on the chosen monitor,
+/// through the CRT layer when it is on.
 struct TVView: View {
     /// How long the finished picture takes to fill in after a shot.
     static let fillDuration: TimeInterval = 0.8
@@ -51,7 +53,8 @@ struct TVView: View {
     /// The photo the picture was made from, shown instead while `showsOriginal`.
     var original: Photo?
     var showsOriginal = false
-    var crtOn = false
+    /// The CRT layer's look, or nil to show the monitor's picture as it is.
+    var crt: CRT?
     var poweredOn = true
     var message: CameraModel.Message?
     /// Where the camera was just asked to focus, if it was.
@@ -76,9 +79,6 @@ struct TVView: View {
                         .clipped()
                         .offset(x: frame.minX, y: frame.minY)
                         .accessibilityLabel("The original photo")
-                }
-                if crtOn {
-                    Scanlines()
                 }
             }
             .scaleEffect(x: 1, y: poweredOn ? 1 : 0.005)
@@ -110,26 +110,64 @@ struct TVView: View {
     @ViewBuilder private func screen(window: CGRect) -> some View {
         switch content {
         case .live(let feed):
-            LiveScreen(feed: feed)
+            LiveScreen(feed: feed, crt: crt)
         case .picture(let picture):
             if let picture {
-                let image = Image(decorative: picture.screen, scale: 1)
-                    .resizable()
-                    .interpolation(.none)
-                    .accessibilityLabel("C64 picture")
                 if let fillStart {
                     TimelineView(.animation) { context in
                         let progress = context.date.timeIntervalSince(fillStart) / Self.fillDuration
-                        image.mask {
-                            CellFill(progress: progress, window: window)
-                        }
+                        PictureScreen(picture: picture, crt: crt, window: window, progress: progress)
                     }
                 } else {
-                    image
+                    PictureScreen(picture: picture, crt: crt, window: window)
                 }
             }
         case .noSignal:
-            NoSignal()
+            NoSignal(crt: crt)
+        }
+    }
+
+    /// A picture as on TV, border included, for sharing (docs/UX.md, section
+    /// 6): with the CRT layer when it is on, drawn 4 pixels per point, so
+    /// that its lines are about 4 pixels high.
+    static func shareImage(of picture: ShownPicture, crt: CRT?) -> UIImage? {
+        let (width, scale): (CGFloat, CGFloat) = (384, 4)
+        let tv = TVView(content: .picture(picture), crt: crt)
+            .frame(width: width, height: width / TVGeometry.aspectRatio)
+            .environment(\.displayScale, scale)
+        let renderer = ImageRenderer(content: tv)
+        renderer.scale = scale
+        return renderer.uiImage
+    }
+}
+
+/// A finished picture, which fills in cell by cell after a shot.
+private struct PictureScreen: View {
+    var picture: ShownPicture
+    var crt: CRT?
+    /// Where the display window is.
+    var window: CGRect
+    /// How far the picture has filled in, from 0 to 1, or nil if it shows
+    /// whole.
+    var progress: Double?
+
+    var body: some View {
+        if let crt {
+            let cells = progress.map { (min(max($0, 0), 1) * 1000).rounded(.down) } ?? 1000
+            CRTScreen(source: picture.crt, crt: crt, revealed: cells)
+                .accessibilityLabel("C64 picture")
+        } else {
+            let image = Image(decorative: picture.screen, scale: 1)
+                .resizable()
+                .interpolation(.none)
+                .accessibilityLabel("C64 picture")
+            if let progress {
+                image.mask {
+                    CellFill(progress: progress, window: window)
+                }
+            } else {
+                image
+            }
         }
     }
 }
@@ -138,26 +176,36 @@ struct TVView: View {
 /// view redraws for each frame.
 private struct LiveScreen: View {
     var feed: ViewfinderFeed
+    var crt: CRT?
 
     var body: some View {
         if let picture = feed.picture {
-            Image(decorative: picture.screen, scale: 1)
-                .resizable()
-                .interpolation(.none)
-                .accessibilityLabel("C64 picture")
+            if let crt {
+                CRTScreen(source: picture.crt, crt: crt)
+                    .accessibilityLabel("C64 picture")
+            } else {
+                Image(decorative: picture.screen, scale: 1)
+                    .resizable()
+                    .interpolation(.none)
+                    .accessibilityLabel("C64 picture")
+            }
         }
     }
 }
 
 /// What a TV shows with no signal: static. It is the TV's own noise, not a C64
-/// picture. With Reduce Motion on, it stands still.
+/// picture, and goes through the CRT layer when it is on. With Reduce Motion
+/// on, it stands still.
 struct NoSignal: View {
+    var crt: CRT?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 25, paused: reduceMotion)) { context in
             let frame = UInt64(max(0, context.date.timeIntervalSinceReferenceDate * 25))
-            if let noise = Self.noise(seed: frame) {
+            if let crt {
+                CRTScreen(source: CRTSource(Self.screen(seed: frame)), crt: crt)
+            } else if let noise = Self.noise(seed: frame) {
                 Image(decorative: noise, scale: 1)
                     .resizable()
                     .interpolation(.none)
@@ -166,10 +214,10 @@ struct NoSignal: View {
         .accessibilityHidden(true)
     }
 
-    /// One frame of static: random greys, a little larger than C64 pixels.
-    static func noise(seed: UInt64, width: Int = 192, height: Int = 136) -> CGImage? {
+    /// Random greys: one frame of static.
+    static func greys(seed: UInt64, count: Int) -> [UInt8] {
         var state = (seed &+ 1) &* 0x9E37_79B9_7F4A_7C15
-        var bytes = [UInt8](repeating: 0, count: width * height)
+        var bytes = [UInt8](repeating: 0, count: count)
         for index in bytes.indices {
             // Xorshift: plenty for static.
             state ^= state << 13
@@ -177,11 +225,33 @@ struct NoSignal: View {
             state ^= state << 17
             bytes[index] = UInt8(truncatingIfNeeded: state >> 32)
         }
+        return bytes
+    }
+
+    /// One frame of static: random greys, a little larger than C64 pixels.
+    static func noise(seed: UInt64, width: Int = 192, height: Int = 136) -> CGImage? {
+        let bytes = greys(seed: seed, count: width * height)
         guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
         return CGImage(
             width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: width,
             space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
             provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+    }
+
+    /// One frame of static as a whole screen, for the CRT layer: the same
+    /// grains, each 2 × 2 C64 pixels.
+    static func screen(seed: UInt64) -> RGBImage {
+        let (width, height) = (Screen.width, Screen.height)
+        let grains = greys(seed: seed, count: (width / 2) * (height / 2))
+        var bytes = [UInt8](repeating: 0, count: width * height * 3)
+        for y in 0..<height {
+            for x in 0..<width {
+                let grey = grains[(y / 2) * (width / 2) + x / 2]
+                let index = (y * width + x) * 3
+                (bytes[index], bytes[index + 1], bytes[index + 2]) = (grey, grey, grey)
+            }
+        }
+        return RGBImage(width: width, height: height, bytes: bytes)
     }
 }
 
@@ -226,23 +296,6 @@ struct CellFill: View {
                 context.fill(Path(row), with: .color(.white))
             }
         }
-    }
-}
-
-/// The CRT layer's scanlines, one per C64 line. It is presentation only: the C64
-/// picture underneath stays the same (plan, section 7).
-struct Scanlines: View {
-    var body: some View {
-        let lines = Int(TVGeometry.visiblePixels.height)
-        Canvas { context, size in
-            let pitch = size.height / CGFloat(lines)
-            for line in 0..<lines {
-                let rect = CGRect(x: 0, y: (CGFloat(line) + 0.55) * pitch, width: size.width, height: pitch * 0.45)
-                context.fill(Path(rect), with: .color(.black.opacity(0.22)))
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 
