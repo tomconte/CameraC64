@@ -183,9 +183,10 @@ struct CameraScreen: View {
 
     /// What the viewfinder makes of the camera's frames, or nil when the TV
     /// shows something else: a review, or the sample picture of a mode
-    /// without a converter yet.
+    /// without a converter yet. Frames are dropped while Settings covers the
+    /// TV too, which leaves the processor to the speed benchmark.
     private var viewfinderSettings: Viewfinder.Settings? {
-        guard model.stage == .live, let spec = model.mode.spec else { return nil }
+        guard model.stage == .live, !showingSettings, let spec = model.mode.spec else { return nil }
         let settings = Converter.Settings(display: model.monitor.display, petsciiCharacters: petsciiCharacters)
         return Viewfinder.Settings(spec: spec, converter: settings, orientation: frameOrientation)
     }

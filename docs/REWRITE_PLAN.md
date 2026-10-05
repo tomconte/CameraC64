@@ -246,9 +246,10 @@ The presets replace the old app's tints and are free. Scanlines, bloom, curvatur
 - **Speed benchmark.** A hidden screen in TestFlight builds (Settings, Development) times each mode's conversion on the phone it runs on; `c64conv speed` runs the same measurement elsewhere.
   - It times each stage of a viewfinder frame, from a 1920 × 1440 camera frame as the viewfinder gets it with the phone held sideways, where the crop is largest: the target, the conversion, the rendering and the display model, for hires, multicolour and PETSCII on a TV, a sharp display and a black-and-white monitor.
   - A viewfinder frame must take well under 33 ms on the oldest supported iPhone (iPhone 11).
-  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 9.5 to 9.9 ms, 7.7 to 7.9 of them in the conversion, and a black-and-white one 4.0 to 4.6 ms, in hires or multicolour. PETSCII is still to be timed on a phone.
+  - On an iPhone 17 Pro (6 cores, iOS 27), a colour frame takes 9.5 to 9.9 ms, 7.7 to 7.9 of them in the conversion, and a black-and-white one 4.0 to 4.6 ms, in hires or multicolour.
+  - PETSCII was first timed there while the viewfinder most likely went on converting the camera's frames behind the Settings sheet, which it no longer does. In that run, a colour frame took 18 ms in PETSCII against 12 to 15 in hires or multicolour, and a black-and-white one 8.0 ms against 4.8 to 5.7. So PETSCII takes about a third longer in colour, and half as long again in black and white, which would put a colour frame at about 13 ms on an otherwise idle phone.
   - On four 2.1 GHz Xeon cores, whose times vary more from run to run, a colour frame takes 17 to 27 ms in hires or multicolour and 20 to 32 ms in PETSCII, and a black-and-white one 8 to 13 ms. Making a PETSCII converter takes another 20 to 30 ms, 8 in black and white, for its tables of how the characters look on the monitor.
-  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 30 ms. The viewfinder's battery use is still to be measured, now that the camera works.
+  - So the converter stays on the CPU for now. The oldest phones are still to be measured: going by published CPU benchmarks, an iPhone 11 is 2.5 to 3 times slower than an iPhone 17 Pro, which would put a colour frame at about 25 to 30 ms, and a PETSCII one at about 33 to 39 ms, a little below 30 frames a second. The viewfinder's battery use is still to be measured, now that the camera works.
   - If the CPU can't keep up, or drains the battery, a Metal version of that search replaces the CPU one in the viewfinder. It must give bit-identical results to `C64Core`, so the viewfinder still shows what the shot will produce.
 - **Quality benchmark** (`c64conv benchmark`, see `Tools/README.md`).
   - A chart of every hue, the app's sample picture, and ten photos from Kodak's Lossless True Color Image Suite: faces, landscapes, high contrast, fine detail, and one darkened by 2.5 stops for low light. They are downloaded, with pinned checksums, rather than kept in the repository.
@@ -372,16 +373,16 @@ docs/                     this plan, the UX (UX.md) and design notes
    - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3).
    - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes under 10 ms, so there is none for now (section 10).
 3. **App at feature parity**:
-   - PETSCII first, since it can all be checked without a phone (done, but for timing it on phones):
+   - PETSCII first, since it can all be checked without a phone (done, but for timing it on older phones):
      - the character ROM's shapes in `C64Core`, in one file with its own notice (section 17)
      - the converter (section 6)
      - a viewer that leaves the VIC-II on the C64's own character ROM, so exported files hold only character codes and colours
      - PETSCII in the quality and speed benchmarks and the VICE tests, and in the app in place of its sample picture
-   - camera and viewfinder (done, but for checking it on phones):
+   - camera and viewfinder (done, but for checking it on more phones):
      - the camera in a 4:3 format, its frames converted live, turned as the phone is held, and mirrored for the front camera (section 6)
      - zoom buttons for each lens, pinch, tap to focus, drag for exposure, flash, and the volume buttons and Camera Control as shutter
      - without a camera or permission, static, with a way to Settings and to a photo from the library
-     - to check on phones: both cameras' orientations held every way, the frame rate, the flicker margins and battery use
+     - tried on an iPhone 17 Pro, where both cameras' pictures and shots come out upright; still to check: the frame rate, the flicker margins, battery use and older phones
    - capture, review, save, share and export: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip, and the picture as on TV can be shared; saving to Photos and C64 file export are still to come
    - gallery, monitors and CRT layer
    - photo import, and StoreKit 2 with the legacy entitlement
