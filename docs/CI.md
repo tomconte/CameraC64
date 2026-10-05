@@ -48,7 +48,7 @@ The archive is left unsigned on purpose. Signing it on CI makes Xcode create a n
 
 After an upload, App Store Connect takes a few minutes to process the build. It then appears under TestFlight, where internal testers can install it with the TestFlight app. The app icon is a placeholder for now.
 
-Builds of the dev app, like debug builds, show Settings → Development → Speed Benchmark: it times each stage of a viewfinder frame on the phone, and shares the results as text (plan, section 10).
+Builds of the dev app, like debug builds, show Settings → Development → Speed Benchmark: it times each stage of a viewfinder frame on the phone, and shares the results as text (plan, section 10). They also show CRT Tuning, which puts sliders for the CRT layer's look below the TV on the camera screen. Copy puts their values on the clipboard, to be sent and made the standard look (`CRT.standard`).
 
 ### Setting up the dev app
 

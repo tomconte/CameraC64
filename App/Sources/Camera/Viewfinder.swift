@@ -13,7 +13,8 @@ import Synchronization
 /// A frame that comes while the last one is being converted is dropped, so
 /// the viewfinder runs as fast as the phone converts. A cell keeps the
 /// previous frame's colours, and in PETSCII its character, unless new ones
-/// are clearly better, so the picture does not flicker.
+/// are clearly better, so the picture does not flicker. With the CRT layer
+/// on, the amber and green monitors' phosphor glows on after each frame.
 nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     /// What the viewfinder makes of frames.
     nonisolated struct Settings: Hashable, Sendable {
@@ -22,6 +23,9 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
         /// How frames are seen. The camera sends them sideways, as
         /// AVFoundation does by default, and unmirrored.
         var orientation: ImageOrientation
+        /// How long the monitor's phosphor glows on, in seconds, or 0 for
+        /// none (`CRT.afterglow`).
+        var afterglow: Double = 0
     }
 
     /// The queue frames come on.
@@ -30,12 +34,13 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
     /// What to make of frames, or nil to drop them.
     private let settings = Mutex<Settings?>(nil)
     /// The newest picture, until the main actor takes it.
-    private let newest = Mutex<RGBImage?>(nil)
+    private let newest = Mutex<ShownPicture?>(nil)
     private let frameSize = Mutex<(width: Int, height: Int)?>(nil)
 
     // Only used on `queue`.
     private var converters: [ConverterKey: Converter] = [:]
     private var previous: (settings: Settings, conversion: Conversion)?
+    private var afterglow: (settings: Settings, phosphor: Afterglow)?
 
     init(feed: ViewfinderFeed) {
         self.feed = feed
@@ -59,7 +64,9 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
         guard let settings = settings.withLock({ $0 }), let frame = CMSampleBufferGetImageBuffer(sampleBuffer),
             let screen = picture(of: frame, settings)
         else { return }
-        deliver(screen)
+        let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+        guard let picture = ShownPicture(glowing(screen, settings, at: time)) else { return }
+        deliver(picture)
     }
 
     /// A frame as the TV shows it: the whole screen, border included,
@@ -85,6 +92,22 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
         let conversion = converter(for: settings).convert(target, keeping: kept)
         previous = (settings, conversion)
         return settings.converter.display.show(VICII.render(conversion.frame), palette: settings.converter.palette)
+    }
+
+    /// A screen as the monitor's phosphor shows it at a time, in seconds:
+    /// with the afterglow of the frames before, if the settings have one.
+    func glowing(_ screen: RGBImage, _ settings: Settings, at time: Double) -> RGBImage {
+        guard settings.afterglow > 0 else {
+            afterglow = nil
+            return screen
+        }
+        var phosphor = Afterglow(duration: settings.afterglow)
+        if let afterglow, afterglow.settings == settings {
+            phosphor = afterglow.phosphor
+        }
+        let shown = phosphor.show(screen, at: time)
+        afterglow = (settings, phosphor)
+        return shown
     }
 
     /// Where a point of the picture lies in the camera's view, as the camera
@@ -126,10 +149,10 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
 
     /// Hands the newest picture to the feed, without queueing up pictures
     /// the main actor has not taken yet.
-    private func deliver(_ screen: RGBImage) {
+    private func deliver(_ picture: ShownPicture) {
         let waiting = newest.withLock { newest in
             let waiting = newest != nil
-            newest = screen
+            newest = picture
             return waiting
         }
         guard !waiting else { return }
@@ -138,7 +161,7 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
         }
     }
 
-    private func takeNewest() -> RGBImage? {
+    private func takeNewest() -> ShownPicture? {
         newest.withLock { newest in
             defer { newest = nil }
             return newest
@@ -154,8 +177,8 @@ final class ViewfinderFeed {
     /// Whether a frame has come yet, for the CRT's warm-up.
     private(set) var hasPicture = false
 
-    func show(_ screen: RGBImage?) {
-        guard let screen, let picture = ShownPicture(screen) else { return }
+    func show(_ picture: ShownPicture?) {
+        guard let picture else { return }
         self.picture = picture
         if !hasPicture {
             hasPicture = true

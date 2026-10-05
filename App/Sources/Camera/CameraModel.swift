@@ -98,12 +98,20 @@ enum Monitor: CaseIterable, Identifiable {
         switch self {
         case .tv: "PAL TV: colours blur and blend"
         case .commodoreMonitor: "Commodore monitor: sharper brightness"
-        case .sharp: "No blending, as in an emulator"
+        case .sharp: "No blending or CRT, as in an emulator"
         case .blackAndWhite: "Black-and-white TV"
         case .amber: "Amber monitor"
         case .green: "Green monitor"
         }
     }
+
+    /// Whether the monitor is a cathode-ray tube, which the CRT layer shows.
+    /// Sharp stands for a flat screen.
+    var hasCRT: Bool { self != .sharp }
+
+    /// Whether the monitor's phosphor glows on after the beam has passed, so
+    /// that whatever moves in the viewfinder leaves a fading trail.
+    var hasAfterglow: Bool { self == .amber || self == .green }
 
     /// How the monitor shows a picture, and what the converter optimises for.
     var display: DisplayModel {
@@ -154,6 +162,7 @@ final class CameraModel {
     private(set) var exposureBias: Float = 0
     private(set) var focus: FocusMark?
     private(set) var flashOn = false
+    /// Whether the CRT switch is on. Sharp shows no CRT layer either way.
     private(set) var crtOn = true
     private(set) var frontCamera = false
     /// The mode of the last picture taken, or nil before the first shot.
@@ -217,7 +226,15 @@ final class CameraModel {
         show(flashOn ? "FLASH ON" : "FLASH OFF")
     }
 
+    /// Whether the TV shows the CRT layer: the switch is on, and the monitor
+    /// is a tube.
+    var crtShown: Bool { crtOn && monitor.hasCRT }
+
     func toggleCRT() {
+        guard monitor.hasCRT else {
+            show("NO CRT ON SHARP", "Sharp is a flat screen")
+            return
+        }
         crtOn.toggle()
         show(crtOn ? "CRT EFFECT ON" : "CRT EFFECT OFF")
     }

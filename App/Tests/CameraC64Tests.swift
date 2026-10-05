@@ -386,4 +386,134 @@ struct CameraScreenTests {
         #expect(Array(back.bytes[0..<3]) == [255, 0, 0])
         #expect(Array(back.bytes[4..<7]) == [10, 200, 30])
     }
+
+    // MARK: - The CRT layer
+
+    /// A whole screen in one colour.
+    private func flatScreen(_ color: RGB) -> RGBImage {
+        RGBImage(width: Screen.width, height: Screen.height, fill: color)
+    }
+
+    /// The glow's light, as RGBA floats.
+    private func glowLight(_ source: CRTSource) -> [Float] {
+        source.glow.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    }
+
+    /// The CRT layer reads a screen as RGBA bytes, with the glow at a quarter
+    /// of its size each way, in linear light.
+    @Test func crtSourceHoldsTheScreenAndItsGlow() {
+        let source = CRTSource(flatScreen(RGB(128, 64, 255)))
+        #expect(source.width == 384 && source.height == 272)
+        #expect(source.pixels.count == 384 * 272 * 4)
+        #expect(Array(source.pixels.prefix(8)) == [128, 64, 255, 255, 128, 64, 255, 255])
+        #expect(source.glowWidth == 96 && source.glowHeight == 68)
+        #expect(source.glow.count == 96 * 68 * 16)
+        // A screen in one colour glows evenly, in that colour's light.
+        let glow = glowLight(source)
+        let middle = (30 * 96 + 50) * 4
+        #expect(abs(glow[middle] - SRGB.linear[128]) < 1e-5)
+        #expect(abs(glow[middle + 1] - SRGB.linear[64]) < 1e-5)
+        #expect(abs(glow[middle + 2] - SRGB.linear[255]) < 1e-5)
+    }
+
+    /// The glow spreads a bright area's light into the dark around it.
+    @Test func glowSpreadsLight() {
+        var screen = flatScreen(RGB(0, 0, 0))
+        for y in 120..<152 {
+            for x in 176..<208 {
+                screen[x, y] = RGB(255, 255, 255)
+            }
+        }
+        let glow = glowLight(CRTSource(screen))
+        // The glow's pixel 42 across covers the screen's pixels 168 to 171,
+        // just left of the white square.
+        #expect(glow[(34 * 96 + 42) * 4] > 0.05)
+        #expect(glow[(5 * 96 + 5) * 4] < 1e-4)
+    }
+
+    /// Development builds save the tuned look as text.
+    @Test func crtLookRoundTripsAsText() {
+        var look = CRT.standard
+        look.glow = 0.25
+        #expect(CRT(text: look.text) == look)
+        #expect(CRT(text: CRT.standard.text) == .standard)
+        #expect(CRT(text: "") == nil)
+        #expect(CRT(text: "0.2 0.4 0.5") == nil)
+    }
+
+    /// A phosphor lights up at once, and fades over its afterglow: after
+    /// that long, its light is down to about a third.
+    @Test func afterglowFadesButLightsUpAtOnce() {
+        let (white, black) = (flatScreen(RGB(255, 255, 255)), flatScreen(RGB(0, 0, 0)))
+        var phosphor = Afterglow(duration: 0.1)
+        let lit = phosphor.show(white, at: 0)
+        let faded = phosphor.show(black, at: 0.1)
+        let fainter = phosphor.show(black, at: 0.2)
+        let relit = phosphor.show(white, at: 0.25)
+        let third = SRGB.encoded(Float(exp(-1.0)))
+        #expect(lit == white)
+        #expect(faded[10, 10] == RGB(third, third, third))
+        #expect(fainter[10, 10].r < third)
+        #expect(relit == white)
+        // Without an afterglow, each screen shows as it is.
+        var none = Afterglow(duration: 0)
+        _ = none.show(white, at: 0)
+        let next = none.show(black, at: 0.01)
+        #expect(next == black)
+    }
+
+    /// The viewfinder's phosphor glows on only when its settings say so.
+    @Test func viewfinderGlowsOnWithAnAfterglow() {
+        let viewfinder = Viewfinder(feed: ViewfinderFeed())
+        let (white, black) = (flatScreen(RGB(255, 255, 255)), flatScreen(RGB(0, 0, 0)))
+        var settings = Viewfinder.Settings(
+            spec: .hires, converter: Converter.Settings(display: .green), orientation: .up, afterglow: 0.1)
+        _ = viewfinder.glowing(white, settings, at: 0)
+        let trail = viewfinder.glowing(black, settings, at: 0.05)
+        settings.afterglow = 0
+        let plain = viewfinder.glowing(black, settings, at: 0.1)
+        #expect(trail != black)
+        #expect(plain == black)
+    }
+
+    /// Sharp is a flat screen: it shows no CRT layer, and its CRT switch says
+    /// so. Only the amber and green monitors glow on.
+    @Test func sharpHasNoCRT() {
+        let model = CameraModel()
+        #expect(model.crtOn && model.crtShown)
+        model.select(Monitor.sharp)
+        #expect(!model.crtShown)
+        model.toggleCRT()
+        #expect(model.crtOn)
+        #expect(model.message?.title == "NO CRT ON SHARP")
+        model.select(Monitor.tv)
+        #expect(model.crtShown)
+        model.toggleCRT()
+        #expect(!model.crtOn && !model.crtShown)
+        #expect(Monitor.allCases.filter { $0.hasAfterglow } == [.amber, .green])
+    }
+
+    /// The CRT shader compiles, with the arguments the TV gives it.
+    @Test func crtShaderCompiles() async throws {
+        let source = CRTSource(flatScreen(RGB(100, 100, 100)))
+        try await CRTScreen.shader(source, .standard, scale: 3).compile(as: .shapeStyle)
+    }
+
+    /// The picture as on TV, which is shared, shows the CRT layer when it is
+    /// on: down a grey screen, its lines have dark gaps between them. Without
+    /// it, every line of the grey looks the same.
+    @Test func sharedPictureShowsTheCRTLayer() throws {
+        let picture = try #require(ShownPicture(flatScreen(RGB(100, 100, 100))))
+        let plain = try #require(TVView.shareImage(of: picture, crt: nil)?.cgImage.flatMap { RGBImage($0) })
+        let crt = try #require(TVView.shareImage(of: picture, crt: .standard)?.cgImage.flatMap { RGBImage($0) })
+        #expect(plain.width == 1536 && crt.width == 1536)
+        /// Ten lines down the middle of the screen, about four pixels each.
+        func middle(_ image: RGBImage) -> [UInt8] {
+            (image.height / 2..<image.height / 2 + 43).map { image[image.width / 2, $0].g }
+        }
+        let (plainColumn, crtColumn) = (middle(plain), middle(crt))
+        #expect(Set(plainColumn).count == 1, "Without the CRT layer: \(plainColumn)")
+        #expect(
+            (crtColumn.max() ?? 0) - (crtColumn.min() ?? 0) > 40, "With the CRT layer: \(crtColumn)")
+    }
 }

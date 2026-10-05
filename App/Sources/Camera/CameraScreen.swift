@@ -43,6 +43,9 @@ struct CameraScreen: View {
     @State private var pinchStart: Double?
     @State private var dragKind: DragKind?
     @AppStorage(SettingName.petsciiGraphicsOnly) private var petsciiGraphicsOnly = false
+    /// The CRT layer's look as a development build tunes it (`CRT.text`).
+    @AppStorage(SettingName.crtLook) private var crtLookText = ""
+    @AppStorage(SettingName.crtTuning) private var showsCRTTuning = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
@@ -82,6 +85,13 @@ struct CameraScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background {
                         Look.caseColor.ignoresSafeArea(edges: .bottom)
+                    }
+                    .overlay {
+                        if BuildKind.isDevelopment && showsCRTTuning {
+                            CRTTuningPanel(crt: crtTuning) {
+                                showsCRTTuning = false
+                            }
+                        }
                     }
             }
             .animation(.spring(duration: 0.5, bounce: 0.15), value: orientation)
@@ -171,6 +181,27 @@ struct CameraScreen: View {
         PictureSettings(photo: pictures.photo?.id, monitor: model.monitor, petsciiCharacters: petsciiCharacters)
     }
 
+    /// The CRT layer's look: the standard one, or as a development build
+    /// tunes it.
+    private var crtLook: CRT {
+        BuildKind.isDevelopment ? CRT(text: crtLookText) ?? .standard : .standard
+    }
+
+    /// The look the tuning panel changes, saved as text.
+    private var crtTuning: Binding<CRT> {
+        Binding {
+            crtLook
+        } set: { look in
+            crtLookText = look.text
+        }
+    }
+
+    /// The CRT layer as the TV shows it, or nil when it is off, or the
+    /// monitor is Sharp.
+    private var crt: CRT? {
+        model.crtShown ? crtLook : nil
+    }
+
     /// The characters PETSCII pictures may use, as Settings has it.
     private var petsciiCharacters: CharacterROM.Selection {
         petsciiGraphicsOnly ? .graphics : .all
@@ -188,7 +219,9 @@ struct CameraScreen: View {
     private var viewfinderSettings: Viewfinder.Settings? {
         guard model.stage == .live, !showingSettings, let spec = model.mode.spec else { return nil }
         let settings = Converter.Settings(display: model.monitor.display, petsciiCharacters: petsciiCharacters)
-        return Viewfinder.Settings(spec: spec, converter: settings, orientation: frameOrientation)
+        let afterglow = model.crtShown && model.monitor.hasAfterglow ? crtLook.afterglow : 0
+        return Viewfinder.Settings(
+            spec: spec, converter: settings, orientation: frameOrientation, afterglow: afterglow)
     }
 
     /// How the camera's frames are seen, as the phone is held.
@@ -205,7 +238,7 @@ struct CameraScreen: View {
             fillStart: model.fillStart,
             original: pictures.photo,
             showsOriginal: showingOriginal,
-            crtOn: model.crtOn,
+            crt: crt,
             poweredOn: poweredOn,
             message: model.message,
             focus: live ? model.focus : nil,
@@ -519,29 +552,25 @@ struct CameraScreen: View {
     private struct ShareKey: Equatable {
         var stage: CameraModel.Stage
         var picture: PictureMaker.Key
-        var crtOn: Bool
+        var crt: CRT?
         /// Whether the picture is made yet.
         var ready: Bool
     }
 
     private var shareKey: ShareKey {
         ShareKey(
-            stage: model.stage, picture: key(model.reviewMode), crtOn: model.crtOn,
+            stage: model.stage, picture: key(model.reviewMode), crt: crt,
             ready: pictures.picture(key(model.reviewMode)) != nil)
     }
 
-    /// Draws the picture as on TV, border included, for sharing (docs/UX.md, section 6).
+    /// Draws the picture as on TV, border included, for sharing (docs/UX.md,
+    /// section 6), with the CRT layer when the TV shows it.
     private func renderShareImage() {
         guard model.stage == .review, let picture = pictures.picture(key(model.reviewMode)) else {
             shareImage = nil
             return
         }
-        let width: CGFloat = 384
-        let tv = TVView(content: .picture(picture), crtOn: model.crtOn)
-            .frame(width: width, height: width / TVGeometry.aspectRatio)
-        let renderer = ImageRenderer(content: tv)
-        renderer.scale = 3
-        shareImage = renderer.uiImage
+        shareImage = TVView.shareImage(of: picture, crt: crt)
     }
 }
 

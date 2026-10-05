@@ -22,8 +22,8 @@ struct TopBar: View {
                 }
                 iconButton(
                     "tv",
-                    label: model.crtOn ? "CRT effect on" : "CRT effect off",
-                    color: model.crtOn ? Look.ledOn : Look.bezelInkDim
+                    label: crtLabel,
+                    color: model.crtShown ? Look.ledOn : Look.bezelInkDim
                 ) {
                     model.toggleCRT()
                 }
@@ -43,6 +43,12 @@ struct TopBar: View {
             }
         }
         .frame(height: ScreenMetrics.topBarHeight)
+    }
+
+    /// What VoiceOver reads for the CRT switch.
+    private var crtLabel: String {
+        guard model.monitor.hasCRT else { return "CRT effect, not on Sharp" }
+        return model.crtOn ? "CRT effect on" : "CRT effect off"
     }
 
     private func iconButton(
