@@ -15,8 +15,10 @@ import CoreMedia
 /// and mirrors the front camera's itself (`HeldOrientation.uprightTurns`).
 /// Their rotation angle is left alone: the iPhone 17's front camera, whose
 /// sensor is mounted upright, needs a different angle from other cameras to
-/// keep the usual orientation, and AVFoundation sets it. Photos are stored
-/// sideways too, with an orientation for the way the phone was held.
+/// keep the usual orientation, and AVFoundation sets it. Photos are stored as
+/// the sensor reads them, with an orientation for the way the phone was held.
+/// Their rotation angle counts from the sensor, so a photo gets the turn
+/// AVFoundation gives the frames as well (`photoRotationAngle`).
 actor Camera {
     /// Which way a camera faces.
     nonisolated enum Position: Sendable {
@@ -121,16 +123,22 @@ actor Camera {
     }
 
     /// Takes a photo and returns its file, a HEIC where the camera can make
-    /// one. `rotationAngle` says how the phone is held, as a video rotation
-    /// angle: the photo is stored as the sensor reads it, with an orientation
-    /// that turns it upright as held.
-    func takePhoto(flash: Bool, rotationAngle: CGFloat) async throws -> Data {
+    /// one. `uprightAngle` is the turn the frames need to be upright as the
+    /// phone is held: the photo is stored as the sensor reads it, with an
+    /// orientation that turns it upright.
+    func takePhoto(flash: Bool, uprightAngle: CGFloat) async throws -> Data {
         // Without a working connection, as while the camera turns round, the
         // photo output would raise an exception.
         guard let connection = photoOutput.connection(with: .video), connection.isEnabled && connection.isActive
         else { throw Failure.noPhoto }
-        if connection.isVideoRotationAngleSupported(rotationAngle) {
-            connection.videoRotationAngle = rotationAngle
+        // How far AVFoundation turns the frames from the sensor's own
+        // orientation to send them sideways, as every camera's come: 0 but for
+        // a sensor mounted another way, like the iPhone 17's front camera's.
+        // Nothing else sets it.
+        let framesRotationAngle = videoOutput.connection(with: .video)?.videoRotationAngle ?? 0
+        let angle = Self.photoRotationAngle(upright: uprightAngle, framesRotationAngle: framesRotationAngle)
+        if connection.isVideoRotationAngleSupported(angle) {
+            connection.videoRotationAngle = angle
         }
         let settings =
             photoOutput.availablePhotoCodecTypes.contains(.hevc)
@@ -220,6 +228,14 @@ actor Camera {
         }
         Self.unmirror(videoOutput.connection(with: .video))
         Self.unmirror(photoOutput.connection(with: .video))
+        // AVFoundation may turn the iPhone 17's front camera's photos to match
+        // earlier front cameras', at a cost (WWDC26, session 341), but those
+        // cameras' angles left this app's shots a quarter turn off there.
+        // With that off, a photo's angle counts from the sensor, as for every
+        // camera.
+        if photoOutput.isCameraSensorOrientationCompensationSupported {
+            photoOutput.isCameraSensorOrientationCompensationEnabled = false
+        }
 
         let low = Double(device.minAvailableVideoZoomFactor / mainZoomFactor)
         let high = Double(
@@ -230,6 +246,17 @@ actor Camera {
         }
         return Capabilities(
             position: position, zoomRange: range, zoomPresets: CameraZoom.presets(in: range, lenses: lenses))
+    }
+
+    /// The rotation angle that stores a photo upright, when `upright` turns
+    /// the frames upright and AVFoundation turns the frames by
+    /// `framesRotationAngle` from the sensor's own orientation: photos' angles
+    /// count from the sensor. On the iPhone 17's front camera, they come out a
+    /// quarter turn less than on earlier front cameras, as AVFoundation's
+    /// rotation coordinator's do.
+    nonisolated static func photoRotationAngle(upright: CGFloat, framesRotationAngle: CGFloat) -> CGFloat {
+        let sum = (upright + framesRotationAngle).truncatingRemainder(dividingBy: 360)
+        return sum < 0 ? sum + 360 : sum
     }
 
     /// Keeps an output's pictures unmirrored: the viewfinder mirrors the front

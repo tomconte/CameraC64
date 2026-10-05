@@ -223,12 +223,23 @@ struct CameraScreenTests {
         #expect(left.x == 0.5 && left.y == 0)
     }
 
-    /// Photos are stored with the turn their camera's frames need, and the
-    /// front camera's are mirrored when they are decoded.
+    /// A photo is stored with the turn its camera's frames need, counted from
+    /// the sensor, so it gets the turn AVFoundation gives the frames as well.
+    /// On the iPhone 17's front camera, whose frames AVFoundation turns by 270°
+    /// to send them sideways, the angles are a quarter turn less than on
+    /// earlier front cameras, as AVFoundation's rotation coordinator gives
+    /// them there.
     @Test func photosAreStoredAsThePhoneIsHeld() {
         let held: [HeldOrientation] = [.portrait, .landscapeLeft, .landscapeRight]
-        #expect(held.map { $0.photoRotationAngle(frontCamera: false) } == [90, 0, 180])
-        #expect(held.map { $0.photoRotationAngle(frontCamera: true) } == [90, 180, 0])
+        func angles(frontCamera: Bool, framesRotationAngle: CGFloat = 0) -> [CGFloat] {
+            held.map {
+                Camera.photoRotationAngle(
+                    upright: $0.uprightAngle(frontCamera: frontCamera), framesRotationAngle: framesRotationAngle)
+            }
+        }
+        #expect(angles(frontCamera: false) == [90, 0, 180])
+        #expect(angles(frontCamera: true) == [90, 180, 0])
+        #expect(angles(frontCamera: true, framesRotationAngle: 270) == [0, 90, 270])
     }
 
     /// A camera frame in BGRA, as the camera sends them.

@@ -69,8 +69,8 @@ enum HeldOrientation {
     /// faces the user, so as the phone turns, its pictures turn the other way
     /// to the back camera's. The iPhone 17's front camera has a square sensor
     /// mounted upright, but AVFoundation turns its frames to match the earlier
-    /// front cameras' while their rotation angle is left as it is, and its
-    /// photos whatever the angle, so the same turns hold (WWDC26, session 341).
+    /// front cameras' while their rotation angle is left as it is, so the same
+    /// turns hold (WWDC26, session 341).
     func uprightTurns(frontCamera: Bool) -> Int {
         switch self {
         case .portrait: 1
@@ -79,9 +79,9 @@ enum HeldOrientation {
         }
     }
 
-    /// The video rotation angle that stores a photo upright as the phone is
-    /// held, with an orientation for the turns it needs.
-    func photoRotationAngle(frontCamera: Bool) -> CGFloat {
+    /// The turns a camera's frames need to be upright, as a rotation angle in
+    /// degrees clockwise.
+    func uprightAngle(frontCamera: Bool) -> CGFloat {
         CGFloat(uprightTurns(frontCamera: frontCamera) * 90)
     }
 
