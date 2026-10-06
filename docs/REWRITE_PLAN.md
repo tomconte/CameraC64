@@ -405,7 +405,7 @@ docs/                     this plan, the UX (UX.md) and design notes
      - saving to Photos, and a setting to save every shot
      - sending to an Ultimate, through its REST API, with its network password if it has one
    - the CRT power-off animation, from the 2013 app ([UX.md](UX.md), section 3)
-   - Settings with only what 3.0 uses, and the acknowledgements; a privacy manifest
+   - Settings with only what 3.0 uses (done: saving every shot, and the Ultimate's address and password), and the acknowledgements; a privacy manifest
 
    Then release 3.0 on the restored listing.
 4. **Advanced modes**, one at a time, each with its display program and VICE tests. The first brings the paid unlock, with StoreKit 2 and the legacy entitlement (section 12).
