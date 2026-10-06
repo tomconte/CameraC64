@@ -12,7 +12,7 @@ Camera C64 turns camera shots into Commodore 64 pictures. The 2012–2013 app on
 | Code | Our own implementation. We borrow ideas and MIT-licensed code with credit; no GPL code in the app |
 | Licence | Open source, MIT |
 | Distribution | Update the existing App Store record (currently "removed from sale"): same bundle ID, version 3.0 |
-| Business model | Standard VIC-II modes free; one paid "Advanced modes" unlock; buyers of the 2012 unlock get it free |
+| Business model | Version 3.0 free, with the standard VIC-II modes; later, one paid "Advanced modes" unlock, which buyers of the 2012 unlock get free |
 | Proof of authenticity | Every mode's exported `.prg` must match our renderer pixel for pixel in the VICE emulator, in CI |
 | Legacy code | Tag `legacy-1.2`, commit [`435cf74`](https://github.com/tomconte/CameraC64/tree/435cf74a414ef75b35dc3ea28039a1f8455f8293) |
 
@@ -80,7 +80,7 @@ Shared by every mode:
 ## 5. Architecture
 
 ```
-CameraC64 app (App/)             SwiftUI · AVFoundation · StoreKit 2 · PhotoKit · SwiftData
+CameraC64 app (App/)             SwiftUI · AVFoundation · Metal · PhotoKit
  └─ C64Core (Packages/C64Core)   plain Swift: palettes, modes, converter, renderer,
                                  display models, C64 file formats
 C64/                             6502 display programs embedded in exported .prg files
@@ -142,7 +142,7 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
      - A cell's error is the squared OKLab distance between the cell as the monitor shows it and its target, both blurred as the eye sees them, within the cell: brightness by 1 pixel and colour by 2, as in the quality benchmark.
      - Done plainly, that is about 30 times the work of hires. Instead, the converter first fits each cell's target with a small linear model: its lightness as a constant plus a multiple of the character's pattern, blurred as the monitor and the eye blur brightness, and its colour likewise, with the pattern blurred as they blur colour. Scoring a character in a pair of colours then takes 6 multiplications, 2 on a black-and-white monitor, and the 512 characters of both sets have only 153 different patterns, counting a character and its inverse as one.
      - The model picks the set and the background. Each cell's character and colour are then exact: a bound on how far the model can be off rules out all but about a dozen of the cell's 3,840 choices, and those are scored exactly. So every cell gets the best character and colour for the chosen set and background, which the tests check by trying them all.
-     - Judged this way, about half the cells take letters, digits or punctuation, which makes pictures look like BBS art. A converter setting keeps to the graphics characters instead, for the classic PETSCII look: the 64 of the upper case set (`$40`–`$7F`), the space, and their reverses, 130 characters with 60 patterns. Those pictures score about 8% worse in the quality benchmark, and convert in half the time. In the app, the choice belongs in Edit, picture by picture ([UX.md](UX.md), section 5).
+     - Judged this way, about half the cells take letters, digits or punctuation, which makes pictures look like BBS art. A converter setting keeps to the graphics characters instead, for the classic PETSCII look: the 64 of the upper case set (`$40`–`$7F`), the space, and their reverses, 130 characters with 60 patterns. Those pictures score about 8% worse in the quality benchmark, and convert in half the time. In the app, PETSCII comes twice in the mode dial and the strip, once with each ([UX.md](UX.md), section 5).
    - FLI: for each 4×8 cell, try each of the 16 colour-memory values, with the best screen-memory pair on each line.
    - AFLI: 120 pairs per 8×1 strip.
 
@@ -162,7 +162,7 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
    - Dithering defaults to 0.85, chosen with the quality benchmark: its score improves up to 0.95, but close up such pictures start to scatter stray dots.
 6. **Dithering** is ordered, with a pattern fixed to the screen, in the viewfinder and in the shot alike.
    - It stays stable from frame to frame, it is the classic C64 look, and the scoring in step 5 is designed around it.
-   - Error diffusion restricted to each cell's colours may come later as an optional look in Edit, if the quality benchmark shows a clear gain.
+   - Error diffusion restricted to each cell's colours may come later as an optional look in Adjust ([UX.md](UX.md), section 8), if the quality benchmark shows a clear gain.
 7. **Harder modes** (interlace, NUFLI, custom character sets): there are too many combinations to try them all. Start from the per-cell solution and re-optimise one setting at a time until nothing improves. The viewfinder shows the starting solution; the shot runs the refinement passes.
 8. **Live viewfinder.** The viewfinder runs the same converter as the shot, on video frames.
    - The camera works in a 4:3 format, the sensor's own shape, with frames of at most 1920 × 1440 at 30 fps, in BGRA, and photos of 12 megapixels.
@@ -216,7 +216,7 @@ The presets replace the old app's tints and are free. The model is an approximat
 - **Curvature**: the glass bulges, so the picture's edges curve, its corners are rounded, and it darkens towards them.
 - **Afterglow**: in the viewfinder, the amber and green monitors' phosphor glows on after each frame, so whatever moves leaves a fading trail.
 
-On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on: SwiftUI's `ImageRenderer` runs the same shader. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation is still to come.
+On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on: SwiftUI's `ImageRenderer` runs the same shader. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation, from the 2013 app, is still to come ([UX.md](UX.md), section 3).
 
 ## 8. Palettes
 
@@ -228,7 +228,7 @@ On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, 
 
 ## 9. Output and export
 
-- **Pixel-exact PNG** at integer scale with square pixels. It is always kept in the gallery and available for export, and is never saved as JPEG.
+- **Pixel-exact PNG** at integer scale with square pixels. It can always be shared, and is never saved as JPEG.
 - **"As on TV" image**, with the real pixel shape, the display model and the border, so about 4:3. This is what gets shared by default.
 - **Interlace modes** export the blended picture plus the two frames, or an animated PNG at 50 Hz.
 - **C64 files**:
@@ -236,7 +236,7 @@ On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, 
   - a `.d64` disk image
   - Koala (`.kla`) and Art Studio (`.art`)
   - FLI/AFLI formats
-- **Save and share**: saving to Photos (add-only), and the share sheet with custom file types.
+- **Save and share**: saving the picture as on TV to Photos (add-only), and the share sheet, with custom file types for the C64 files.
 - **Send to C64**: owners of an Ultimate 64, C64 Ultimate or Ultimate-II+ can send the `.prg` over Wi-Fi, through the device's REST API (`POST /v1/runners:run_prg`).
 
 ## 10. Verification and quality
@@ -279,34 +279,34 @@ How the app looks and behaves, screen by screen, is in [UX.md](UX.md).
 |---|---|
 | Live C64 viewfinder | Viewfinder drawn from real C64 memory by the same converter as the shot, at up to 30 fps |
 | Colour / B&W / amber / green monitors (paid) | Monitor presets (display models), free |
-| Scanlines baked into the JPEG | CRT layer for display and sharing only; the pixel-exact PNG is always kept |
+| Scanlines baked into the JPEG | CRT layer for display and sharing only; the pixel-exact PNG can always be shared |
 | Power-off animation, retro UI | SwiftUI and Metal shaders; drawn in code first, detailed artwork later |
 | Flash, front/back camera | Same, plus lens and zoom |
-| Discard / share / save | Every shot is kept in the gallery; share, save to Photos, C64 export, "send to C64" and delete |
-| In-app purchase | StoreKit 2; the old purchase is honoured |
-| — | Photo-library import, mode picker, a strip showing the photo in every mode after capture, re-editing later (the gallery keeps the original photo, the settings and the C64 memory) |
+| Discard / share / save | Still one shot at a time, like a Polaroid: share it (as on TV, as a pixel-exact PNG, or as C64 files), save it to Photos, send it to a C64, or delete it |
+| In-app purchase | None in 3.0, as the monitors it unlocked are free; later, a new unlock with StoreKit 2, which the old purchase includes |
+| — | Mode picker, a strip showing the shot in every mode, C64 files, and sending them to a C64. Later: a gallery, photo-library import and adjustments ([UX.md](UX.md), section 8) |
 
 **Screens**:
 - **Camera**: viewfinder, mode and monitor pickers, shutter, flash, lens.
-- **Review**: the camera screen after a shot, also opened from the gallery: mode strip, tone controls, export.
-- **Gallery.**
-- **Settings**: palette, chip revision, and a few app options.
-- **Store.**
+- **Review**: the camera screen after a shot: mode strip, monitors, share, save, send to C64.
+- **Settings**: a few app options, and the acknowledgements.
+- Later: a gallery and a store.
 
 **Platform**:
-- On iPhone 16 and later, the Camera Control button cycles modes or monitors (`AVCaptureIndexPicker`).
-- Standard iOS 26 styling for the gallery, settings and store; a custom C64/CRT look for the camera screen.
-- **Privacy**: no analytics SDK (MetricKit for diagnostics), a privacy manifest, and camera and photo-add usage strings.
+- On iPhone 16 and later, a click of the Camera Control takes the picture. Later, sliding on it will cycle modes or monitors (`AVCaptureIndexPicker`).
+- Standard iOS 26 styling for settings, and later the gallery and store; a custom C64/CRT look for the camera screen.
+- **Privacy**: no analytics SDK (MetricKit for diagnostics), a privacy manifest, and camera, photo-add and local-network usage strings.
 
 ## 12. Monetization and App Store
 
+- **Version 3.0 is free**, with no in-app purchase. It has only the standard modes, and the monitors the 2012 purchase unlocked are free for everyone, so its buyers lose nothing.
 - **Free**:
-  - camera and gallery
+  - the camera
   - all standard VIC-II modes: hires, multicolour, text/PETSCII, custom character sets
   - every monitor preset and every export
-- **Paid**: one non-consumable "Advanced modes" unlock.
-  - At launch: per-line background, FLI, AFLI, interlace/IFLI.
-  - Later: NUFLI, sprite layers and future modes.
+- **Paid**: one non-consumable "Advanced modes" unlock, which comes with the first advanced mode (milestone 4).
+  - At first: per-line background, FLI, AFLI, interlace/IFLI.
+  - Later: NUFLI, sprite layers and future modes, and perhaps features such as photo import.
 - **Earlier buyers**: the legacy `AXOLINK_C64_FILTERS` purchase unlocks "Advanced modes", checked through StoreKit 2's `Transaction.currentEntitlements`.
 - **Open source with a paid unlock**: anyone can build the app with everything unlocked. The App Store purchase pays for convenience and supports the project.
 
@@ -314,7 +314,7 @@ Restoring the listing (the record still exists, confirmed September 2026):
 
 1. Use the legacy bundle ID. The 2013 project builds as `com.camerac64`, derived from its target name; check that it matches the record.
 2. Create version 3.0 (the last version shipped was 1.2) and upload a build.
-3. Refresh the metadata (screenshots, App Privacy details, age rating, description) and add the new in-app purchase.
+3. Refresh the metadata (screenshots, App Privacy details, age rating, description). The new in-app purchase comes with a later version.
 4. Submit. After approval, make the app available again under Pricing and Availability.
 
 Until then, TestFlight cannot install builds of the removed-from-sale record. Development builds therefore go to a separate dev app, `com.camerac64.dev` (see [CI.md](CI.md)).
@@ -327,7 +327,8 @@ Until then, TestFlight cannot install builds of the removed-from-sale record. De
 - **Apple frameworks**:
   - AVFoundation: `AVCaptureSession`, a video data output for the viewfinder, `AVCapturePhotoOutput` for stills.
   - Metal: SwiftUI shader effects for the CRT layer, and compute kernels only if the speed benchmark calls for them (section 10).
-  - Vision, StoreKit 2, PhotoKit/PhotosUI, SwiftData, MetricKit.
+  - PhotoKit, to save to Photos, and MetricKit.
+  - Later, for the gallery, photo import and the paid unlock: SwiftData, PhotosUI, Vision and StoreKit 2.
 - **6502 display programs**: written for ca65 (cc65), which is open source and packaged for apt and Homebrew.
   - `C64/build.sh` assembles them into `C64Core` as Swift byte arrays, which the app fills with picture data, and CI checks that the result is up to date.
   - NUFLIX's display programs use KickAssembler's syntax; they will be ported when milestone 4 needs them.
@@ -381,7 +382,7 @@ docs/                     this plan, the UX (UX.md) and design notes
    - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark, in CI.
    - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3).
    - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes 10 to 11 ms, so there is none for now (section 10).
-3. **App at feature parity**:
+3. **App at feature parity**, released as 3.0: the 2013 app's features done authentically, plus C64 files. Like the 2013 app, it holds one shot at a time, as a Polaroid camera does: no gallery, no photo import and no in-app purchase, which can come in later versions (decided October 2026).
    - PETSCII first, since it can all be checked without a phone (done, but for timing it on older phones):
      - the character ROM's shapes in `C64Core`, in one file with its own notice (section 17)
      - the converter (section 6)
@@ -390,15 +391,20 @@ docs/                     this plan, the UX (UX.md) and design notes
    - camera and viewfinder (done, but for checking it on more phones):
      - the camera in a 4:3 format, its frames converted live, turned as the phone is held, and mirrored for the front camera (section 6)
      - zoom buttons for each lens, pinch, tap to focus, drag for exposure, flash, and the volume buttons and Camera Control as shutter
-     - without a camera or permission, static, with a way to Settings and to a photo from the library
+     - without a camera or permission, static, with a way to Settings, and in development builds to a photo from the library
      - tried on an iPhone 17 Pro, where both cameras' pictures and shots come out upright; still to check: the frame rate, the flicker margins, battery use and older phones
-   - capture, review, save, share and export: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip, and the picture as on TV can be shared; saving to Photos and C64 file export are still to come
    - the CRT layer: scanlines, glow and curvature, and the amber and green monitors' afterglow, drawn by a Metal shader in the viewfinder, the review and the shared picture (done, but for tuning its look on a phone; section 7)
-   - gallery and monitors
-   - photo import, and StoreKit 2 with the legacy entitlement
+   - capture and review: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip and every monitor, and the picture as on TV can be shared (done). Still to come:
+     - only hires, multicolour and PETSCII: FLI's and AFLI's sample pictures were placeholders, so both leave the app until milestone 4 brings their converters
+     - PETSCII twice, with only the graphics characters and with all of them, in place of the switch in Settings
+     - sharing the pixel-exact PNG and the C64 files: `.prg`, `.d64`, and Art Studio or Koala
+     - saving to Photos, and a setting to save every shot
+     - sending to an Ultimate, through its REST API
+   - the CRT power-off animation, from the 2013 app ([UX.md](UX.md), section 3)
+   - Settings with only what 3.0 uses, and the acknowledgements; a privacy manifest
 
    Then release 3.0 on the restored listing.
-4. **Advanced modes**, one at a time, each with its display program and VICE tests:
+4. **Advanced modes**, one at a time, each with its display program and VICE tests. The first brings the paid unlock, with StoreKit 2 and the legacy entitlement (section 12).
    1. per-line background
    2. FLI and AFLI
    3. interlace and IFLI
@@ -406,6 +412,8 @@ docs/                     this plan, the UX (UX.md) and design notes
    5. sprite layers
 
    The free character-set modes slot in alongside.
+
+Left out of 3.0, for later versions ([UX.md](UX.md), section 8): a gallery, photo import, adjusting the framing, tones and border after the shot, pinching to see the pixels, sliding on the Camera Control, and the palette and chip revision settings.
 
 Later ideas: a constraint-aware pixel touch-up editor, an in-app emulator view, a Mac app.
 
