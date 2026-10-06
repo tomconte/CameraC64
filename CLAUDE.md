@@ -56,6 +56,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
+  - The app's Info.plist comes from the `INFOPLIST_KEY_` settings in `project.yml`, added to `App/Info.plist`, which holds what those settings cannot say: the C64 files' types and plain HTTP on the local network. The app tests check both.
   - The app target uses MainActor as its default actor isolation: code that runs anywhere else is marked `nonisolated`, types included.
   - The camera (`App/Sources/Camera/`): `Camera`, an actor whose executor is its own queue, owns the capture session; `Viewfinder` converts frames on another queue; `LiveCamera` is the screen's side of both.
   - Frames come sideways and unmirrored, as AVFoundation sends them by default. `HeldOrientation` says how each camera's frames turn as the phone is held, the front camera's the other way to the back camera's. `Target`'s `ImageOrientation` turns them, and mirrors the front camera's once upright; mirrored first, they would be upside down with the phone upright.
@@ -64,8 +65,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - The CRT layer (`App/Sources/CRT/`, plan section 7): `CRT.metal` is a SwiftUI shader that fills the TV with the display model's picture as a tube shows it, with scanlines, glow and curvature. `CRTSource` prepares what it reads, off the main actor, and `Afterglow` gives the amber and green monitors their trails in the viewfinder. It is presentation only: never in C64 files or the pixel-exact PNG, and never on Sharp. The shared picture as on TV draws it through `ImageRenderer`, which runs SwiftUI shaders as the screen does: `sharedPictureShowsTheCRTLayer` checks that its lines have gaps.
   - Metal doesn't compile on Linux, so only CI's app job checks the shader: `crtShaderCompiles` fails if it doesn't compile with the arguments `CRTScreen` gives it.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
-  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it for each shot's photo: converter, renderer, then the monitor's display model. `Viewfinder` does the same for each camera frame.
-  - The one exception is temporary: modes without a converter yet (FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
+  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it for each shot's photo: converter, renderer, then the monitor's display model. `Viewfinder` does the same for each camera frame. Each `ShownPicture` keeps the `C64Frame` it is drawn from.
+  - The review shares, saves and sends what is made from that frame (`App/Sources/Pictures/`): `SharedFile` makes each file Share offers only when it is shared, `PhotoLibrary` saves the picture as on TV, and `Ultimate` runs the `.prg` on a C64 through the Ultimate's REST API. The Ultimate's password stays in the keychain (`Keychain`), not in the user defaults.
 - **Still to come** (plan section 5):
   - converters for the character-set modes
   - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit

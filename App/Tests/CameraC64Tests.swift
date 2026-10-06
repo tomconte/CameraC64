@@ -68,7 +68,7 @@ struct CameraScreenTests {
     @Test func modeDialStopsAtTheEnds() {
         #expect(PictureMode.hires.moved(by: -1) == .hires)
         #expect(PictureMode.hires.moved(by: 1) == .multicolour)
-        #expect(PictureMode.afli.moved(by: 1) == .afli)
+        #expect(PictureMode.bbs.moved(by: 1) == .bbs)
     }
 
     @Test func aShotIsHeldForReviewAndKept() {
@@ -93,9 +93,14 @@ struct CameraScreenTests {
         #expect(model.stage == .live)
     }
 
-    @Test func modesConvertOrShowASample() {
-        #expect(PictureMode.allCases.filter { $0.spec != nil } == [.hires, .multicolour, .petscii])
-        #expect(PictureMode.allCases.allSatisfy { ($0.spec == nil) == ($0.sample != nil) })
+    /// 3.0 has the standard modes, with PETSCII twice: with only the
+    /// graphics characters, and with all of them, as BBS.
+    @Test func petsciiComesTwice() {
+        #expect(PictureMode.allCases == [.hires, .multicolour, .petscii, .bbs])
+        #expect(PictureMode.petscii.spec == .petscii && PictureMode.bbs.spec == .petscii)
+        #expect(PictureMode.petscii.converterSettings(on: .tv).petsciiCharacters == .graphics)
+        #expect(PictureMode.bbs.converterSettings(on: .tv).petsciiCharacters == .all)
+        #expect(PictureMode.multicolour.converterSettings(on: .amber).display == .amber)
     }
 
     /// When the camera takes no photo, the last picture stays as it was.
@@ -111,7 +116,8 @@ struct CameraScreenTests {
     }
 
     /// Every mode's picture comes out at the screen's size, border included,
-    /// and its display window at the picture's.
+    /// and its display window at the picture's, with the C64 memory it is
+    /// drawn from.
     @Test func everyModeHasAPicture() async throws {
         let maker = PictureMaker(photo: try samplePhoto())
         for mode in PictureMode.allCases {
@@ -120,23 +126,27 @@ struct CameraScreenTests {
             let picture = maker.picture(key)
             #expect(picture?.screen.width == 384 && picture?.screen.height == 272, "\(mode.name)")
             #expect(picture?.window.width == 320 && picture?.window.height == 200, "\(mode.name)")
+            #expect(picture?.frame.mode == mode.spec.graphicsMode, "\(mode.name)")
         }
         #expect(maker.picture(PictureMaker.Key(.hires, on: .sharp)) == nil)
     }
 
-    /// PETSCII pictures can take only the graphics characters, a setting the
-    /// other modes ignore.
-    @Test func petsciiCanUseOnlyTheGraphicsCharacters() async throws {
-        #expect(PictureMaker.Key(.hires, on: .tv, petsciiCharacters: .graphics) == PictureMaker.Key(.hires, on: .tv))
+    /// PETSCII takes only the graphics characters, for the classic look, and
+    /// BBS all of them.
+    @Test func petsciiTakesOnlyTheGraphicsCharacters() async throws {
         let maker = PictureMaker(photo: try samplePhoto())
-        let all = PictureMaker.Key(.petscii, on: .tv)
-        let graphics = PictureMaker.Key(.petscii, on: .tv, petsciiCharacters: .graphics)
-        await maker.make(all)
-        #expect(maker.picture(graphics) == nil)
-        await maker.make(graphics)
-        let allPixels = try #require(maker.picture(all).flatMap { RGBImage($0.window) }).bytes
-        let graphicsPixels = try #require(maker.picture(graphics).flatMap { RGBImage($0.window) }).bytes
-        #expect(allPixels != graphicsPixels)
+        let (petscii, bbs) = (PictureMaker.Key(.petscii, on: .tv), PictureMaker.Key(.bbs, on: .tv))
+        await maker.make(petscii)
+        #expect(maker.picture(bbs) == nil)
+        await maker.make(bbs)
+        let petsciiPicture = try #require(maker.picture(petscii))
+        let bbsPicture = try #require(maker.picture(bbs))
+        let graphics = Set(CharacterROM.Selection.graphics.codes(in: .upperCase).map(UInt8.init))
+        #expect(petsciiPicture.frame.screen.allSatisfy { graphics.contains($0) })
+        #expect(!bbsPicture.frame.screen.allSatisfy { graphics.contains($0) })
+        let petsciiPixels = try #require(RGBImage(petsciiPicture.window)).bytes
+        let bbsPixels = try #require(RGBImage(bbsPicture.window)).bytes
+        #expect(petsciiPixels != bbsPixels)
     }
 
     /// The black-and-white monitor shows greys, from the display model rather
@@ -151,18 +161,15 @@ struct CameraScreenTests {
         #expect(stride(from: 0, to: pixels.count, by: 4).allSatisfy { pixels[$0 + 1] == pixels[$0 + 2] })
     }
 
-    /// Before the first shot, only the modes without a converter have
-    /// pictures: their samples.
-    @Test func withoutAPhotoOnlySamplesHavePictures() async {
+    /// Before the first shot, there are no pictures to make.
+    @Test func withoutAPhotoThereAreNoPictures() async {
         let maker = PictureMaker()
         await maker.make(PictureMaker.Key(.hires, on: .tv))
-        await maker.make(PictureMaker.Key(.fli, on: .tv))
         #expect(maker.picture(PictureMaker.Key(.hires, on: .tv)) == nil)
-        #expect(maker.picture(PictureMaker.Key(.fli, on: .tv)) != nil)
     }
 
-    /// A new shot replaces the last one's pictures. (On the black-and-white
-    /// monitor, whose search is the quickest.)
+    /// A new shot replaces the last one's pictures, and deleting it forgets
+    /// them. (On the black-and-white monitor, whose search is the quickest.)
     @Test func aNewPhotoReplacesThePictures() async throws {
         let maker = PictureMaker(photo: try samplePhoto())
         let key = PictureMaker.Key(.hires, on: .blackAndWhite)
@@ -174,6 +181,8 @@ struct CameraScreenTests {
         #expect(maker.picture(key) == nil)
         await maker.make(key)
         #expect(maker.picture(key) != nil)
+        maker.forget()
+        #expect(maker.photo == nil && maker.picture(key) == nil)
     }
 
     /// A photo keeps its pixels as stored, with the orientation its file
@@ -503,7 +512,7 @@ struct CameraScreenTests {
     /// on: down a grey screen, its lines have dark gaps between them. Without
     /// it, every line of the grey looks the same.
     @Test func sharedPictureShowsTheCRTLayer() throws {
-        let picture = try #require(ShownPicture(flatScreen(RGB(100, 100, 100))))
+        let picture = try #require(ShownPicture(flatScreen(RGB(100, 100, 100)), frame: C64Frame(mode: .hiresBitmap)))
         let plain = try #require(TVView.shareImage(of: picture, crt: nil)?.cgImage.flatMap { RGBImage($0) })
         let crt = try #require(TVView.shareImage(of: picture, crt: .standard)?.cgImage.flatMap { RGBImage($0) })
         #expect(plain.width == 1536 && crt.width == 1536)

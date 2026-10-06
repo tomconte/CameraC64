@@ -62,10 +62,10 @@ nonisolated final class Viewfinder: NSObject, AVCaptureVideoDataOutputSampleBuff
         _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection
     ) {
         guard let settings = settings.withLock({ $0 }), let frame = CMSampleBufferGetImageBuffer(sampleBuffer),
-            let screen = picture(of: frame, settings)
+            let screen = picture(of: frame, settings), let conversion = previous?.conversion
         else { return }
         let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
-        guard let picture = ShownPicture(glowing(screen, settings, at: time)) else { return }
+        guard let picture = ShownPicture(glowing(screen, settings, at: time), frame: conversion.frame) else { return }
         deliver(picture)
     }
 

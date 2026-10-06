@@ -59,7 +59,7 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 **Camera**:
 
 - Shutter: the capture key, the volume buttons, and a click of the Camera Control.
-- Mode dial: swipe across the TV. Real names (Hires, Multicolour, PETSCII…), each with a one-line description. PETSCII comes twice: with only the graphics characters, for the classic PETSCII look, and with all of them, whose letters, digits and punctuation make pictures look like BBS art.
+- Mode dial: swipe across the TV. Real names (Hires, Multicolour, PETSCII…), each with a one-line description. PETSCII comes twice: as PETSCII, with only the graphics characters, for the classic PETSCII look, and as BBS, with all of them, whose letters, digits and punctuation make pictures look like BBS art.
 - Monitor bank: TV, Commodore monitor, Sharp, B&W, Amber, Green.
 - The last picture, which opens it again.
 - Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch, settings.
@@ -72,19 +72,22 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - Monitor bank. Changing the monitor converts the picture again, for that monitor.
 - The CRT switch stays in the top bar: it decides whether the picture as on TV, which is shared, shows the tube.
 - Share, Save to Photos, Send to C64, Delete.
-  - Share offers the picture as on TV first, then the pixel-exact PNG and the C64 files (section 6).
-  - Save to Photos saves the picture as on TV.
-  - Send to C64 appears once an Ultimate is set up. Its first use triggers iOS's local-network permission prompt.
+  - Share opens a menu: the picture as on TV first, then the pixel-exact PNG and the C64 files (section 6). Each opens the share sheet.
+  - Save to Photos saves the picture as on TV, as a PNG.
+  - Send to C64 appears once an Ultimate is set up. It runs the picture's `.prg` on the Ultimate's C64, through the Ultimate's REST API. Its first use triggers iOS's local-network permission prompt.
+  - Delete discards the shot at once, as the 2013 app's Discard did, and goes back to the camera.
 - Press and hold the TV to see the original photo.
 - The capture key goes back to the camera.
 
-**Settings**: saving every shot to Photos, the Ultimate's address, acknowledgements.
+**Settings**: saving every shot to Photos (turning it on asks for permission to add photos), the Ultimate's address and, if it has one, its network password (kept in the keychain), acknowledgements.
 
 ## 6. What gets shared and exported
 
 - **As on TV**, shared by default: the real pixel shape, the monitor's display model, the CRT layer when it is on (never with Sharp), and the border, so about 4:3. The border makes it read as a C64 screen at a glance.
-- **Pixel-exact PNG**: square pixels, so 8:5, 7% wider than a PAL TV shows it. It is meant for C64 tools.
+- **Pixel-exact PNG**: the 320 × 200 picture without its border, one pixel for each C64 pixel, in the palette's colours whatever the monitor. Its pixels are square, so it is 8:5, 7% wider than a PAL TV shows it. It is meant for C64 tools.
 - **C64 files**: a `.prg` that shows the picture, a `.d64` disk image holding it, and for hires and multicolour pictures, their Art Studio and Koala files (plan, section 9).
+  - On the disk, named CAMERA C64, the program takes the mode's name, and `LOAD"*",8` then `RUN` shows the picture.
+- Files are named after the shot's mode and time, such as "C64 Multicolour 2026-10-06 21.04.12.prg"; the pixel-exact PNG adds "320x200".
 - A picture made for a mono monitor is still colour data: its `.prg` shows odd colours on a colour TV. Warn at export, or have the converter prefer greys where it can.
 - Idea: with the Sharp monitor, the as-on-TV image could stay pixel-exact by drawing each C64 pixel as a 15×16 block, which is 0.9375 as wide as tall, within 0.2% of PAL.
 
