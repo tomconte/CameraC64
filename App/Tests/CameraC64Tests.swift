@@ -141,7 +141,7 @@ struct CameraScreenTests {
         await maker.make(bbs)
         let petsciiPicture = try #require(maker.picture(petscii))
         let bbsPicture = try #require(maker.picture(bbs))
-        let graphics = Set(CharacterROM.Selection.graphics.codes(in: .upperCase).map(UInt8.init))
+        let graphics = Set(CharacterROM.Selection.graphics.codes(in: .upperCase).map { UInt8($0) })
         #expect(petsciiPicture.frame.screen.allSatisfy { graphics.contains($0) })
         #expect(!bbsPicture.frame.screen.allSatisfy { graphics.contains($0) })
         let petsciiPixels = try #require(RGBImage(petsciiPicture.window)).bytes

@@ -138,7 +138,6 @@ nonisolated struct SharedFile: Transferable, Sendable {
         let frame = picture.frame
         switch kind {
         case .pictureAsOnTV:
-            let (picture, crt) = (picture, crt)
             let png = await MainActor.run { TVView.pngAsOnTV(of: picture, crt: crt) }
             guard let png else { throw Failure.notMade }
             return png

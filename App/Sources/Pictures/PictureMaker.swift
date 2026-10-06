@@ -1,5 +1,6 @@
 import C64Core
 import CoreGraphics
+import Foundation
 import Observation
 
 /// A picture as the TV shows it, through the chosen monitor, with the C64
