@@ -1,3 +1,4 @@
+import AVFoundation
 import C64Core
 import CoreVideo
 import ImageIO
@@ -249,6 +250,23 @@ struct CameraScreenTests {
         #expect(angles(frontCamera: false) == [90, 0, 180])
         #expect(angles(frontCamera: true) == [90, 180, 0])
         #expect(angles(frontCamera: true, framesRotationAngle: 270) == [0, 90, 270])
+    }
+
+    /// iOS stops the camera when it resets its media services, as it may while
+    /// the app is away, and the camera starts again. Other errors leave it
+    /// off, so that a camera that keeps failing is not started over and
+    /// over. (The Simulator has no camera, so there it stays unavailable.)
+    @Test func cameraStartsAgainAfterMediaServicesAreReset() async {
+        #expect(LiveCamera.startsAgain(after: .mediaServicesWereReset))
+        #expect(!LiveCamera.startsAgain(after: .unknown))
+        #expect(!LiveCamera.startsAgain(after: nil))
+        // The screen follows what the session does.
+        #expect(LiveCamera.state(of: .running) == .running)
+        #expect(LiveCamera.state(of: .interrupted) == .interrupted)
+        #expect(LiveCamera.state(of: .stopped) == .unavailable)
+        let camera = LiveCamera()
+        await camera.sessionFailed(.mediaServicesWereReset, position: .back)
+        #expect(camera.state == .unavailable)
     }
 
     /// A camera frame in BGRA, as the camera sends them.

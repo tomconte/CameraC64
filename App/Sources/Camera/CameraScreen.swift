@@ -113,7 +113,7 @@ struct CameraScreen: View {
         }
         // The CRT warms up while the camera starts (docs/UX.md, section 3).
         .task {
-            await camera.start(model.frontCamera ? .front : .back)
+            await camera.start(cameraPosition)
         }
         .task {
             try? await Task.sleep(for: .seconds(2))
@@ -130,10 +130,12 @@ struct CameraScreen: View {
         .onChange(of: viewfinderSettings, initial: true) {
             camera.show(viewfinderSettings)
         }
-        // Back from Settings, where the camera may have been allowed.
+        // Back in the app, the camera runs again if iOS stopped it while the
+        // app was away, as when it resets its media services, or if it was
+        // allowed in Settings meanwhile.
         .onChange(of: scenePhase) {
-            if scenePhase == .active && camera.state == .notAllowed {
-                Task { await camera.start(model.frontCamera ? .front : .back) }
+            if scenePhase == .active && camera.state != .starting {
+                Task { await camera.start(cameraPosition) }
             }
         }
         .onChange(of: importedItem) {
@@ -151,7 +153,14 @@ struct CameraScreen: View {
             NotificationCenter.default.publisher(for: AVCaptureSession.interruptionEndedNotification)
                 .receive(on: DispatchQueue.main)
         ) { _ in
-            camera.interruptionEnded()
+            Task { await camera.interruptionEnded(cameraPosition) }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: AVCaptureSession.runtimeErrorNotification)
+                .receive(on: DispatchQueue.main)
+        ) { notification in
+            let error = (notification.userInfo?[AVCaptureSessionErrorKey] as? AVError)?.code
+            Task { await camera.sessionFailed(error, position: cameraPosition) }
         }
         // The volume buttons and a click of the Camera Control take a picture too.
         .onCameraCaptureEvent(isEnabled: model.stage == .live && camera.state == .running) { event in
@@ -214,6 +223,11 @@ struct CameraScreen: View {
         return Viewfinder.Settings(
             spec: model.mode.spec, converter: model.mode.converterSettings(on: model.monitor),
             orientation: frameOrientation, afterglow: afterglow)
+    }
+
+    /// The camera chosen: the back one, or the front one.
+    private var cameraPosition: Camera.Position {
+        model.frontCamera ? .front : .back
     }
 
     /// How the camera's frames are seen, as the phone is held.
@@ -479,6 +493,10 @@ struct CameraScreen: View {
         guard model.stage == .live else { return }
         guard camera.state == .running else {
             model.show("NO CAMERA", BuildKind.isDevelopment ? "Import a photo instead" : nil)
+            // A camera that stopped on an error tries again.
+            if camera.state == .unavailable {
+                Task { await camera.start(cameraPosition) }
+            }
             return
         }
         let (previous, mode) = (model.lastShot, model.mode)
@@ -489,6 +507,9 @@ struct CameraScreen: View {
                 await review(photo, in: mode)
             } catch {
                 model.captureFailed(lastShot: previous)
+                // The camera may have stopped, as when iOS resets its media
+                // services: it runs again.
+                await camera.start(cameraPosition)
             }
         }
     }
@@ -528,7 +549,7 @@ struct CameraScreen: View {
             return
         }
         model.flipCamera()
-        let position: Camera.Position = model.frontCamera ? .front : .back
+        let position = cameraPosition
         Task { await camera.start(position) }
     }
 
