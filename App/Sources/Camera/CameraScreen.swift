@@ -10,7 +10,7 @@ import UIKit
 enum ScreenMetrics {
     static let topBarHeight: CGFloat = 44
     /// The controls below the TV in landscape. The TV gets the rest of the height.
-    static let compactLivePanelHeight: CGFloat = 252
+    static let compactLivePanelHeight: CGFloat = 268
     static let compactReviewPanelHeight: CGFloat = 216
 
     /// The area the TV gets, in screen coordinates. In portrait it spans the
@@ -313,10 +313,11 @@ struct CameraScreen: View {
         case (.live, true):
             compactLivePanel(rotation)
         case (.review, false):
-            ViewThatFits(in: .vertical) {
-                reviewPanel(showsMonitors: true)
-                reviewPanel(showsMonitors: false)
-            }
+            ReviewPanel(
+                mode: model.reviewMode, monitor: model.monitor, thumbnails: thumbnails,
+                onSelectMode: { model.reviewMode = $0 }, onSelectMonitor: { model.select($0) },
+                actions: { actionRow(rotation: .zero, showsCaptions: $0) },
+                shutter: { shutterRow(rotation: .zero, showsCaption: $0) })
         case (.review, true):
             compactReviewPanel(rotation)
         }
@@ -335,21 +336,6 @@ struct CameraScreen: View {
         .padding(.bottom, 6)
     }
 
-    private func reviewPanel(showsMonitors: Bool) -> some View {
-        VStack(spacing: 12) {
-            ModeStrip(selection: model.reviewMode, thumbnails: thumbnails) { model.reviewMode = $0 }
-            if showsMonitors {
-                MonitorBank(selection: model.monitor) { model.select($0) }
-                    .padding(.top, 6)
-            }
-            actionRow(rotation: .zero, showsCaptions: true)
-            Spacer(minLength: 8)
-            shutterRow(rotation: .zero, showsCaption: true)
-        }
-        .padding(.top, 12)
-        .padding(.bottom, 6)
-    }
-
     private func compactLivePanel(_ rotation: Angle) -> some View {
         VStack(spacing: 8) {
             CompactModeDial(selection: model.mode, rotation: rotation) { model.select($0) }
@@ -359,6 +345,8 @@ struct CameraScreen: View {
         .padding(.vertical, 8)
     }
 
+    /// The review's controls in landscape, which have no monitor keys: the
+    /// phone turns upright to change the monitor.
     private func compactReviewPanel(_ rotation: Angle) -> some View {
         VStack(spacing: 8) {
             CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, rotation: rotation) {

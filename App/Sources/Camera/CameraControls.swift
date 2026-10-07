@@ -126,7 +126,8 @@ struct CompactModeDial: View {
     }
 }
 
-/// The monitor bank: six keys with lamps, like the 2013 app's MON SELEC panel.
+/// The monitor bank on the camera: six keys with lamps, like the 2013 app's
+/// MON SELEC panel. The review has its own (`ReviewMonitorBank`).
 struct MonitorBank: View {
     var selection: Monitor
     var onSelect: (Monitor) -> Void
@@ -149,19 +150,7 @@ struct MonitorBank: View {
         .padding(.horizontal, 14)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Look.caseLine, lineWidth: 1.5)
-        }
-        .overlay(alignment: .topLeading) {
-            Text("MONITOR")
-                .font(Look.smallFont)
-                .tracking(1.4)
-                .foregroundStyle(Look.label)
-                .padding(.horizontal, 6)
-                .background(Look.caseColor)
-                .offset(x: 14, y: -7)
-        }
+        .casePanel("MONITOR")
         .padding(.horizontal, 24)
     }
 
@@ -179,26 +168,37 @@ struct MonitorBank: View {
 /// A monitor key: a square key, its lamp, and the monitor's name printed beside it.
 struct MonitorKeyStyle: ButtonStyle {
     var isSelected: Bool
+    /// The key's side.
+    var keySize: CGFloat = 30
+    /// The space between the key, its lamp and the name.
+    var spacing: CGFloat = 10
+    var height: CGFloat = 38
 
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: spacing) {
             KeyFace(isPressed: configuration.isPressed, cornerRadius: 5)
-                .frame(width: 30, height: 30)
+                .frame(width: keySize, height: keySize)
             LED(isOn: isSelected)
             configuration.label
                 .font(Look.caseLabelFont)
                 .tracking(0.8)
                 .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
+                .fixedSize()
             Spacer(minLength: 0)
         }
-        .frame(height: 38)
+        .frame(height: height)
         .contentShape(Rectangle())
     }
 }
 
-/// The monitor bank in landscape: smaller keys with the lamp and name on them,
-/// turned upright.
+/// The monitor bank on the camera in landscape: smaller keys with the lamp and
+/// name on them, turned upright.
 struct CompactMonitorBank: View {
+    /// A key's size, as the screen is laid out. Its label turns upright with
+    /// the phone, so it runs along the key's height, which is the key's width
+    /// as the user sees it.
+    static let keySize = CGSize(width: 56, height: 52)
+
     var selection: Monitor
     var rotation: Angle
     var onSelect: (Monitor) -> Void
@@ -223,18 +223,23 @@ struct CompactMonitorBank: View {
         return Button {
             onSelect(monitor)
         } label: {
-            HStack(spacing: 4) {
-                LED(isOn: isSelected, size: 6)
-                Text(monitor.shortName)
-            }
-            .font(Look.smallFont)
-            .foregroundStyle(isSelected ? Look.labelSelected : Look.ink)
-            .fixedSize()
-            .rotationEffect(rotation)
+            Self.label(monitor, isSelected: isSelected)
+                .rotationEffect(rotation)
         }
-        .buttonStyle(KeyButtonStyle(width: 56, height: 44, cornerRadius: 6))
+        .buttonStyle(KeyButtonStyle(width: Self.keySize.width, height: Self.keySize.height, cornerRadius: 6))
         .accessibilityLabel(monitor.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// A key's label, upright: its lamp and the monitor's short name.
+    static func label(_ monitor: Monitor, isSelected: Bool) -> some View {
+        HStack(spacing: 4) {
+            LED(isOn: isSelected, size: 6)
+            Text(monitor.shortName)
+        }
+        .font(Look.smallFont)
+        .foregroundStyle(isSelected ? Look.labelSelected : Look.ink)
+        .fixedSize()
     }
 }
 
