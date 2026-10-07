@@ -15,11 +15,6 @@ struct LayoutTests {
         var height: CGFloat
         var top: CGFloat
         var bottom: CGFloat
-
-        /// The height left below the TV for the controls.
-        var panelHeight: CGFloat {
-            height - top - bottom - ScreenMetrics.topBarHeight - width / TVGeometry.aspectRatio
-        }
     }
 
     /// One iPhone of each screen size, with the largest safe area among the
@@ -37,6 +32,11 @@ struct LayoutTests {
         Phone(name: "iPhone 14 and 15 Pro Max, 15 and 16 Plus", width: 430, height: 932, top: 59, bottom: 34),
         Phone(name: "iPhone 16 and 17 Pro Max", width: 440, height: 956, top: 62, bottom: 34),
     ]
+
+    /// The height a phone leaves below the TV for the controls.
+    private func panelHeight(on phone: Phone) -> CGFloat {
+        phone.height - phone.top - phone.bottom - ScreenMetrics.topBarHeight - phone.width / TVGeometry.aspectRatio
+    }
 
     /// The size SwiftUI gives a view offered a width and a height.
     private func size(of view: some View, width: CGFloat, height: CGFloat) -> CGSize {
@@ -66,7 +66,7 @@ struct LayoutTests {
     /// all but the iPhone SE. (Sizes may round up to a pixel.)
     @Test func reviewFitsEveryIPhone() {
         for phone in Self.phones {
-            let room = phone.panelHeight
+            let room = panelHeight(on: phone)
             let panel = size(of: reviewPanel(nil), width: phone.width, height: room)
             #expect(panel.width <= phone.width, "\(phone.name): \(panel.width) points wide")
             #expect(panel.height <= room + 0.5, "\(phone.name): \(panel.height) points in \(room)")
