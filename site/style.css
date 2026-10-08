@@ -1,0 +1,63 @@
+/* Camera C64's pages: the C64's own blues, light or dark as the reader's device is. */
+:root {
+    --background: #f4f3ff;
+    --text: #1e1b4b;
+    --muted: #4b4880;
+    --accent: #352879;
+    --rule: #c9c6f0;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #352879;
+        --text: #e8e6ff;
+        --muted: #b8b4ff;
+        --accent: #a39ff5;
+        --rule: #6c5eb5;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+main {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2.5rem 1rem 4rem;
+}
+
+header a {
+    color: var(--muted);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+h1 { font-size: 2rem; line-height: 1.2; margin: 1.5rem 0 0.25rem; }
+h2 { font-size: 1.2rem; margin: 2.25rem 0 0.5rem; }
+p, li { margin: 0.5rem 0; }
+a { color: var(--accent); }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.95em; }
+
+.date { color: var(--muted); margin-top: 0; }
+
+.summary {
+    border-left: 4px solid var(--accent);
+    padding: 0.25rem 0 0.25rem 1rem;
+    margin: 1.5rem 0;
+}
+
+footer {
+    border-top: 1px solid var(--rule);
+    margin-top: 3rem;
+    padding-top: 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+footer a { color: var(--muted); }

@@ -18,9 +18,16 @@ enum SettingName {
     static let crtTuning = "crtTuning"
 }
 
+/// The app's pages on its website, published from the repository's `site`
+/// folder. App Store Connect has the same URLs.
+enum Website {
+    static let support = URL(string: "https://c64camera.com/support/")!
+    static let privacyPolicy = URL(string: "https://c64camera.com/privacy/")!
+}
+
 /// Settings, in standard iOS styling (docs/UX.md, section 5): saving every
-/// shot to Photos, the Ultimate that Send to C64 sends pictures to, and the
-/// acknowledgements.
+/// shot to Photos, the Ultimate that Send to C64 sends pictures to, links to
+/// the support page and the privacy policy, and the acknowledgements.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SettingName.saveEveryShot) private var savesEveryShot = false
@@ -59,6 +66,8 @@ struct SettingsView: View {
                             + "control on. Send to C64 then shows the picture on its C64.")
                 }
                 Section {
+                    Link("Support", destination: Website.support)
+                    Link("Privacy Policy", destination: Website.privacyPolicy)
                     NavigationLink("Acknowledgements") {
                         AcknowledgementsView()
                     }

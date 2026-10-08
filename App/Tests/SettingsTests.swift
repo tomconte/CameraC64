@@ -35,6 +35,15 @@ struct SettingsTests {
             ])
     }
 
+    /// Settings links to the support page and the privacy policy, which App
+    /// Review opens too.
+    @Test func settingsLinkToTheWebsite() {
+        for url in [Website.support, Website.privacyPolicy] {
+            #expect(url.scheme == "https" && url.host() == "c64camera.com", "\(url)")
+        }
+        #expect(Website.support != Website.privacyPolicy)
+    }
+
     /// The privacy manifest says the app tracks no one and collects nothing,
     /// and why it reads the user defaults: its own settings.
     @Test func privacyManifestDeclaresTheUserDefaults() throws {

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Support – Camera C64</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+    <header><a href="/">Camera C64</a></header>
+    <h1>Support</h1>
+
+    <p class="summary">Write to <a href="mailto:support@c64camera.com">support@c64camera.com</a>, or, if you have a GitHub account, <a href="https://github.com/tomconte/CameraC64/issues">report a problem on GitHub</a>. Please say which iPhone and which version of iOS you use.</p>
+
+    <h2>The TV shows static instead of the camera</h2>
+    <p>The app may not use the camera. Allow it in the Settings app, under Privacy &amp; Security → Camera, then come back to Camera C64. Another app using the camera, such as a video call, also stops it until that app lets go.</p>
+
+    <h2>Pictures are not saved to Photos</h2>
+    <p>The app needs permission to add photos. Allow it in the Settings app, under Privacy &amp; Security → Photos → Camera C64.</p>
+
+    <h2>Setting up Send to C64</h2>
+    <ol>
+        <li>Connect your Ultimate 64, C64 Ultimate or Ultimate-II+ to the same network as your iPhone.</li>
+        <li>In the Ultimate's menu, turn on its web remote control (the REST API), and note its IP address, such as <code>192.168.1.64</code>.</li>
+        <li>In Camera C64, open Settings and enter that address, and the Ultimate's network password if you set one.</li>
+        <li>After a shot, tap Send to C64. The first time, iOS asks to let the app find devices on your local network: allow it.</li>
+    </ol>
+    <p>If the TV says <strong>NO NETWORK</strong>, allow Local Network for Camera C64 in the Settings app, under Privacy &amp; Security → Local Network. If it says <strong>C64 NOT FOUND</strong>, check the address, and that the phone and the Ultimate are on the same network.</p>
+
+    <h2>Using the C64 files</h2>
+    <ul>
+        <li>The <code>.prg</code> file shows the picture on a C64, or in an emulator such as VICE.</li>
+        <li>The <code>.d64</code> file is a disk image holding that program: on a C64, type <code>LOAD"*",8</code>, then <code>RUN</code>.</li>
+        <li>Hires pictures also come as Art Studio files (<code>.art</code>), and multicolour pictures as Koala files (<code>.kla</code>), for C64 paint programs and tools.</li>
+    </ul>
+    <p>The programs are made for PAL machines. A picture made for a black-and-white, amber or green monitor still holds colours, which may look odd on a colour TV.</p>
+
+    <footer><a href="/privacy/">Privacy policy</a> · <a href="/">Camera C64</a></footer>
+</main>
+</body>
+</html>
