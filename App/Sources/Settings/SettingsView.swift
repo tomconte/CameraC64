@@ -19,7 +19,8 @@ enum SettingName {
 }
 
 /// Settings, in standard iOS styling (docs/UX.md, section 5): saving every
-/// shot to Photos, and the Ultimate that Send to C64 sends pictures to.
+/// shot to Photos, the Ultimate that Send to C64 sends pictures to, and the
+/// acknowledgements.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SettingName.saveEveryShot) private var savesEveryShot = false
@@ -56,6 +57,11 @@ struct SettingsView: View {
                     Text(
                         "An Ultimate 64, C64 Ultimate or Ultimate-II+ on the same network, with its web remote "
                             + "control on. Send to C64 then shows the picture on its C64.")
+                }
+                Section {
+                    NavigationLink("Acknowledgements") {
+                        AcknowledgementsView()
+                    }
                 }
                 if BuildKind.isDevelopment {
                     Section {

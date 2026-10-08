@@ -23,6 +23,11 @@ targets:
     sources:
       - App/Sources
       - App/Resources
+      # Shown in Settings, as the acknowledgements.
+      - path: LICENSE
+        buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
     dependencies:
       - package: C64Core
     settings:
