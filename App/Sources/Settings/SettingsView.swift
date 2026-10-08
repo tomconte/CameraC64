@@ -21,8 +21,8 @@ enum SettingName {
 /// The app's pages on its website, published from the repository's `site`
 /// folder. App Store Connect has the same URLs.
 enum Website {
-    static let support = URL(string: "https://c64camera.com/support/")!
-    static let privacyPolicy = URL(string: "https://c64camera.com/privacy/")!
+    static let support = URL(string: "https://camerac64.com/support/")!
+    static let privacyPolicy = URL(string: "https://camerac64.com/privacy/")!
 }
 
 /// Settings, in standard iOS styling (docs/UX.md, section 5): saving every

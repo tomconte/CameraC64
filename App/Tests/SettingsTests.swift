@@ -39,7 +39,7 @@ struct SettingsTests {
     /// Review opens too.
     @Test func settingsLinkToTheWebsite() {
         for url in [Website.support, Website.privacyPolicy] {
-            #expect(url.scheme == "https" && url.host() == "c64camera.com", "\(url)")
+            #expect(url.scheme == "https" && url.host() == "camerac64.com", "\(url)")
         }
         #expect(Website.support != Website.privacyPolicy)
     }
