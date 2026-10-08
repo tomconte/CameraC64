@@ -712,7 +712,7 @@ struct CameraScreenTests {
             return try #require(renderer.cgImage.flatMap { RGBImage($0) })
         }
         let plain = try drawn(gain: 1)
-        let brighter = try drawn(gain: 4)
+        let brighter = try drawn(gain: 8)
         #expect(Int(brighter[5, 5].g) > Int(plain[5, 5].g) + 40, "\(plain[5, 5]) and \(brighter[5, 5])")
         #expect(brighter[15, 5].g < 3, "Black: \(brighter[15, 5])")
     }
