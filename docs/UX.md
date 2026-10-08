@@ -86,7 +86,7 @@ With Reduce Motion on, the warm-up, the power-off and the fill-in are skipped.
 - Press and hold the TV to see the original photo.
 - The capture key goes back to the camera.
 
-**Settings**: saving every shot to Photos (turning it on asks for permission to add photos), the Ultimate's address and, if it has one, its network password (kept in the keychain), acknowledgements.
+**Settings**: saving every shot to Photos (turning it on asks for permission to add photos), the Ultimate's address and, if it has one, its network password (kept in the keychain), links to the support page and the privacy policy on camerac64.com, acknowledgements.
 
 ## 6. What gets shared and exported
 

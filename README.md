@@ -13,6 +13,7 @@ The original 2012–2013 app (Objective-C, GPUImage) is preserved at tag `legacy
 - `C64/`: 6502 display programs embedded in exported `.prg` files
 - `Tools/`: developer tools: the `c64conv` command-line tool, the quality benchmark, and the tests that compare the renderer with the VICE emulator
 - `docs/`: plan and design notes
+- `site/`: the website, [camerac64.com](https://camerac64.com): the support page and the privacy policy
 
 ## Building
 

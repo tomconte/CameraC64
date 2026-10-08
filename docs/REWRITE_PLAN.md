@@ -372,6 +372,7 @@ Packages/C64Core/         the core library and its tests
 C64/                      6502 display programs
 Tools/                    c64conv CLI, VICE comparison tests, quality benchmark
 docs/                     this plan, the UX (UX.md) and design notes
+site/                     the website, camerac64.com: support page and privacy policy
 ```
 
 ## 16. Milestones
@@ -409,7 +410,7 @@ docs/                     this plan, the UX (UX.md) and design notes
      - saving to Photos, and a setting to save every shot
      - sending to an Ultimate, through its REST API, with its network password if it has one
    - the CRT power-off animation, from the 2013 app: the badge switches the TV off, and the camera with it, and any key switches them back on, with the warm-up (done, but for trying it on a phone; section 7)
-   - Settings with only what 3.0 uses (done: saving every shot, and the Ultimate's address and password), and the acknowledgements; a privacy manifest
+   - Settings with only what 3.0 uses (done): saving every shot, the Ultimate's address and password, and the acknowledgements, read from the bundled `THIRD_PARTY_NOTICES.md` and `LICENSE`; a privacy manifest (done), which declares no tracking, no collected data and the user defaults; the support page and privacy policy that App Store Connect requires, in `site/`, to publish on camerac64.com, and linked from Settings
 
    Then release 3.0 on the restored listing.
 4. **Advanced modes**, one at a time, each with its display program and VICE tests. The first brings the paid unlock, with StoreKit 2 and the legacy entitlement (section 12).
