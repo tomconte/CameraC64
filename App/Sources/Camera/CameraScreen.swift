@@ -30,14 +30,18 @@ enum ScreenMetrics {
 /// chosen monitor, and a shot holds its picture for review, until the next
 /// one: it can be shared, saved to Photos, sent to a C64 or deleted. Without a
 /// camera the TV shows static, and in development builds, a photo from the
-/// library can stand in for a shot.
+/// library can stand in for a shot. The badge switches the TV off, and the
+/// camera with it; any key switches them back on.
 struct CameraScreen: View {
     @State private var model = CameraModel()
     @State private var camera = LiveCamera()
     @State private var pictures = PictureMaker()
     @State private var held = HeldOrientationObserver()
     @State private var showingSettings = false
-    @State private var poweredOn = false
+    /// The TV's tube, dark at launch until it warms up.
+    @State private var tube = Tube(.off)
+    /// When the TV began warming up, while it waits for a picture to open on.
+    @State private var warmUpStart: Date?
     @State private var showingOriginal = false
     @State private var importedItem: PhotosPickerItem?
     /// The zoom when a pinch began.
@@ -60,9 +64,13 @@ struct CameraScreen: View {
             let area = ScreenMetrics.tvArea(in: geometry.size, turned: turned, stage: model.stage)
             let tvSize = TVGeometry.size(fitting: area, turned: turned)
             VStack(spacing: 0) {
-                TopBar(model: model, rotation: rotation, showsTitle: !turned) {
-                    showingSettings = true
-                }
+                TopBar(
+                    model: model, rotation: rotation, showsTitle: !turned,
+                    onFlash: { whenOn { model.toggleFlash() } },
+                    onCRT: { whenOn { model.toggleCRT() } },
+                    onPower: { model.togglePower() },
+                    onSettings: { whenOn { showingSettings = true } }
+                )
                 .background {
                     Look.bezel.ignoresSafeArea(edges: .top)
                 }
@@ -81,7 +89,7 @@ struct CameraScreen: View {
                     // Pressing and holding the TV shows the original photo, until the finger lifts.
                     .onLongPressGesture(minimumDuration: 60, maximumDistance: 20) {
                     } onPressingChanged: { pressing in
-                        showingOriginal = pressing && model.stage == .review
+                        showingOriginal = pressing && model.stage == .review && model.tvOn
                     }
                 panel(turned: turned, rotation: rotation)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -105,26 +113,47 @@ struct CameraScreen: View {
         .sensoryFeedback(.selection, trigger: model.mode)
         .sensoryFeedback(.selection, trigger: model.reviewMode)
         .sensoryFeedback(.selection, trigger: model.monitor)
+        .sensoryFeedback(.impact(weight: .light), trigger: model.tvOn)
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
+        // The TV warms up while the camera starts (docs/UX.md, section 3).
         .onAppear {
             held.start()
+            if model.tvOn && tube.target == .off {
+                warmUp()
+            }
         }
-        // The CRT warms up while the camera starts (docs/UX.md, section 3).
         .task {
             await camera.start(cameraPosition)
         }
-        .task {
+        // The tube stops redrawing once it gets where it was going.
+        .task(id: tube) {
+            guard !tube.isSettled else { return }
+            try? await Task.sleep(for: .seconds(max(0, tube.end.timeIntervalSinceNow)))
+            if !Task.isCancelled {
+                tube = tube.settled
+            }
+        }
+        // The warm-up ends with the TV's first picture, or after 2 seconds,
+        // as while iOS asks for permission to use the camera.
+        .onChange(of: tvHasSignal) {
+            if tvHasSignal {
+                openUp()
+            }
+        }
+        .task(id: warmUpStart) {
+            guard warmUpStart != nil else { return }
             try? await Task.sleep(for: .seconds(2))
-            powerOn()
+            if !Task.isCancelled {
+                openUp()
+            }
         }
-        .onChange(of: camera.feed.hasPicture) {
-            powerOn()
-        }
-        .onChange(of: camera.state) {
-            if camera.state != .starting && camera.state != .running {
-                powerOn()
+        .onChange(of: model.tvOn) {
+            if model.tvOn {
+                switchedOn()
+            } else {
+                switchedOff()
             }
         }
         .onChange(of: viewfinderSettings, initial: true) {
@@ -215,10 +244,10 @@ struct CameraScreen: View {
     }
 
     /// What the viewfinder makes of the camera's frames, or nil when the TV
-    /// holds a shot. Frames are dropped while Settings covers the TV too,
-    /// which leaves the processor to the speed benchmark.
+    /// holds a shot, or is off. Frames are dropped while Settings covers the
+    /// TV too, which leaves the processor to the speed benchmark.
     private var viewfinderSettings: Viewfinder.Settings? {
-        guard model.stage == .live, !showingSettings else { return nil }
+        guard model.stage == .live, model.tvOn, !showingSettings else { return nil }
         let afterglow = model.crtShown && model.monitor.hasAfterglow ? crtLook.afterglow : 0
         return Viewfinder.Settings(
             spec: model.mode.spec, converter: model.mode.converterSettings(on: model.monitor),
@@ -238,18 +267,19 @@ struct CameraScreen: View {
     private func tv(showsZoom: Bool) -> some View {
         let live = model.stage == .live
         let mode = live ? model.mode : model.reviewMode
-        let label = live ? "Viewfinder, \(mode.name)" : "Your picture, \(mode.name)"
+        let label = !model.tvOn ? "TV off" : live ? "Viewfinder, \(mode.name)" : "Your picture, \(mode.name)"
         return TVView(
             content: tvContent,
             fillStart: model.fillStart,
             original: pictures.photo,
             showsOriginal: showingOriginal,
             crt: crt,
-            poweredOn: poweredOn,
+            tube: tube,
+            phosphor: model.monitor.phosphor,
             message: model.message,
             focus: live ? model.focus : nil,
             zoom: showsZoom && live ? zoomButtons : nil,
-            onSelectZoom: { selectZoom($0) }
+            onSelectZoom: { zoom in whenOn { selectZoom(zoom) } }
         )
         .overlay {
             if live, let trouble = cameraTrouble {
@@ -267,13 +297,15 @@ struct CameraScreen: View {
         .accessibilityLabel(label)
     }
 
-    /// What the TV shows: the viewfinder, a shot's picture, or static.
+    /// What the TV shows: the viewfinder, a shot's picture, or static. Off,
+    /// it keeps the viewfinder's last picture, which closes as it switches
+    /// off.
     private var tvContent: TVView.Content {
         if let reviewKey {
             return .picture(pictures.picture(reviewKey))
         }
         switch camera.state {
-        case .running: return .live(camera.feed)
+        case .running, .off: return .live(camera.feed)
         case .starting: return .picture(nil)
         case .notAllowed, .unavailable, .interrupted: return .noSignal
         }
@@ -288,7 +320,7 @@ struct CameraScreen: View {
     private var cameraTrouble: LiveCamera.State? {
         switch camera.state {
         case .notAllowed, .unavailable, .interrupted: camera.state
-        case .starting, .running: nil
+        case .starting, .running, .off: nil
         }
     }
 
@@ -315,7 +347,8 @@ struct CameraScreen: View {
         case (.review, false):
             ReviewPanel(
                 mode: model.reviewMode, monitor: model.monitor, thumbnails: thumbnails,
-                onSelectMode: { model.reviewMode = $0 }, onSelectMonitor: { model.select($0) },
+                onSelectMode: { mode in whenOn { model.reviewMode = mode } },
+                onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
                 actions: { actionRow(rotation: .zero, showsCaptions: $0) },
                 shutter: { shutterRow(rotation: .zero, showsCaption: $0) })
         case (.review, true):
@@ -325,9 +358,9 @@ struct CameraScreen: View {
 
     private var livePanel: some View {
         VStack(spacing: 12) {
-            ZoomPills(buttons: zoomButtons) { selectZoom($0) }
-            ModeDial(selection: model.mode) { model.select($0) }
-            MonitorBank(selection: model.monitor) { model.select($0) }
+            ZoomPills(buttons: zoomButtons) { zoom in whenOn { selectZoom(zoom) } }
+            ModeDial(selection: model.mode) { mode in whenOn { model.select(mode) } }
+            MonitorBank(selection: model.monitor) { monitor in whenOn { model.select(monitor) } }
                 .padding(.top, 6)
             Spacer(minLength: 8)
             shutterRow(rotation: .zero, showsCaption: true)
@@ -338,8 +371,10 @@ struct CameraScreen: View {
 
     private func compactLivePanel(_ rotation: Angle) -> some View {
         VStack(spacing: 8) {
-            CompactModeDial(selection: model.mode, rotation: rotation) { model.select($0) }
-            CompactMonitorBank(selection: model.monitor, rotation: rotation) { model.select($0) }
+            CompactModeDial(selection: model.mode, rotation: rotation) { mode in whenOn { model.select(mode) } }
+            CompactMonitorBank(selection: model.monitor, rotation: rotation) { monitor in
+                whenOn { model.select(monitor) }
+            }
             shutterRow(rotation: rotation, showsCaption: false)
         }
         .padding(.vertical, 8)
@@ -349,8 +384,8 @@ struct CameraScreen: View {
     /// phone turns upright to change the monitor.
     private func compactReviewPanel(_ rotation: Angle) -> some View {
         VStack(spacing: 8) {
-            CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, rotation: rotation) {
-                model.reviewMode = $0
+            CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, rotation: rotation) { mode in
+                whenOn { model.reviewMode = mode }
             }
             actionRow(rotation: rotation, showsCaptions: false)
             shutterRow(rotation: rotation, showsCaption: false)
@@ -361,8 +396,8 @@ struct CameraScreen: View {
     private func actionRow(rotation: Angle, showsCaptions: Bool) -> some View {
         ActionRow(
             actions: ReviewAction.all(canSend: canSend), files: sharedFiles, sending: model.sending,
-            rotation: rotation, showsCaptions: showsCaptions
-        ) { perform($0) }
+            tvOn: model.tvOn, rotation: rotation, showsCaptions: showsCaptions
+        ) { action in whenOn { perform(action) } }
     }
 
     /// Whether an Ultimate is set up, for Send to C64.
@@ -385,9 +420,9 @@ struct CameraScreen: View {
             thumbnail: model.lastShot.flatMap { pictures.picture(key($0))?.window },
             rotation: rotation,
             showsCaption: showsCaption,
-            onLastPicture: { model.showLastShot() },
-            onKey: { pressBigKey() },
-            onFlip: { flipCamera() })
+            onLastPicture: { whenOn { model.showLastShot() } },
+            onKey: { whenOn { pressBigKey() } },
+            onFlip: { whenOn { flipCamera() } })
     }
 
     // MARK: - Gestures
@@ -417,7 +452,7 @@ struct CameraScreen: View {
     private func drag(_ orientation: HeldOrientation) -> some Gesture {
         DragGesture(minimumDistance: 24)
             .onChanged { value in
-                guard model.stage == .live, pinchStart == nil else { return }
+                guard model.stage == .live, model.tvOn, pinchStart == nil else { return }
                 // A drag on the TV, as the user sees it.
                 let movement = orientation.upright(value.translation)
                 if dragKind == nil {
@@ -438,7 +473,7 @@ struct CameraScreen: View {
             }
             .onEnded { value in
                 defer { dragKind = nil }
-                guard model.stage == .live, dragKind == .swipe else { return }
+                guard model.stage == .live, model.tvOn, dragKind == .swipe else { return }
                 let movement = orientation.upright(value.translation)
                 guard abs(movement.width) > max(40, abs(movement.height)) else { return }
                 model.step(by: movement.width < 0 ? 1 : -1)
@@ -449,7 +484,7 @@ struct CameraScreen: View {
     private var pinch: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                guard model.stage == .live, let range = camera.capabilities?.zoomRange else { return }
+                guard model.stage == .live, model.tvOn, let range = camera.capabilities?.zoomRange else { return }
                 let start = pinchStart ?? model.zoom
                 pinchStart = start
                 let zoom = min(max(start * Double(value.magnification), range.lowerBound), range.upperBound)
@@ -462,6 +497,16 @@ struct CameraScreen: View {
     }
 
     // MARK: - Actions
+
+    /// Runs a key's action, or while the TV is off, switches it back on
+    /// instead, as any key does (docs/UX.md, section 3).
+    private func whenOn(_ action: () -> Void) {
+        if model.tvOn {
+            action()
+        } else {
+            model.switchOn()
+        }
+    }
 
     private func selectZoom(_ zoom: Double) {
         model.select(zoom: zoom)
@@ -595,17 +640,51 @@ struct CameraScreen: View {
         }
     }
 
-    /// The CRT warms up while the camera starts: until its first frame comes,
-    /// or it is clear none will.
-    private func powerOn() {
-        guard !poweredOn else { return }
-        if reduceMotion {
-            poweredOn = true
-        } else {
-            withAnimation(.easeOut(duration: 0.45)) {
-                poweredOn = true
-            }
+    // MARK: - Power
+
+    /// Whether the tube switches as a tube does, rather than at once: only
+    /// with the CRT layer, and without Reduce Motion (docs/UX.md, section 3).
+    private var animatesTube: Bool {
+        model.crtShown && !reduceMotion
+    }
+
+    /// Whether the TV has a picture to open on as it warms up: the review's,
+    /// the camera's first frame, or static when the camera will not start.
+    private var tvHasSignal: Bool {
+        model.stage == .review || camera.feed.hasPicture || cameraTrouble != nil
+    }
+
+    /// The TV warms up while the camera starts, so that it costs no time: a
+    /// dot stretches into a line, which opens once there is a picture.
+    private func warmUp() {
+        warmUpStart = .now
+        tube.move(to: .line, animated: animatesTube)
+        if tvHasSignal {
+            openUp()
         }
+    }
+
+    /// The warm-up ends: the line opens into the picture.
+    private func openUp() {
+        guard model.tvOn, warmUpStart != nil else { return }
+        warmUpStart = nil
+        tube.move(to: .on, animated: animatesTube)
+    }
+
+    /// The TV was switched off: the picture closes into a line, then a dot,
+    /// which fades, and the camera stops, which saves the battery.
+    private func switchedOff() {
+        warmUpStart = nil
+        showingOriginal = false
+        tube.move(to: .off, animated: animatesTube)
+        camera.switchOff()
+    }
+
+    /// The TV was switched back on: the camera starts again while the TV
+    /// warms up.
+    private func switchedOn() {
+        camera.switchOn(cameraPosition)
+        warmUp()
     }
 }
 

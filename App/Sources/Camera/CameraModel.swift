@@ -122,6 +122,11 @@ enum Monitor: CaseIterable, Identifiable {
     /// that whatever moves in the viewfinder leaves a fading trail.
     var hasAfterglow: Bool { self == .amber || self == .green }
 
+    /// The colour of the monitor's phosphor at full brightness, as its tube's
+    /// line and dot show it when it switches off: white on a colour monitor,
+    /// whose three phosphors light together.
+    var phosphor: RGB { display.phosphor?.color ?? RGB(255, 255, 255) }
+
     /// How the monitor shows a picture, and what the converter optimises for.
     var display: DisplayModel {
         switch self {
@@ -161,6 +166,10 @@ final class CameraModel {
     }
 
     private(set) var stage = Stage.live
+    /// Whether the TV is on. The badge switches it off, and the camera with
+    /// it, which saves the battery; any key, or the badge again, switches it
+    /// back on (docs/UX.md, section 3).
+    private(set) var tvOn = true
     private(set) var mode = PictureMode.multicolour
     /// The mode the review shows. The mode strip changes it.
     var reviewMode = PictureMode.multicolour
@@ -235,6 +244,23 @@ final class CameraModel {
     func toggleFlash() {
         flashOn.toggle()
         show(flashOn ? "FLASH ON" : "FLASH OFF")
+    }
+
+    /// Switches the TV off, or back on, as the badge does. What was on its
+    /// glass goes with it.
+    func togglePower() {
+        guard tvOn else {
+            switchOn()
+            return
+        }
+        tvOn = false
+        message = nil
+        focus = nil
+    }
+
+    /// Switches the TV back on, as any key does while it is off.
+    func switchOn() {
+        tvOn = true
     }
 
     /// Whether the TV shows the CRT layer: the switch is on, and the monitor

@@ -42,8 +42,11 @@ A TV above a C64, as in the 2013 app, but with a TV of the right shape.
 **What the TV shows**:
 
 - The live picture, drawn from real C64 memory through the chosen monitor, with its border. The border colour is automatic: it matches the picture's edges.
-- At launch, a short CRT warm-up while the camera starts, so it costs no time: it ends with the camera's first frame.
-- Tapping the badge switches the TV off, as the 2013 app's power bar did: the picture shrinks to a bright line, then to a dot, and fades, and the camera stops, which saves the battery. Any key, or the badge again, switches it back on, with the warm-up. (Still to come.)
+- At launch, a short CRT warm-up while the camera starts, so it costs no time: a dot stretches into a bright line, which opens into the picture with the camera's first frame.
+- Tapping the badge, which shows with the phone upright, switches the TV off, as the 2013 app's power bar did: the picture shrinks to a bright line, then to a dot, and fades, and the camera stops, which saves the battery.
+  - The picture brightens as it closes, and the line and the dot are in the phosphor's colour: white on the colour monitors, and amber or green on the amber and green ones. Around them, the glass of the switched-off tube shows, dark grey, tinted by its phosphor.
+  - Any key, or the badge again, switches it back on, with the warm-up. A review's picture comes back as it was. While the TV is off, it takes no gestures.
+  - The tube switches this way only through the CRT layer. With the CRT switch off, on Sharp, or with Reduce Motion on, the TV switches off and on at once.
 - Without a camera (permission denied, or the Simulator): static, with an "Allow camera" button, which opens the app's page in Settings. Development builds also offer "Import a photo", so that the review can be tried without a camera. While another app or a call has the camera, static with "Camera in use".
 - The front camera's pictures are mirrored, as a mirror shows the scene, in the viewfinder and the shot alike, so the shot is what the viewfinder showed.
 
@@ -53,7 +56,7 @@ A TV above a C64, as in the 2013 app, but with a TV of the right shape.
 2. **Review.** The TV holds the finished picture, and the controls below switch to review (section 5). The capture key becomes the way back to the camera. It is one screen in two states, not a new screen.
 3. **Keep it, or not.** The app holds one shot at a time. Until the next shot, or until the app is closed, the last picture in the shutter row opens it again. To keep it, share it, save it to Photos or send it to a C64; Delete discards it, as in the 2013 app. Nothing goes to Photos unless the user asks, or turns on a setting.
 
-With Reduce Motion on, the warm-up and the fill-in are skipped.
+With Reduce Motion on, the warm-up, the power-off and the fill-in are skipped.
 
 ## 5. Controls
 
@@ -63,8 +66,8 @@ With Reduce Motion on, the warm-up and the fill-in are skipped.
 - Mode dial: swipe across the TV. Real names (Hires, Multicolour, PETSCII…), each with a one-line description. PETSCII comes twice: as PETSCII, with only the graphics characters, for the classic PETSCII look, and as BBS, with all of them, whose letters, digits and punctuation make pictures look like BBS art.
 - Monitor bank: TV, Commodore monitor, Sharp, B&W, Amber, Green: two columns of keys, colour monitors on the left.
 - The last picture, which opens it again.
-- Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch, settings.
-- The CRT switch shows the TV's tube: scanlines, glow and curvature, and on the amber and green monitors, a fading trail behind whatever moves in the viewfinder. It is presentation only (plan, section 7). Sharp is a flat screen, so it has none: there, the switch says so.
+- Flash, front/back camera, zoom (pinch, plus the lens buttons: 0.5×, 1×, 2× and each telephoto lens the phone has), the CRT switch, settings, and the badge, which switches the TV off (section 3).
+- The CRT switch shows the TV's tube: scanlines, glow and curvature, on the amber and green monitors a fading trail behind whatever moves in the viewfinder, and the tube switching off and on. It is presentation only (plan, section 7). Sharp is a flat screen, so it has none: there, the switch says so.
 - Tap to focus and expose; drag up or down to set exposure, which matters a lot with only 9 brightness levels: two stops either way, in thirds. A tap sets it back to the camera's own.
 
 **Review**, after a shot, or when the last picture is opened again:
