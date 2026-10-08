@@ -11,6 +11,8 @@ final class LiveCamera {
         /// Asking for permission, or starting.
         case starting
         case running
+        /// Switched off with the TV, which saves the battery.
+        case off
         /// The user said no, or the phone's restrictions do.
         case notAllowed
         /// There is no camera, as in the Simulator, or it would not start.
@@ -26,6 +28,10 @@ final class LiveCamera {
     let feed: ViewfinderFeed
     private let camera = Camera()
     private let viewfinder: Viewfinder
+    /// How many times the camera was switched off. A start or a check that
+    /// it was switched off during leaves the state alone, even if it was
+    /// switched back on since: the starts since set it.
+    @ObservationIgnored private var switchOffs = 0
 
     init() {
         let feed = ViewfinderFeed()
@@ -40,22 +46,50 @@ final class LiveCamera {
     /// iOS may stop it while the app is away, when it resets its media
     /// services, so the camera starts again whenever the app comes back,
     /// after an interruption, after such a reset, and after a failed shot.
+    /// A camera switched off with the TV stays off: only `switchOn` starts
+    /// it again.
     func start(_ position: Camera.Position) async {
+        guard state != .off else { return }
+        let switchOffs = self.switchOffs
         guard Camera.exists else {
             state = .unavailable
             return
         }
-        guard await Self.isAllowed() else {
+        let allowed = await Self.isAllowed()
+        guard self.switchOffs == switchOffs else { return }
+        guard allowed else {
             state = .notAllowed
             return
         }
         do {
             capabilities = try await camera.start(position, frames: viewfinder)
             let activity = await camera.activity
+            // Switched off meanwhile, the camera stopped after this start.
+            guard self.switchOffs == switchOffs else { return }
             state = Self.state(of: activity)
         } catch {
-            state = .unavailable
+            if self.switchOffs == switchOffs {
+                state = .unavailable
+            }
         }
+    }
+
+    /// Switches the camera off with the TV, which saves the battery. It
+    /// stays off, whatever happens, until `switchOn`.
+    func switchOff() {
+        guard state != .off else { return }
+        state = .off
+        switchOffs += 1
+        Task { await camera.stop() }
+    }
+
+    /// Switches the camera back on with the TV. The viewfinder starts over:
+    /// the TV's warm-up waits for its first picture since.
+    func switchOn(_ position: Camera.Position) {
+        guard state == .off else { return }
+        state = .starting
+        feed.clear()
+        Task { await start(position) }
     }
 
     /// The state the camera is in when its session does something.
@@ -73,11 +107,15 @@ final class LiveCamera {
     /// the app comes back or the capture key is pressed, so that a camera
     /// that keeps failing is not started over and over.
     func sessionFailed(_ error: AVError.Code?, position: Camera.Position) async {
+        guard state != .off else { return }
         if Self.startsAgain(after: error) {
             await start(position)
         } else {
+            let switchOffs = self.switchOffs
             let activity = await camera.activity
-            state = Self.state(of: activity)
+            if self.switchOffs == switchOffs {
+                state = Self.state(of: activity)
+            }
         }
     }
 

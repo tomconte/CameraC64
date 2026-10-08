@@ -32,7 +32,8 @@ enum TVGeometry {
 }
 
 /// The TV: a C64 picture inside its border, as it looks on the chosen monitor,
-/// through the CRT layer when it is on.
+/// through the CRT layer when it is on. Switching off and on, its tube closes
+/// the picture into a line and a dot, and opens it again (`Tube`).
 struct TVView: View {
     /// How long the finished picture takes to fill in after a shot.
     static let fillDuration: TimeInterval = 0.8
@@ -55,7 +56,11 @@ struct TVView: View {
     var showsOriginal = false
     /// The CRT layer's look, or nil to show the monitor's picture as it is.
     var crt: CRT?
-    var poweredOn = true
+    /// The tube, as it switches off and on.
+    var tube = Tube(.on)
+    /// The colour of the monitor's phosphor, for the tube's line and dot:
+    /// white on a colour monitor.
+    var phosphor = RGB(255, 255, 255)
     var message: CameraModel.Message?
     /// Where the camera was just asked to focus, if it was.
     var focus: CameraModel.FocusMark?
@@ -66,44 +71,82 @@ struct TVView: View {
     var body: some View {
         GeometryReader { geometry in
             let frame = TVGeometry.pictureFrame(inTV: geometry.size)
-            ZStack(alignment: .topLeading) {
-                Color.black
-                screen(window: frame)
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                if showsOriginal, let original {
-                    // Cropped as the converter crops it: the centre, in the window's shape.
-                    Image(decorative: original.preview, scale: 1, orientation: original.mirrored ? .upMirrored : .up)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: frame.width, height: frame.height)
-                        .clipped()
-                        .offset(x: frame.minX, y: frame.minY)
-                        .accessibilityLabel("The original photo")
+            // What shows on the glass, only once the TV is on, or opening.
+            let isOn = tube.target == .on
+            tubeScreen(window: frame, size: geometry.size)
+                .overlay(alignment: .topLeading) {
+                    if isOn, let focus {
+                        FocusMarkView()
+                            .position(
+                                x: frame.minX + focus.point.x * frame.width,
+                                y: frame.minY + focus.point.y * frame.height)
+                    }
                 }
-            }
-            .scaleEffect(x: 1, y: poweredOn ? 1 : 0.005)
-            .brightness(poweredOn ? 0 : 0.5)
-            .overlay(alignment: .topLeading) {
-                if let focus {
-                    FocusMarkView()
-                        .position(
-                            x: frame.minX + focus.point.x * frame.width, y: frame.minY + focus.point.y * frame.height)
+                .overlay(alignment: .top) {
+                    if isOn, let message {
+                        MessageView(message: message)
+                            .padding(.top, frame.minY + 8)
+                    }
                 }
-            }
-            .overlay(alignment: .top) {
-                if let message {
-                    MessageView(message: message)
-                        .padding(.top, frame.minY + 8)
+                .overlay(alignment: .bottom) {
+                    if isOn, let zoom {
+                        ZoomPills(buttons: zoom, onSelect: onSelectZoom)
+                            .padding(.bottom, max(0, (geometry.size.height - frame.maxY - 34) / 2))
+                    }
                 }
-            }
-            .overlay(alignment: .bottom) {
-                if let zoom {
-                    ZoomPills(buttons: zoom, onSelect: onSelectZoom)
-                        .padding(.bottom, max(0, (geometry.size.height - frame.maxY - 34) / 2))
-                }
-            }
         }
         .clipped()
+    }
+
+    /// The screen as the tube draws it, every frame while it switches off or
+    /// warms up.
+    @ViewBuilder private func tubeScreen(window: CGRect, size: CGSize) -> some View {
+        if tube.isSettled {
+            drawn(tube.raster(at: .now), window: window, size: size)
+        } else {
+            TimelineView(.animation) { context in
+                drawn(tube.raster(at: context.date), window: window, size: size)
+            }
+        }
+    }
+
+    /// The screen with the tube's raster: the whole picture, or the tube's
+    /// face behind the picture as it closes into a line, brighter as it
+    /// closes.
+    private func drawn(_ raster: Raster, window: CGRect, size: CGSize) -> some View {
+        ZStack {
+            if raster != .on {
+                TubeFace(raster: raster, phosphor: phosphor, crt: crt)
+            }
+            if raster == .on {
+                picture(window: window, size: size)
+            } else if raster.pictureOpacity > 0 {
+                picture(window: window, size: size)
+                    .colorEffect(TubeFace.gain(raster.gain))
+                    .scaleEffect(x: max(raster.width, 0.001), y: max(raster.height, 0.001))
+                    .opacity(raster.pictureOpacity)
+            }
+        }
+    }
+
+    /// The whole screen, border included, or the original photo while it
+    /// shows instead.
+    private func picture(window: CGRect, size: CGSize) -> some View {
+        ZStack(alignment: .topLeading) {
+            Color.black
+            screen(window: window)
+                .frame(width: size.width, height: size.height)
+            if showsOriginal, let original {
+                // Cropped as the converter crops it: the centre, in the window's shape.
+                Image(decorative: original.preview, scale: 1, orientation: original.mirrored ? .upMirrored : .up)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: window.width, height: window.height)
+                    .clipped()
+                    .offset(x: window.minX, y: window.minY)
+                    .accessibilityLabel("The original photo")
+            }
+        }
     }
 
     /// The whole screen, border included, filling in cell by cell after a shot.

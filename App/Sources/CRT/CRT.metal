@@ -176,15 +176,27 @@ static float3 crtGlow(device const float *glow, CRTSettings s, float2 spot) {
     return crtBlend(top, bottom, t.y);
 }
 
-/// How much of a device pixel lies on the tube, whose corners are rounded:
-/// 1 inside, 0 outside, and in between along its edge. The point goes from 0
-/// to 1 across and down the screen, which is `size` points.
-static float crtCoverage(CRTSettings s, float2 spot, float2 size) {
-    float radius = s.corner * size.y;
+/// The point of the screen that a point of the glass shows, both from 0 to 1
+/// across and down the TV, which is `size` points. The glass bulges by
+/// `curvature`: towards the corners, a point of the glass shows a point of the
+/// screen further out, so the picture's edges curve.
+static float2 crtSpot(float curvature, float2 glass, float2 size) {
+    float2 c = glass * 2.0f - 1.0f;
+    float aspect = size.x / size.y;
+    float2 bulge = float2(1.0f + curvature * c.y * c.y, 1.0f + curvature * aspect * c.x * c.x);
+    return (c * bulge) * 0.5f + 0.5f;
+}
+
+/// How much of a device pixel lies on the tube, whose corners are rounded,
+/// with a radius of `corner` times its height: 1 inside, 0 outside, and in
+/// between along its edge. The point goes from 0 to 1 across and down the
+/// screen, which is `size` points, drawn `scale` device pixels per point.
+static float crtCoverage(float corner, float scale, float2 spot, float2 size) {
+    float radius = corner * size.y;
     float2 fromCentre = fabs(spot - 0.5f) * size;
     float2 beyond = max(fromCentre - (size * 0.5f - radius), float2(0.0f));
     float outside = length(beyond) - radius;
-    return clamp(0.5f - outside * s.scale, 0.0f, 1.0f);
+    return clamp(0.5f - outside * scale, 0.0f, 1.0f);
 }
 
 /// The light of the glass at a point, from 0 to 1 across and down the TV,
@@ -192,13 +204,9 @@ static float crtCoverage(CRTSettings s, float2 spot, float2 size) {
 static float3 crtLight(
     device const uchar *pixels, device const float *glow, CRTSettings s, float2 glass, float2 size
 ) {
-    // The glass bulges: towards the corners, a point of the glass shows a
-    // point of the screen further out, so the picture's edges curve.
     float2 c = glass * 2.0f - 1.0f;
-    float aspect = size.x / size.y;
-    float2 bulge = float2(1.0f + s.curvature * c.y * c.y, 1.0f + s.curvature * aspect * c.x * c.x);
-    float2 spot = (c * bulge) * 0.5f + 0.5f;
-    float coverage = crtCoverage(s, spot, size);
+    float2 spot = crtSpot(s.curvature, glass, size);
+    float coverage = crtCoverage(s.corner, s.scale, spot, size);
     if (coverage <= 0.0f) {
         return float3(0.0f);
     }
@@ -232,4 +240,101 @@ static float3 crtLight(
     float2 glass = (position - float2(bounds.x, bounds.y)) / size;
     float3 light = crtLight((device const uchar *)screen, (device const float *)glow, s, glass, size);
     return half4(float4(crtEncoded(clamp(light, float3(0.0f), float3(1.0f))), 1.0f));
+}
+
+// The tube's power (`Tube.swift`, docs/UX.md, section 3). Switching off, the
+// picture closes into a bright line, which shrinks to a dot, which fades;
+// warming up, it goes the other way. `tubeFace` draws the tube's glass, and
+// the beam's line or dot on it. `tubeGain` brightens the picture as it
+// closes, since the beam's light falls on less and less of the glass.
+
+/// The settings, as `TubeFace.settings` lays them out.
+struct TubeSettings {
+    /// The phosphor's colour at full brightness, in sRGB from 0 to 1: white
+    /// on a colour monitor.
+    float3 phosphor;
+    /// The tube's shape, as the CRT layer gives it: the radius of its corners,
+    /// as a fraction of its height, and how far its glass bulges.
+    float corner;
+    float curvature;
+    /// Device pixels per point.
+    float scale;
+    /// How long the beam's line is, as a fraction of the screen's width, and
+    /// how thick, in points. Shorter than it is thick, it is a round dot.
+    float length;
+    float thickness;
+    /// How bright the line or dot is, from 0 to 1.
+    float beam;
+    /// How much of a dot's halo shows: 0 for a line, 1 for a dot.
+    float halo;
+};
+
+constant int tubeSettingCount = 10;
+
+static TubeSettings tubeSettings(device const float *values) {
+    TubeSettings s;
+    s.phosphor = float3(values[0], values[1], values[2]);
+    s.corner = values[3];
+    s.curvature = values[4];
+    s.scale = values[5];
+    s.length = values[6];
+    s.thickness = values[7];
+    s.beam = values[8];
+    s.halo = values[9];
+    return s;
+}
+
+/// The glass of a switched-off tube in a lit room, in sRGB, at a point from 0
+/// to 1 across and down: dark grey, tinted by the phosphor, lighter towards
+/// the middle, with a sheen from above.
+static float3 tubeGlass(TubeSettings s, float2 glass) {
+    float3 tint = crtBlend(float3(1.0f), s.phosphor * 1.4f, 0.25f);
+    float fromMiddle = min(length((glass - float2(0.5f, 0.42f)) / 0.62f), 1.0f);
+    float sheen = max(1.0f - glass.y / 0.45f, 0.0f);
+    return tint * mix(0.16f, 0.06f, fromMiddle) + 0.035f * sheen * sheen;
+}
+
+/// The beam's light, in linear light, at a point `offset` points from the
+/// middle of a screen `width` points wide: a line or a dot, white-hot at its
+/// core, with a glow in the phosphor's colour around it, and around a dot, a
+/// halo.
+static float3 tubeBeam(TubeSettings s, float2 offset, float width) {
+    float reach = max(s.length * width - s.thickness, 0.0f) * 0.5f;
+    float apart = length(float2(max(fabs(offset.x) - reach, 0.0f), offset.y));
+    float core = clamp((s.thickness * 0.5f - apart) * s.scale + 0.5f, 0.0f, 1.0f);
+    float glow = 0.5f * exp(-apart * apart / 32.0f) + 0.08f * exp(-apart * apart / 512.0f);
+    float edge = max(1.0f - length(offset) / 40.0f, 0.0f);
+    float halo = s.halo * 0.18f * edge * edge;
+    float3 white = crtLinear(crtBlend(s.phosphor, float3(1.0f), 0.6f));
+    return s.beam * (core * white + (glow + halo) * crtLinear(s.phosphor));
+}
+
+/// The tube's face, as a SwiftUI fill: its glass, the same shape as the CRT
+/// layer's tube, and the beam's line or dot. Opaque, in sRGB.
+[[ stitchable ]] half4 tubeFace(float2 position, float4 bounds, device const float *values, int valueCount) {
+    float4 black = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (valueCount < tubeSettingCount || bounds.z <= 0.0f || bounds.w <= 0.0f) {
+        return half4(black);
+    }
+    TubeSettings s = tubeSettings(values);
+    float2 size = float2(bounds.z, bounds.w);
+    float2 inTV = position - float2(bounds.x, bounds.y);
+    float2 glass = inTV / size;
+    float coverage = crtCoverage(s.corner, s.scale, crtSpot(s.curvature, glass, size), size);
+    float3 light = crtLinear(tubeGlass(s, glass)) * coverage + tubeBeam(s, inTV - size * 0.5f, size.x);
+    return half4(float4(crtEncoded(clamp(light, float3(0.0f), float3(1.0f))), 1.0f));
+}
+
+/// The picture as the raster closes, as a SwiftUI colour effect: the beam's
+/// light falls on `gain` times less of the glass, so the picture is `gain`
+/// times brighter in linear light, and its phosphor saturates towards white.
+/// Black stays black.
+[[ stitchable ]] half4 tubeGain(float2 position, half4 color, float gain) {
+    float alpha = float(color.a);
+    if (alpha <= 0.0f) {
+        return color;
+    }
+    float3 light = crtLinear(clamp(float3(color.rgb) / alpha, float3(0.0f), float3(1.0f)));
+    light = gain * light / (1.0f + (gain - 1.0f) * light);
+    return half4(half3(crtEncoded(light) * alpha), color.a);
 }

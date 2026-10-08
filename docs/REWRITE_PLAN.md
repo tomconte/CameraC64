@@ -215,8 +215,12 @@ The presets replace the old app's tints and are free. The model is an approximat
 - **Glow**: the glass scatters some of the light, so bright areas spill into the dark around them.
 - **Curvature**: the glass bulges, so the picture's edges curve, its corners are rounded, and it darkens towards them.
 - **Afterglow**: in the viewfinder, the amber and green monitors' phosphor glows on after each frame, so whatever moves leaves a fading trail.
+- **Power**, as in the 2013 app: the badge switches the TV off ([UX.md](UX.md), section 3).
+  - Switching off, the deflection collapses: the picture closes into a bright line, which shrinks to a dot, which fades. The beam's light falls on less and less of the glass, so the picture brightens as it closes, in linear light, saturating towards white, while black stays black. The line and the dot glow in the phosphor's colour, white-hot at their core.
+  - Switching on, the tube warms up the other way while the camera starts, and its line opens into the picture with the camera's first frame.
+  - Around them is the glass of a switched-off tube in a lit room: dark grey, tinted by its phosphor, the same shape as the tube.
 
-On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on: SwiftUI's `ImageRenderer` runs the same shader. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. The power-off animation, from the 2013 app, is still to come ([UX.md](UX.md), section 3).
+On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, so the beams are soft: hard-edged lines would beat against the pixel grid into bands. The CRT layer is presentation only: the converter never sees it, and neither C64 files nor the pixel-exact PNG include it. The picture as on TV, which is shared, includes it when it is on: SwiftUI's `ImageRenderer` runs the same shader. Sharp stands for a flat screen, so it has none. Development builds have sliders to tune its look on a phone. Without the CRT layer, or with Reduce Motion on, the TV switches off and on at once.
 
 ## 8. Palettes
 
@@ -404,7 +408,7 @@ docs/                     this plan, the UX (UX.md) and design notes
      - Share: the picture as on TV, the pixel-exact PNG and the C64 files: `.prg`, `.d64`, and Art Studio or Koala
      - saving to Photos, and a setting to save every shot
      - sending to an Ultimate, through its REST API, with its network password if it has one
-   - the CRT power-off animation, from the 2013 app ([UX.md](UX.md), section 3)
+   - the CRT power-off animation, from the 2013 app: the badge switches the TV off, and the camera with it, and any key switches them back on, with the warm-up (done, but for trying it on a phone; section 7)
    - Settings with only what 3.0 uses (done: saving every shot, and the Ultimate's address and password), and the acknowledgements; a privacy manifest
 
    Then release 3.0 on the restored listing.

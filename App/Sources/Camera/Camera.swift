@@ -94,6 +94,13 @@ actor Camera {
         return capabilities
     }
 
+    /// Stops the camera, as when the TV switches off, which saves the
+    /// battery. The session no longer runs again by itself when an
+    /// interruption ends: only `start` runs it again.
+    func stop() {
+        session.stopRunning()
+    }
+
     /// What the session does.
     nonisolated enum Activity: Sendable {
         case running

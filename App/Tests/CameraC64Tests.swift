@@ -543,4 +543,177 @@ struct CameraScreenTests {
         #expect(
             (crtColumn.max() ?? 0) - (crtColumn.min() ?? 0) > 40, "With the CRT layer: \(crtColumn)")
     }
+
+    // MARK: - Switching the TV off and on
+
+    /// When the tubes in these tests begin moving.
+    private let poweredAt = Date(timeIntervalSinceReferenceDate: 0)
+
+    /// Switching off, the picture closes into a line, brighter as it closes,
+    /// and the line shrinks to a dot, which fades (docs/UX.md, section 3).
+    @Test func switchingOffClosesThePictureIntoALineThenADot() {
+        var tube = Tube(.on)
+        tube.move(to: .off, animated: true, at: poweredAt)
+        func raster(_ seconds: Double) -> Raster { tube.raster(at: poweredAt + seconds) }
+        #expect(raster(0) == .on)
+        let closing = raster(0.08)
+        #expect(closing.height > 0.5 && closing.height < 1 && closing.width == 1)
+        #expect(closing.gain > 1 && closing.beam == 0 && closing.pictureOpacity == 1)
+        let line = raster(0.17)
+        #expect(line.height == 0 && line.width > 0.99 && line.beam == 1 && line.pictureOpacity == 0)
+        let shrinking = raster(0.3)
+        #expect(shrinking.height == 0 && shrinking.width > 0 && shrinking.width < 1 && shrinking.light == 1)
+        let fading = raster(0.6)
+        #expect(fading.width == 0 && fading.light > 0 && fading.light < 1 && fading.beam == fading.light)
+        #expect(abs(tube.end.timeIntervalSince(poweredAt) - 1.18) < 1e-9)
+        #expect(raster(1.2) == .off)
+        // It stops redrawing once it gets there.
+        #expect(!tube.isSettled && tube.settled.isSettled && tube.settled.raster(at: poweredAt) == .off)
+    }
+
+    /// Warming up, a dot stretches into a line, which holds until there is a
+    /// picture, then opens into it.
+    @Test func warmingUpHoldsTheLineUntilThereIsAPicture() {
+        var tube = Tube(.off)
+        tube.move(to: .line, animated: true, at: poweredAt)
+        func raster(_ seconds: Double) -> Raster { tube.raster(at: poweredAt + seconds) }
+        let dot = raster(0.03)
+        #expect(dot.width == 0 && dot.light > 0 && dot.light < 1)
+        let stretching = raster(0.2)
+        #expect(stretching.height == 0 && stretching.width > 0 && stretching.width < 1 && stretching.light == 1)
+        #expect(raster(5) == Raster(level: 2) && raster(5).beam == 1)
+        tube.move(to: .on, animated: true, at: poweredAt + 5)
+        let opening = raster(5.2)
+        #expect(opening.height > 0 && opening.height < 1 && opening.gain > 1)
+        #expect(raster(5.5) == .on)
+    }
+
+    /// A tube that turns back halfway goes back from where it is.
+    @Test func aTubeTurnsBackFromWhereItIs() {
+        var tube = Tube(.on)
+        tube.move(to: .off, animated: true, at: poweredAt)
+        let turn = poweredAt + 0.3
+        let halfway = tube.level(at: turn)
+        tube.move(to: .on, animated: true, at: turn)
+        #expect(tube.level(at: turn) == halfway)
+        #expect(tube.level(at: turn + 0.05) > halfway)
+        #expect(tube.raster(at: turn + 2) == .on)
+    }
+
+    /// With Reduce Motion on, or without the CRT layer, the TV switches off
+    /// and on at once, and shows no line while it warms up.
+    @Test func withoutMotionTheTVSwitchesAtOnce() {
+        var tube = Tube(.on)
+        tube.move(to: .off, animated: false, at: poweredAt)
+        #expect(tube.isSettled && tube.raster(at: poweredAt) == .off)
+        tube.move(to: .line, animated: false, at: poweredAt)
+        #expect(tube.raster(at: poweredAt) == .off)
+        tube.move(to: .on, animated: false, at: poweredAt)
+        #expect(tube.raster(at: poweredAt) == .on)
+    }
+
+    /// The picture gains as much light as it loses height, and the line takes
+    /// over from it over its last 5%.
+    @Test func theLineTakesOverAsThePictureCloses() {
+        let open = Raster(level: 3)
+        #expect(open == .on && open.gain == 1 && open.beam == 0 && open.pictureOpacity == 1)
+        let half = Raster(height: 0.5, width: 1, light: 1)
+        #expect(half.gain == 2 && half.beam == 0)
+        let almost = Raster(height: 0.025, width: 1, light: 1)
+        #expect(abs(almost.beam - 0.25) < 1e-9 && abs(almost.pictureOpacity - 0.75) < 1e-9)
+        #expect(abs(almost.gain - 40) < 1e-9)
+        let line = Raster(level: 2)
+        #expect(line.beam == 1 && line.pictureOpacity == 0)
+        #expect(Raster(level: 0) == .off)
+    }
+
+    /// The badge switches the TV off, and what was on its glass goes with
+    /// it; any key, or the badge again, switches it back on.
+    @Test func theBadgeSwitchesTheTVOff() {
+        let model = CameraModel()
+        #expect(model.tvOn)
+        model.select(Monitor.amber)
+        #expect(model.message != nil)
+        model.togglePower()
+        #expect(!model.tvOn && model.message == nil)
+        model.switchOn()
+        #expect(model.tvOn)
+        model.togglePower()
+        model.togglePower()
+        #expect(model.tvOn)
+    }
+
+    /// A camera switched off with the TV stays off, whatever would start it
+    /// again, until the TV is switched back on. Its viewfinder then starts
+    /// over, so that the TV's warm-up waits for its first picture since.
+    /// (The Simulator has no camera, so there it ends up unavailable.)
+    @Test func aSwitchedOffCameraStaysOff() async throws {
+        let camera = LiveCamera()
+        let picture = try #require(ShownPicture(flatScreen(RGB(0, 0, 0)), frame: C64Frame(mode: .hiresBitmap)))
+        camera.feed.show(picture)
+        camera.switchOff()
+        #expect(camera.state == .off)
+        await camera.start(.back)
+        await camera.sessionFailed(.mediaServicesWereReset, position: .back)
+        camera.wasInterrupted()
+        await camera.interruptionEnded(.back)
+        #expect(camera.state == .off && camera.feed.hasPicture)
+        camera.switchOn(.back)
+        #expect(camera.state == .starting && !camera.feed.hasPicture)
+        await camera.start(.back)
+        #expect(camera.state == .unavailable)
+    }
+
+    /// The tube's shaders compile, with the arguments the TV gives them, and
+    /// its line and dot take the monitor's phosphor colour.
+    @Test func tubeShadersCompile() async throws {
+        #expect(Monitor.tv.phosphor == RGB(255, 255, 255))
+        #expect(Monitor.amber.phosphor == DisplayModel.Phosphor.amber.color)
+        let face = TubeFace.shader(Raster(level: 2), phosphor: Monitor.green.phosphor, crt: .standard, scale: 3)
+        try await face.compile(as: .shapeStyle)
+        try await TubeFace.gain(4).compile(as: .colorEffect)
+    }
+
+    /// The tube's face is its dark glass, rounded like the CRT layer's tube,
+    /// with the line across its middle in the phosphor's colour, white-hot at
+    /// its core.
+    @Test func tubeFaceShowsTheLineOnTheGlass() throws {
+        func drawn(_ raster: Raster) throws -> RGBImage {
+            let face = TubeFace(raster: raster, phosphor: Monitor.green.phosphor, crt: .standard)
+                .frame(width: 400, height: 300)
+                .environment(\.displayScale, 1)
+            let renderer = ImageRenderer(content: face)
+            renderer.scale = 1
+            renderer.isOpaque = true
+            return try #require(renderer.cgImage.flatMap { RGBImage($0) })
+        }
+        let line = try drawn(Raster(level: 2))
+        let core = line[200, 150]
+        #expect(core.g > 200 && core.r > 150 && core.g > core.r, "The line's core: \(core)")
+        let glass = line[200, 60]
+        #expect(glass.g > 15 && glass.g < 80 && glass.g > glass.r, "The glass: \(glass)")
+        #expect(line[0, 0].g < 3, "Beyond the tube's corner: \(line[0, 0])")
+        let off = try drawn(.off)
+        #expect(off[200, 150].g < 80, "Off: \(off[200, 150])")
+    }
+
+    /// As the picture closes, it gains light, saturating towards white, and
+    /// black stays black.
+    @Test func closingPictureGainsLight() throws {
+        func drawn(gain: Double) throws -> RGBImage {
+            let picture = HStack(spacing: 0) {
+                Color(white: 0.5)
+                Color.black
+            }
+            .frame(width: 20, height: 10)
+            .colorEffect(TubeFace.gain(gain))
+            let renderer = ImageRenderer(content: picture)
+            renderer.scale = 1
+            return try #require(renderer.cgImage.flatMap { RGBImage($0) })
+        }
+        let plain = try drawn(gain: 1)
+        let brighter = try drawn(gain: 4)
+        #expect(Int(brighter[5, 5].g) > Int(plain[5, 5].g) + 40, "\(plain[5, 5]) and \(brighter[5, 5])")
+        #expect(brighter[15, 5].g < 3, "Black: \(brighter[15, 5])")
+    }
 }

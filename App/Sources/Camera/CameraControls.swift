@@ -1,11 +1,15 @@
 import SwiftUI
 import UIKit
 
-/// The strip above the TV: flash, the CRT switch, the badge and settings.
+/// The strip above the TV: flash, the CRT switch, the badge, which is the
+/// TV's power switch, and settings.
 struct TopBar: View {
     var model: CameraModel
     var rotation: Angle
     var showsTitle: Bool
+    var onFlash: () -> Void
+    var onCRT: () -> Void
+    var onPower: () -> Void
     var onSettings: () -> Void
 
     var body: some View {
@@ -15,24 +19,30 @@ struct TopBar: View {
                     iconButton(
                         model.flashOn ? "bolt.fill" : "bolt.slash.fill",
                         label: model.flashOn ? "Flash on" : "Flash off",
-                        color: model.flashOn ? Look.ledOn : Look.bezelInkDim
-                    ) {
-                        model.toggleFlash()
-                    }
+                        color: model.flashOn ? Look.ledOn : Look.bezelInkDim,
+                        action: onFlash)
                 }
                 iconButton(
                     "tv",
                     label: crtLabel,
-                    color: model.crtShown ? Look.ledOn : Look.bezelInkDim
-                ) {
-                    model.toggleCRT()
-                }
+                    color: model.crtShown ? Look.ledOn : Look.bezelInkDim,
+                    action: onCRT)
                 Spacer()
                 iconButton("gearshape.fill", label: "Settings", color: Look.bezelInk, action: onSettings)
             }
             .padding(.horizontal, 8)
             if showsTitle {
-                CameraBadge()
+                // As the 2013 app's title bar did, the badge switches the TV
+                // off and on.
+                Button(action: onPower) {
+                    CameraBadge()
+                        .padding(.horizontal, 8)
+                        .frame(height: ScreenMetrics.topBarHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(model.tvOn ? "TV on" : "TV off")
+                .accessibilityHint(model.tvOn ? "Switches the TV and the camera off" : "Switches the TV back on")
             }
         }
         .frame(height: ScreenMetrics.topBarHeight)
@@ -482,6 +492,9 @@ struct ActionRow: View {
     var files: [SharedFile]
     /// Whether the picture is on its way to a C64.
     var sending: Bool
+    /// Whether the TV is on. While it is off, Share switches it back on, as
+    /// every key does, instead of opening its menu.
+    var tvOn = true
     var rotation: Angle
     var showsCaptions: Bool
     var onAction: (ReviewAction) -> Void
@@ -508,7 +521,7 @@ struct ActionRow: View {
 
     @ViewBuilder private func key(for action: ReviewAction) -> some View {
         switch action {
-        case .share:
+        case .share where tvOn:
             Menu {
                 ForEach(files, id: \.kind) { file in
                     let preview = Image(uiImage: UIImage(cgImage: file.picture.window))
@@ -532,7 +545,7 @@ struct ActionRow: View {
             .buttonStyle(KeyButtonStyle(width: keyWidth, height: 42))
             .disabled(true)
             .accessibilityLabel("Sending to C64")
-        case .save, .send, .delete:
+        case .share, .save, .send, .delete:
             Button {
                 onAction(action)
             } label: {

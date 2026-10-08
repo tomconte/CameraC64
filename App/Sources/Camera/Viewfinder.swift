@@ -184,4 +184,11 @@ final class ViewfinderFeed {
             hasPicture = true
         }
     }
+
+    /// Forgets the pictures, as when the camera starts again with the TV,
+    /// whose warm-up then waits for the next one.
+    func clear() {
+        picture = nil
+        hasPicture = false
+    }
 }
