@@ -1,11 +1,13 @@
 import C64Core
 import CoreGraphics
+import Foundation
 import Observation
-import UIKit
 
-/// A picture as the TV shows it, through the chosen monitor. (CGImage is
-/// immutable, so threads can share it.)
+/// A picture as the TV shows it, through the chosen monitor, with the C64
+/// memory it is drawn from. (CGImage is immutable, so threads can share it.)
 nonisolated struct ShownPicture: @unchecked Sendable {
+    /// The C64 memory the converter made, which C64 files hold.
+    let frame: C64Frame
     /// The whole screen, border included: 384 × 272 C64 pixels.
     let screen: CGImage
     /// The display window alone: the 320 × 200 picture.
@@ -15,40 +17,33 @@ nonisolated struct ShownPicture: @unchecked Sendable {
 }
 
 nonisolated extension ShownPicture {
-    /// A whole screen as a monitor shows it, border included.
-    init?(_ screen: RGBImage) {
+    /// A frame's whole screen as a monitor shows it, border included.
+    init?(_ screen: RGBImage, frame: C64Frame) {
         let windowArea = CGRect(
             x: Screen.windowX, y: Screen.windowY, width: Screen.windowWidth, height: Screen.windowHeight)
         guard let image = screen.cgImage, let window = image.cropping(to: windowArea) else { return nil }
-        self.init(screen: image, window: window, crt: CRTSource(screen))
+        self.init(frame: frame, screen: image, window: window, crt: CRTSource(screen))
     }
 }
 
 /// Makes the pictures of a shot with C64Core (CLAUDE.md, core rule): the
 /// converter turns the photo into C64 memory, the renderer draws that memory
 /// as the VIC-II shows it, and the monitor's display model shows the result.
-///
-/// Modes without a converter yet show sample pictures, through the same
-/// display models.
 @Observable
 final class PictureMaker {
     /// A picture: a mode's, for a monitor.
     struct Key: Hashable {
         var mode: PictureMode
         var monitor: Monitor
-        /// The characters a PETSCII picture may use. The other modes have
-        /// none, so for them it is always `.all`.
-        var petsciiCharacters: CharacterROM.Selection
 
-        init(_ mode: PictureMode, on monitor: Monitor, petsciiCharacters: CharacterROM.Selection = .all) {
+        init(_ mode: PictureMode, on monitor: Monitor) {
             self.mode = mode
             self.monitor = monitor
-            self.petsciiCharacters = mode == .petscii ? petsciiCharacters : .all
         }
     }
 
     /// The photo the pictures are made from: the last shot, or nil before
-    /// the first.
+    /// the first and after it is deleted.
     private(set) var photo: Photo?
     private(set) var pictures: [Key: ShownPicture] = [:]
     /// The pictures being made, each with the photo it is made from.
@@ -73,82 +68,42 @@ final class PictureMaker {
         pictures = [:]
     }
 
+    /// Forgets the photo and its pictures, as when the shot is deleted.
+    func forget() {
+        photo = nil
+        pictures = [:]
+    }
+
     /// Makes every mode's picture for a monitor, the given mode first, unless
     /// they are made already.
-    func makeAll(for monitor: Monitor, petsciiCharacters: CharacterROM.Selection, first: PictureMode) async {
+    func makeAll(for monitor: Monitor, first: PictureMode) async {
         for mode in [first] + PictureMode.allCases.filter({ $0 != first }) {
             guard !Task.isCancelled else { return }
-            await make(Key(mode, on: monitor, petsciiCharacters: petsciiCharacters))
+            await make(Key(mode, on: monitor))
         }
     }
 
-    /// Makes a picture, unless it is made already. A picture of a photo
-    /// needs one.
+    /// Makes a picture of the photo, unless it is made already.
     func make(_ key: Key) async {
         let job = Job(key: key, photo: photo?.id)
-        guard pictures[key] == nil, !making.contains(job) else { return }
-        let source: Source
-        if let spec = key.mode.spec {
-            guard let photo else { return }
-            source = .photo(photo.image, photo.orientation, spec, key.petsciiCharacters)
-        } else if let name = key.mode.sample, let sample = UIImage(named: name)?.cgImage.flatMap({ RGBImage($0) }) {
-            source = .sample(sample)
-        } else {
-            return
-        }
+        guard let photo, pictures[key] == nil, !making.contains(job) else { return }
         making.insert(job)
         defer { making.remove(job) }
-        let display = key.monitor.display
+        let (spec, settings) = (key.mode.spec, key.mode.converterSettings(on: key.monitor))
         let picture = await Task.detached(priority: .userInitiated) {
-            ShownPicture(PictureMaker.screen(of: source, on: display))
+            PictureMaker.picture(of: photo.image, orientation: photo.orientation, in: spec, settings: settings)
         }.value
         // A picture of a photo since replaced is dropped.
-        guard photo?.id == job.photo, let picture else { return }
+        guard self.photo?.id == job.photo, let picture else { return }
         pictures[key] = picture
     }
 
-    /// What a picture is made from.
-    nonisolated enum Source: Sendable {
-        /// A photo, seen in an orientation, converted in a mode, with the
-        /// characters PETSCII may use.
-        case photo(RGBImage, ImageOrientation, ModeSpec, CharacterROM.Selection)
-        /// A sample picture of the display window, in Colodore's colours.
-        case sample(RGBImage)
-    }
-
-    /// The whole screen as a monitor shows it.
-    nonisolated static func screen(of source: Source, on display: DisplayModel) -> RGBImage {
-        let screen: IndexedImage
-        switch source {
-        case .photo(let photo, let orientation, let spec, let petsciiCharacters):
-            let settings = Converter.Settings(display: display, petsciiCharacters: petsciiCharacters)
-            let converter = Converter(spec: spec, settings: settings)
-            screen = VICII.render(converter.convert(photo, orientation: orientation).frame)
-        case .sample(let picture):
-            screen = sampleScreen(picture)
-        }
-        return display.show(screen, palette: .colodore)
-    }
-
-    /// A sample picture as a screen: each pixel takes the nearest of
-    /// Colodore's colours, and the border matches the picture's edges.
-    nonisolated static func sampleScreen(_ picture: RGBImage) -> IndexedImage {
-        let palette = C64Palette.colodore.colors.map(OKLab.init)
-        var window = IndexedImage(width: Screen.windowWidth, height: Screen.windowHeight)
-        for y in 0..<min(picture.height, window.height) {
-            for x in 0..<min(picture.width, window.width) {
-                let color = OKLab(picture[x, y])
-                let distances = palette.map { $0.distanceSquared(to: color) }
-                let nearest = distances.indices.min { distances[$0] < distances[$1] }!
-                window[x, y] = C64Color(rawValue: UInt8(nearest))!
-            }
-        }
-        var screen = IndexedImage(width: Screen.width, height: Screen.height, fill: window.edgeColor)
-        for y in 0..<window.height {
-            for x in 0..<window.width {
-                screen[Screen.windowX + x, Screen.windowY + y] = window[x, y]
-            }
-        }
-        return screen
+    /// A photo, seen in an orientation, converted in a mode and shown on the
+    /// monitor the settings are for.
+    nonisolated static func picture(
+        of photo: RGBImage, orientation: ImageOrientation, in spec: ModeSpec, settings: Converter.Settings
+    ) -> ShownPicture? {
+        let frame = Converter(spec: spec, settings: settings).convert(photo, orientation: orientation).frame
+        return ShownPicture(settings.display.show(VICII.render(frame), palette: settings.palette), frame: frame)
     }
 }

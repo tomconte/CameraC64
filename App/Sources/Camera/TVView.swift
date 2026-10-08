@@ -137,7 +137,14 @@ struct TVView: View {
             .environment(\.displayScale, scale)
         let renderer = ImageRenderer(content: tv)
         renderer.scale = scale
+        renderer.isOpaque = true
         return renderer.uiImage
+    }
+
+    /// The picture as on TV as a PNG file, as Share and Save to Photos give
+    /// it: never a JPEG, whose blocks would blur the C64's pixels.
+    static func pngAsOnTV(of picture: ShownPicture, crt: CRT?) -> Data? {
+        shareImage(of: picture, crt: crt)?.pngData()
     }
 }
 
@@ -378,7 +385,9 @@ struct ZoomPills: View {
 }
 
 /// On the static, when there is no camera to show: why, and what to do
-/// instead (docs/UX.md, section 3).
+/// instead (docs/UX.md, section 3). Development builds can convert a photo
+/// from the library instead, so that the review can be tried without a
+/// camera.
 struct NoCameraPanel: View {
     var trouble: LiveCamera.State
     @Binding var importedItem: PhotosPickerItem?
@@ -397,7 +406,7 @@ struct NoCameraPanel: View {
                 if trouble == .notAllowed {
                     Button("ALLOW CAMERA", action: onAllow)
                 }
-                if trouble != .interrupted {
+                if trouble != .interrupted && BuildKind.isDevelopment {
                     PhotosPicker(selection: $importedItem, matching: .images) {
                         Text("IMPORT A PHOTO")
                     }
@@ -421,10 +430,12 @@ struct NoCameraPanel: View {
     }
 
     private var detail: String {
-        switch trouble {
-        case .notAllowed: "Allow it in Settings, or convert a photo."
-        case .interrupted: "Another app has the camera for now."
-        default: "Convert a photo from your library instead."
+        switch (trouble, BuildKind.isDevelopment) {
+        case (.notAllowed, true): "Allow it in Settings, or convert a photo."
+        case (.notAllowed, false): "Allow it in Settings to take pictures."
+        case (.interrupted, _): "Another app has the camera for now."
+        case (_, true): "Convert a photo from your library instead."
+        case (_, false): "The camera would not start."
         }
     }
 }

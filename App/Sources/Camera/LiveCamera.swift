@@ -15,7 +15,7 @@ final class LiveCamera {
         case notAllowed
         /// There is no camera, as in the Simulator, or it would not start.
         case unavailable
-        /// Another app, or a call, has the camera for now.
+        /// Another app or a call has the camera for now, or the app is away.
         case interrupted
     }
 
@@ -35,6 +35,11 @@ final class LiveCamera {
 
     /// Starts the camera facing a way, or turns it round, asking for
     /// permission first if the user has not been asked.
+    ///
+    /// Starting it again checks that it runs, and starts it if it stopped.
+    /// iOS may stop it while the app is away, when it resets its media
+    /// services, so the camera starts again whenever the app comes back,
+    /// after an interruption, after such a reset, and after a failed shot.
     func start(_ position: Camera.Position) async {
         guard Camera.exists else {
             state = .unavailable
@@ -46,10 +51,41 @@ final class LiveCamera {
         }
         do {
             capabilities = try await camera.start(position, frames: viewfinder)
-            state = .running
+            let activity = await camera.activity
+            state = Self.state(of: activity)
         } catch {
             state = .unavailable
         }
+    }
+
+    /// The state the camera is in when its session does something.
+    static func state(of activity: Camera.Activity) -> State {
+        switch activity {
+        case .running: .running
+        case .interrupted: .interrupted
+        case .stopped: .unavailable
+        }
+    }
+
+    /// The camera's session stopped on an error
+    /// (`AVCaptureSession.runtimeErrorNotification`). When iOS reset its media
+    /// services, the camera starts again. Other errors leave it as it is until
+    /// the app comes back or the capture key is pressed, so that a camera
+    /// that keeps failing is not started over and over.
+    func sessionFailed(_ error: AVError.Code?, position: Camera.Position) async {
+        if Self.startsAgain(after: error) {
+            await start(position)
+        } else {
+            let activity = await camera.activity
+            state = Self.state(of: activity)
+        }
+    }
+
+    /// Whether the camera starts again by itself after its session stopped
+    /// on an error: only when iOS reset its media services, as in Apple's
+    /// AVCam sample.
+    static func startsAgain(after error: AVError.Code?) -> Bool {
+        error == .mediaServicesWereReset
     }
 
     private static func isAllowed() async -> Bool {
@@ -107,9 +143,11 @@ final class LiveCamera {
         }
     }
 
-    func interruptionEnded() {
-        if state == .interrupted {
-            state = .running
-        }
+    /// The interruption ended. The session runs again by itself, unless iOS
+    /// stopped it meanwhile, as when it resets its media services while the
+    /// app is away: then it starts again.
+    func interruptionEnded(_ position: Camera.Position) async {
+        guard state == .interrupted else { return }
+        await start(position)
     }
 }

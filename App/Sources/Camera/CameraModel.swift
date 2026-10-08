@@ -4,12 +4,17 @@ import Observation
 import SwiftUI
 
 /// A graphics mode, as the mode dial and the mode strip offer it.
+///
+/// PETSCII comes twice (docs/UX.md, section 5): with only the graphics
+/// characters, for the classic PETSCII look, and with all of them, whose
+/// letters, digits and punctuation make pictures look like BBS art.
 enum PictureMode: CaseIterable, Identifiable {
     case hires
     case multicolour
+    /// PETSCII with only the graphics characters.
     case petscii
-    case fli
-    case afli
+    /// PETSCII with all the characters.
+    case bbs
 
     var id: Self { self }
 
@@ -18,47 +23,51 @@ enum PictureMode: CaseIterable, Identifiable {
         case .hires: "HIRES"
         case .multicolour: "MULTICOLOUR"
         case .petscii: "PETSCII"
-        case .fli: "FLI"
-        case .afli: "AFLI"
+        case .bbs: "BBS"
         }
     }
 
     /// A shorter name where space is tight, as on the landscape dial.
     var shortName: String { self == .multicolour ? "MULTI" : name }
 
+    /// The name in file names, such as "Multicolour".
+    var title: String {
+        switch self {
+        case .hires: "Hires"
+        case .multicolour: "Multicolour"
+        case .petscii: "PETSCII"
+        case .bbs: "BBS"
+        }
+    }
+
     /// One line on what the mode does.
     var summary: String {
         switch self {
         case .hires: "320 × 200, 2 colours in each 8 × 8 cell"
         case .multicolour: "160 × 200 wide pixels, 4 colours in each 4 × 8 cell"
-        case .petscii: "40 × 25 characters, one colour each"
-        case .fli: "Multicolour with new colours on every line"
-        case .afli: "Hires with new colours on every line"
+        case .petscii: "40 × 25 graphics characters, one colour each"
+        case .bbs: "PETSCII with letters and digits, like BBS art"
         }
     }
 
-    /// Part of the paid "Advanced modes" unlock.
-    var isAdvanced: Bool { self == .fli || self == .afli }
-
-    /// The mode as C64Core describes it, for the modes its converter handles.
-    var spec: ModeSpec? {
+    /// The mode as C64Core describes it.
+    var spec: ModeSpec {
         switch self {
         case .hires: .hires
         case .multicolour: .multicolor
-        case .petscii: .petscii
-        case .fli, .afli: nil
+        case .petscii, .bbs: .petscii
         }
     }
 
-    /// For a mode without a converter yet, a sample picture of the display
-    /// window, in Colodore's colours. Placeholder until its converter comes
-    /// (plan, section 16).
-    var sample: String? {
-        switch self {
-        case .hires, .multicolour, .petscii: nil
-        case .fli: "SampleFLI"
-        case .afli: "SampleAFLI"
-        }
+    /// The characters a PETSCII picture may use. The other modes have none,
+    /// and the converter ignores it for them.
+    var petsciiCharacters: CharacterROM.Selection {
+        self == .petscii ? .graphics : .all
+    }
+
+    /// What the converter optimises for, for a monitor.
+    func converterSettings(on monitor: Monitor) -> Converter.Settings {
+        Converter.Settings(display: monitor.display, petsciiCharacters: petsciiCharacters)
     }
 
     /// The mode `steps` places along the dial, stopping at either end.
@@ -171,6 +180,8 @@ final class CameraModel {
     private(set) var shotCount = 0
     /// When the finished picture started filling in, or nil once it has.
     private(set) var fillStart: Date?
+    /// Whether the picture is on its way to a C64.
+    private(set) var sending = false
     private(set) var message: Message?
 
     func select(_ newMode: PictureMode) {
@@ -271,7 +282,7 @@ final class CameraModel {
         show("NO PICTURE", "The camera took none")
     }
 
-    /// Opens the last picture for review, as the gallery will.
+    /// Opens the last picture for review again, until the next shot.
     func showLastShot() {
         guard let lastShot else {
             show("NO PICTURES YET")
@@ -287,14 +298,38 @@ final class CameraModel {
         fillStart = nil
     }
 
+    /// Discards the shot, as the 2013 app did: the last picture is gone too.
     func deleteShot() {
         lastShot = nil
         backToLive()
         show("PICTURE DELETED")
     }
 
-    func notBuiltYet(_ feature: String) {
-        show(feature, "Not built yet")
+    /// The picture as on TV was saved to Photos, or `failure` says why not.
+    /// A shot that Settings saves by itself says so only if it fails.
+    func saved(_ failure: PhotoLibrary.Failure?, everyShot: Bool = false) {
+        if let failure {
+            show("NOT SAVED", failure.detail)
+        } else if !everyShot {
+            show("SAVED TO PHOTOS")
+        }
+    }
+
+    /// Send to C64 has begun.
+    func sendingStarted() {
+        sending = true
+        show("SENDING TO C64")
+    }
+
+    /// Send to C64 has ended: the C64 shows the picture, or `failure` says
+    /// why not.
+    func sendingEnded(_ failure: Ultimate.Failure?) {
+        sending = false
+        if let failure {
+            show(failure.title, failure.detail)
+        } else {
+            show("SENT TO C64")
+        }
     }
 
     func show(_ title: String, _ detail: String? = nil) {

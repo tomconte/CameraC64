@@ -41,6 +41,8 @@ actor Camera {
         case noCamera
         /// The session would not take the camera.
         case cannotConfigure
+        /// The session would not run.
+        case cannotStart
         /// The camera took no photo.
         case noPhoto
     }
@@ -62,21 +64,49 @@ actor Camera {
 
     /// Starts the camera facing a way, sending its frames to the viewfinder,
     /// and says what it can do.
+    ///
+    /// Starting it again checks that it runs. When iOS resets its media
+    /// services, as it may while the app is away, it stops the session and
+    /// leaves it to the app to start it again (Apple's AVCam sample does the
+    /// same), which may take a new input for the camera.
     func start(_ position: Position, frames viewfinder: Viewfinder) throws -> Capabilities {
         if session.outputs.isEmpty {
             try addOutputs(sendingFramesTo: viewfinder)
         }
-        let capabilities: Capabilities
+        var capabilities: Capabilities
         if let current = self.capabilities, current.position == position {
             capabilities = current
         } else {
             capabilities = try use(position)
             self.capabilities = capabilities
         }
-        if !session.isRunning {
+        // An interrupted session runs again by itself when the interruption
+        // ends.
+        if !session.isRunning && !session.isInterrupted {
             session.startRunning()
+            if !session.isRunning && !session.isInterrupted {
+                capabilities = try use(position)
+                self.capabilities = capabilities
+                session.startRunning()
+            }
         }
+        guard session.isRunning || session.isInterrupted else { throw Failure.cannotStart }
         return capabilities
+    }
+
+    /// What the session does.
+    nonisolated enum Activity: Sendable {
+        case running
+        /// Another app or a call has the camera for now, or the app is away.
+        case interrupted
+        case stopped
+    }
+
+    var activity: Activity {
+        if session.isInterrupted {
+            return .interrupted
+        }
+        return session.isRunning ? .running : .stopped
     }
 
     /// Zooms to a value as the buttons show it, smoothly if `animated`.

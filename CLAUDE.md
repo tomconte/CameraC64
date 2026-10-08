@@ -41,7 +41,9 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
-- **TestFlight:** a pushed commit whose message starts with `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). Only do this when asked. The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
+- **TestFlight:** a pushed commit whose message starts with `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
+  - Upload one on your own whenever a change alters the app's UI (what its screens show, or how they behave), so it can be tried on a phone: once CI is green on the change, push a commit whose message starts with `[testflight]`, an empty one if nothing is left to commit. Otherwise, only when asked.
+  - Check that the TestFlight run succeeds, and say which build it uploaded.
 
 ## Architecture
 
@@ -56,16 +58,19 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
+  - The app's Info.plist comes from the `INFOPLIST_KEY_` settings in `project.yml`, added to `App/Info.plist`, which holds what those settings cannot say: the C64 files' types and plain HTTP on the local network. The app tests check both.
   - The app target uses MainActor as its default actor isolation: code that runs anywhere else is marked `nonisolated`, types included.
   - The camera (`App/Sources/Camera/`): `Camera`, an actor whose executor is its own queue, owns the capture session; `Viewfinder` converts frames on another queue; `LiveCamera` is the screen's side of both.
   - Frames come sideways and unmirrored, as AVFoundation sends them by default. `HeldOrientation` says how each camera's frames turn as the phone is held, the front camera's the other way to the back camera's. `Target`'s `ImageOrientation` turns them, and mirrors the front camera's once upright; mirrored first, they would be upside down with the phone upright.
   - Never set the video output's rotation angle: on the iPhone 17's front camera, whose sensor is mounted upright, AVFoundation's default angle is what keeps its frames sideways like every other camera's (plan, section 6). A photo's angle counts from the sensor, so `Camera` adds that default angle to the turn the frames need, with the photo output's sensor orientation compensation turned off.
   - Only a phone can check the camera: the Simulator, and so CI, has none, and shows static. The app tests feed the viewfinder synthetic frames.
+  - The controls below the TV must fit on every iPhone iOS 26 runs on. `LayoutTests` measures the review's at each screen size, from the iPhone SE, which takes a tighter layout, to the Pro Max.
+  - iOS may stop the capture session while the app is away, when it resets its media services, and leaves it to the app to start it again. So `LiveCamera.start` runs again whenever the app becomes active, an interruption ends, such a reset is reported (`AVCaptureSession.runtimeErrorNotification`) or a shot fails: it checks what the session does (`Camera.activity`), and starts it if it stopped. Never set `LiveCamera.state` to running without asking the session. On a phone, Settings → Developer → Reset Media Services tries it.
   - The CRT layer (`App/Sources/CRT/`, plan section 7): `CRT.metal` is a SwiftUI shader that fills the TV with the display model's picture as a tube shows it, with scanlines, glow and curvature. `CRTSource` prepares what it reads, off the main actor, and `Afterglow` gives the amber and green monitors their trails in the viewfinder. It is presentation only: never in C64 files or the pixel-exact PNG, and never on Sharp. The shared picture as on TV draws it through `ImageRenderer`, which runs SwiftUI shaders as the screen does: `sharedPictureShowsTheCRTLayer` checks that its lines have gaps.
   - Metal doesn't compile on Linux, so only CI's app job checks the shader: `crtShaderCompiles` fails if it doesn't compile with the arguments `CRTScreen` gives it.
 - **Core rule:** converters produce C64 memory (a `C64Frame`), and every picture shown or exported is rendered from that memory. Never produce pixels that bypass the renderer; that is how the legacy app ended up with pictures a real C64 could not display.
-  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it for each shot's photo: converter, renderer, then the monitor's display model. `Viewfinder` does the same for each camera frame.
-  - The one exception is temporary: modes without a converter yet (FLI, AFLI) show sample pictures from `App/Resources/Assets.xcassets/Samples`, through the display models. Replace each with its converter.
+  - The app's `PictureMaker` (`App/Sources/Pictures/`) does it for each shot's photo: converter, renderer, then the monitor's display model. `Viewfinder` does the same for each camera frame. Each `ShownPicture` keeps the `C64Frame` it is drawn from.
+  - The review shares, saves and sends what is made from that frame (`App/Sources/Pictures/`): `SharedFile` makes each file Share offers only when it is shared, `PhotoLibrary` saves the picture as on TV, and `Ultimate` runs the `.prg` on a C64 through the Ultimate's REST API. The Ultimate's password stays in the keychain (`Keychain`), not in the user defaults.
 - **Still to come** (plan section 5):
   - converters for the character-set modes
   - a `C64Metal` target, only if the speed benchmark shows the CPU converter can't keep up with the viewfinder (plan section 10); its kernels would have to match `C64Core` bit for bit

@@ -3,8 +3,14 @@ import UIKit
 
 /// The names settings are saved under, in the app's user defaults.
 enum SettingName {
-    /// Whether PETSCII pictures use only the graphics characters.
-    static let petsciiGraphicsOnly = "petsciiGraphicsOnly"
+    /// Whether every shot is saved to Photos, as on TV.
+    static let saveEveryShot = "saveEveryShot"
+    /// The address of the Ultimate that Send to C64 sends pictures to, or
+    /// empty for none.
+    static let ultimateAddress = "ultimateAddress"
+    /// The name of the keychain item that holds the Ultimate's network
+    /// password, if it has one.
+    static let ultimatePassword = "ultimatePassword"
     /// In development builds, the CRT layer's look as tuned (`CRT.text`).
     static let crtLook = "crtLook"
     /// In development builds, whether the camera screen shows the CRT tuning
@@ -12,70 +18,44 @@ enum SettingName {
     static let crtTuning = "crtTuning"
 }
 
-/// Settings, in standard iOS styling (docs/UX.md, section 5).
-///
-/// Mostly a placeholder: apart from PETSCII's characters, the choices are
-/// neither saved nor used yet. PETSCII's characters belong in Edit, picture by
-/// picture: the switch here stands in until Edit exists (docs/UX.md, section
-/// 5).
+/// Settings, in standard iOS styling (docs/UX.md, section 5): saving every
+/// shot to Photos, and the Ultimate that Send to C64 sends pictures to.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage(SettingName.petsciiGraphicsOnly) private var petsciiGraphicsOnly = false
+    @AppStorage(SettingName.saveEveryShot) private var savesEveryShot = false
+    @AppStorage(SettingName.ultimateAddress) private var ultimateAddress = ""
     @AppStorage(SettingName.crtTuning) private var showsCRTTuning = false
-    @State private var palette = "Colodore"
-    @State private var brightnessLevels = 9
-    @State private var saveEveryShot = false
-    @State private var ultimateAddress = ""
-    @State private var cameraControl = "mode"
+    @State private var ultimatePassword = ""
+    /// Whether the app was kept from adding photos when the switch was
+    /// turned on.
+    @State private var photosNotAllowed = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Palette", selection: $palette) {
-                        Text("Colodore").tag("Colodore")
-                        Text("Pepto 2001").tag("Pepto 2001")
-                    }
-                    Picker("Chip", selection: $brightnessLevels) {
-                        Text("9 brightness levels").tag(9)
-                        Text("5 (earliest chips)").tag(5)
-                    }
+                    Toggle("Save Every Shot to Photos", isOn: $savesEveryShot)
                 } header: {
-                    Text("Picture")
+                    Text("Saving")
                 } footer: {
-                    Text("Pictures are PAL: 320 × 200 pixels at 50 Hz.")
-                }
-                Section {
-                    Toggle("Graphics characters only", isOn: $petsciiGraphicsOnly)
-                } header: {
-                    Text("PETSCII")
-                } footer: {
-                    Text("Only blocks, lines and shapes, for the classic look: no letters, digits or punctuation.")
-                }
-                Section("Saving") {
-                    Toggle("Save every shot to Photos", isOn: $saveEveryShot)
+                    if photosNotAllowed {
+                        Text("Camera C64 may not add photos. Allow it in the Settings app, under Privacy & Security.")
+                    } else {
+                        Text("Each picture goes to Photos as on TV as soon as it is taken.")
+                    }
                 }
                 Section {
                     TextField("Address, such as 192.168.1.64", text: $ultimateAddress)
                         .keyboardType(.numbersAndPunctuation)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    SecureField("Password, if it has one", text: $ultimatePassword)
                 } header: {
                     Text("Send to C64")
                 } footer: {
-                    Text("An Ultimate 64, C64 Ultimate or Ultimate-II+ on the same Wi-Fi network.")
-                }
-                Section("Camera Control") {
-                    Picker("Slide to change", selection: $cameraControl) {
-                        Text("Mode").tag("mode")
-                        Text("Monitor").tag("monitor")
-                    }
-                }
-                Section {
-                    Button("Restore Purchase") {}
-                        .disabled(true)
-                } footer: {
-                    Text("Apart from PETSCII's characters, nothing here is saved or used yet.")
+                    Text(
+                        "An Ultimate 64, C64 Ultimate or Ultimate-II+ on the same network, with its web remote "
+                            + "control on. Send to C64 then shows the picture on its C64.")
                 }
                 if BuildKind.isDevelopment {
                     Section {
@@ -98,6 +78,25 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                ultimatePassword = Keychain.password(SettingName.ultimatePassword)
+            }
+            .onChange(of: ultimatePassword) {
+                Keychain.setPassword(ultimatePassword, for: SettingName.ultimatePassword)
+            }
+            // Asks for permission to add photos when the switch is turned on,
+            // rather than after the next shot.
+            .onChange(of: savesEveryShot) {
+                guard savesEveryShot else { return }
+                photosNotAllowed = false
+                Task {
+                    let allowed = await PhotoLibrary.canAdd()
+                    if !allowed {
+                        savesEveryShot = false
+                        photosNotAllowed = true
                     }
                 }
             }

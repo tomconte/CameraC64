@@ -52,6 +52,9 @@ extension Color {
 
 /// A beige key seen from above: its face sits on a darker edge and sinks when pressed.
 struct KeyFace: View {
+    /// How much of the darker edge shows below the face.
+    static let edge: CGFloat = 3
+
     var isPressed = false
     var cornerRadius: CGFloat = 6
 
@@ -65,7 +68,7 @@ struct KeyFace: View {
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .strokeBorder(Look.keyEdge, lineWidth: 1)
                 }
-                .padding(.bottom, 3)
+                .padding(.bottom, Self.edge)
                 .offset(y: isPressed ? 2 : 0)
         }
     }
@@ -83,7 +86,7 @@ struct KeyButtonStyle: ButtonStyle {
             .overlay {
                 configuration.label
                     .foregroundStyle(Look.ink)
-                    .padding(.bottom, 3)
+                    .padding(.bottom, KeyFace.edge)
                     .offset(y: configuration.isPressed ? 2 : 0)
             }
     }
@@ -120,6 +123,26 @@ struct LED: View {
         Circle()
             .fill(isOn ? Look.ledOn : Look.ledOff)
             .frame(width: size, height: size)
+    }
+}
+
+extension View {
+    /// A panel on the case, like the 2013 app's MON SELEC panel: a thin
+    /// border, with its title set into the top edge.
+    func casePanel(_ title: String) -> some View {
+        overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Look.caseLine, lineWidth: 1.5)
+        }
+        .overlay(alignment: .topLeading) {
+            Text(title)
+                .font(Look.smallFont)
+                .tracking(1.4)
+                .foregroundStyle(Look.label)
+                .padding(.horizontal, 6)
+                .background(Look.caseColor)
+                .offset(x: 14, y: -7)
+        }
     }
 }
 

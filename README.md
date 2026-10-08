@@ -2,7 +2,7 @@
 
 An iPhone camera that takes authentic Commodore 64 pictures: real VIC-II graphics modes, every hardware limit respected, and files that run on a real C64.
 
-**Work in progress.** The app is being rewritten from scratch. The converter works, for hires, multicolour and PETSCII: `c64conv convert` turns a photo into a C64 picture, and the app's viewfinder shows what the camera sees, converted live, and takes shots. Saving them, C64 file export and sending them to a C64 are still to come. See the [rewrite plan](docs/REWRITE_PLAN.md).
+**Work in progress.** The app is being rewritten from scratch. The converter works, for hires, multicolour and PETSCII: `c64conv convert` turns a photo into a C64 picture, and the app's viewfinder shows what the camera sees, converted live, and takes shots, which can be shared as pictures or C64 files, saved to Photos, or sent to a C64 with an Ultimate. See the [rewrite plan](docs/REWRITE_PLAN.md).
 
 The original 2012–2013 app (Objective-C, GPUImage) is preserved at tag `legacy-1.2` ([browse](https://github.com/tomconte/CameraC64/tree/435cf74a414ef75b35dc3ea28039a1f8455f8293)).
 

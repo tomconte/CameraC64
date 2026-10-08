@@ -142,7 +142,7 @@ There is one converter, and it runs on the CPU. The viewfinder and the shot both
      - A cell's error is the squared OKLab distance between the cell as the monitor shows it and its target, both blurred as the eye sees them, within the cell: brightness by 1 pixel and colour by 2, as in the quality benchmark.
      - Done plainly, that is about 30 times the work of hires. Instead, the converter first fits each cell's target with a small linear model: its lightness as a constant plus a multiple of the character's pattern, blurred as the monitor and the eye blur brightness, and its colour likewise, with the pattern blurred as they blur colour. Scoring a character in a pair of colours then takes 6 multiplications, 2 on a black-and-white monitor, and the 512 characters of both sets have only 153 different patterns, counting a character and its inverse as one.
      - The model picks the set and the background. Each cell's character and colour are then exact: a bound on how far the model can be off rules out all but about a dozen of the cell's 3,840 choices, and those are scored exactly. So every cell gets the best character and colour for the chosen set and background, which the tests check by trying them all.
-     - Judged this way, about half the cells take letters, digits or punctuation, which makes pictures look like BBS art. A converter setting keeps to the graphics characters instead, for the classic PETSCII look: the 64 of the upper case set (`$40`–`$7F`), the space, and their reverses, 130 characters with 60 patterns. Those pictures score about 8% worse in the quality benchmark, and convert in half the time. In the app, PETSCII comes twice in the mode dial and the strip, once with each ([UX.md](UX.md), section 5).
+     - Judged this way, about half the cells take letters, digits or punctuation, which makes pictures look like BBS art. A converter setting keeps to the graphics characters instead, for the classic PETSCII look: the 64 of the upper case set (`$40`–`$7F`), the space, and their reverses, 130 characters with 60 patterns. Those pictures score about 8% worse in the quality benchmark, and convert in half the time. In the app, PETSCII comes twice in the mode dial and the strip, once with each: as PETSCII with the graphics characters, and as BBS with all of them ([UX.md](UX.md), section 5).
    - FLI: for each 4×8 cell, try each of the 16 colour-memory values, with the best screen-memory pair on each line.
    - AFLI: 120 pairs per 8×1 strip.
 
@@ -236,8 +236,11 @@ On an iPhone held upright, a C64 line is only about 3.4 of the screen's pixels, 
   - a `.d64` disk image
   - Koala (`.kla`) and Art Studio (`.art`)
   - FLI/AFLI formats
-- **Save and share**: saving the picture as on TV to Photos (add-only), and the share sheet, with custom file types for the C64 files.
+- **Save and share**: saving the picture as on TV to Photos (add-only), as a PNG, and the share sheet, with custom file types for the C64 files. No app owns them, so the app imports their declarations (`App/Info.plist`).
 - **Send to C64**: owners of an Ultimate 64, C64 Ultimate or Ultimate-II+ can send the `.prg` over Wi-Fi, through the device's REST API (`POST /v1/runners:run_prg`).
+  - The program goes as the request's body, as it is: the Ultimate resets the C64, puts the program in its memory and runs it.
+  - Since firmware 3.12, an Ultimate can have a network password, which goes in an `X-Password` header.
+  - The API is plain HTTP, which the app allows on the local network only (`NSAllowsLocalNetworking`). A host name outside it, such as `ultimate.lan`, needs HTTPS, which the Ultimate does not offer, so Settings asks for its IP address.
 
 ## 10. Verification and quality
 
@@ -380,7 +383,7 @@ docs/                     this plan, the UX (UX.md) and design notes
    - The `c64conv` CLI and the VICE golden tests in CI.
 2. **Converter** (done, but for measuring the oldest phones):
    - Hires and multicolour search, dithering-aware scoring, ordered dithering, display models, and the quality benchmark, in CI.
-   - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3).
+   - The app shows the sample photo converted in hires and multicolour, through the display models; PETSCII, FLI and AFLI keep sample pictures until their converters come (PETSCII's came in milestone 3, and FLI and AFLI left the app then, until milestone 4).
    - The speed benchmark's screen is in TestFlight builds; its results on real iPhones decide whether any search needs a Metal version. On an iPhone 17 Pro, a colour viewfinder frame takes 10 to 11 ms, so there is none for now (section 10).
 3. **App at feature parity**, released as 3.0: the 2013 app's features done authentically, plus C64 files. Like the 2013 app, it holds one shot at a time, as a Polaroid camera does: no gallery, no photo import and no in-app purchase, which can come in later versions (decided October 2026).
    - PETSCII first, since it can all be checked without a phone (done, but for timing it on older phones):
@@ -394,14 +397,15 @@ docs/                     this plan, the UX (UX.md) and design notes
      - without a camera or permission, static, with a way to Settings, and in development builds to a photo from the library
      - tried on an iPhone 17 Pro, where both cameras' pictures and shots come out upright; still to check: the frame rate, the flicker margins, battery use and older phones
    - the CRT layer: scanlines, glow and curvature, and the amber and green monitors' afterglow, drawn by a Metal shader in the viewfinder, the review and the shared picture (done, but for tuning its look on a phone; section 7)
-   - capture and review: shots are converted from the full-size photo and fill in on the TV, with every mode in the strip and every monitor, and the picture as on TV can be shared (done). Still to come:
-     - only hires, multicolour and PETSCII: FLI's and AFLI's sample pictures were placeholders, so both leave the app until milestone 4 brings their converters
-     - PETSCII twice, with only the graphics characters and with all of them, in place of the switch in Settings
-     - sharing the pixel-exact PNG and the C64 files: `.prg`, `.d64`, and Art Studio or Koala
+   - capture and review (done, but for trying it on a phone and a real Ultimate):
+     - shots are converted from the full-size photo and fill in on the TV, with every mode in the strip and every monitor
+     - only hires, multicolour and PETSCII: FLI's and AFLI's sample pictures were placeholders, so both left the app until milestone 4 brings their converters
+     - PETSCII twice, with only the graphics characters and with all of them, as PETSCII and BBS, in place of the switch in Settings
+     - Share: the picture as on TV, the pixel-exact PNG and the C64 files: `.prg`, `.d64`, and Art Studio or Koala
      - saving to Photos, and a setting to save every shot
-     - sending to an Ultimate, through its REST API
+     - sending to an Ultimate, through its REST API, with its network password if it has one
    - the CRT power-off animation, from the 2013 app ([UX.md](UX.md), section 3)
-   - Settings with only what 3.0 uses, and the acknowledgements; a privacy manifest
+   - Settings with only what 3.0 uses (done: saving every shot, and the Ultimate's address and password), and the acknowledgements; a privacy manifest
 
    Then release 3.0 on the restored listing.
 4. **Advanced modes**, one at a time, each with its display program and VICE tests. The first brings the paid unlock, with StoreKit 2 and the legacy entitlement (section 12).

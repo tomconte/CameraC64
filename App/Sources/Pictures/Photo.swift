@@ -12,6 +12,8 @@ import UIKit
 /// them in sRGB.
 nonisolated struct Photo: Identifiable, @unchecked Sendable {
     let id = UUID()
+    /// When the photo was taken, or imported.
+    let date = Date.now
     /// The pixels, as stored.
     let image: RGBImage
     /// How they are seen: the photo's own orientation, then mirrored for the

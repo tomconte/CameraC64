@@ -32,14 +32,7 @@ struct TopBar: View {
             }
             .padding(.horizontal, 8)
             if showsTitle {
-                if model.stage == .live {
-                    CameraBadge()
-                } else {
-                    Label("KEPT IN GALLERY", systemImage: "checkmark")
-                        .font(Look.caseLabelFont)
-                        .tracking(1.2)
-                        .foregroundStyle(Look.bezelInk)
-                }
+                CameraBadge()
             }
         }
         .frame(height: ScreenMetrics.topBarHeight)
@@ -80,13 +73,7 @@ struct ModeDial: View {
                     onSelect(mode)
                 } label: {
                     VStack(spacing: 6) {
-                        HStack(spacing: 3) {
-                            Text(mode.name)
-                            if mode.isAdvanced {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 8, weight: .bold))
-                            }
-                        }
+                        Text(mode.name)
                         Circle()
                             .fill(isSelected ? Look.ledOn : Color.clear)
                             .frame(width: 6, height: 6)
@@ -97,7 +84,7 @@ struct ModeDial: View {
                     .fixedSize()
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(mode.isAdvanced ? "\(mode.name), advanced mode" : mode.name)
+                .accessibilityLabel(mode.name)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
@@ -122,10 +109,6 @@ struct CompactModeDial: View {
                             .fill(isSelected ? Look.ledOn : Color.clear)
                             .frame(width: 6, height: 6)
                         Text(mode.shortName)
-                        if mode.isAdvanced {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 7, weight: .bold))
-                        }
                     }
                     .font(Look.smallFont)
                     .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
@@ -136,14 +119,15 @@ struct CompactModeDial: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(mode.isAdvanced ? "\(mode.name), advanced mode" : mode.name)
+                .accessibilityLabel(mode.name)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
     }
 }
 
-/// The monitor bank: six keys with lamps, like the 2013 app's MON SELEC panel.
+/// The monitor bank on the camera: six keys with lamps, like the 2013 app's
+/// MON SELEC panel. The review has its own (`ReviewMonitorBank`).
 struct MonitorBank: View {
     var selection: Monitor
     var onSelect: (Monitor) -> Void
@@ -166,19 +150,7 @@ struct MonitorBank: View {
         .padding(.horizontal, 14)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Look.caseLine, lineWidth: 1.5)
-        }
-        .overlay(alignment: .topLeading) {
-            Text("MONITOR")
-                .font(Look.smallFont)
-                .tracking(1.4)
-                .foregroundStyle(Look.label)
-                .padding(.horizontal, 6)
-                .background(Look.caseColor)
-                .offset(x: 14, y: -7)
-        }
+        .casePanel("MONITOR")
         .padding(.horizontal, 24)
     }
 
@@ -196,26 +168,37 @@ struct MonitorBank: View {
 /// A monitor key: a square key, its lamp, and the monitor's name printed beside it.
 struct MonitorKeyStyle: ButtonStyle {
     var isSelected: Bool
+    /// The key's side.
+    var keySize: CGFloat = 30
+    /// The space between the key, its lamp and the name.
+    var spacing: CGFloat = 10
+    var height: CGFloat = 38
 
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: spacing) {
             KeyFace(isPressed: configuration.isPressed, cornerRadius: 5)
-                .frame(width: 30, height: 30)
+                .frame(width: keySize, height: keySize)
             LED(isOn: isSelected)
             configuration.label
                 .font(Look.caseLabelFont)
                 .tracking(0.8)
                 .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
+                .fixedSize()
             Spacer(minLength: 0)
         }
-        .frame(height: 38)
+        .frame(height: height)
         .contentShape(Rectangle())
     }
 }
 
-/// The monitor bank in landscape: smaller keys with the lamp and name on them,
-/// turned upright.
+/// The monitor bank on the camera in landscape: smaller keys with the lamp and
+/// name on them, turned upright.
 struct CompactMonitorBank: View {
+    /// A key's size, as the screen is laid out. Its label turns upright with
+    /// the phone, so it runs along the key's height, which is the key's width
+    /// as the user sees it.
+    static let keySize = CGSize(width: 56, height: 52)
+
     var selection: Monitor
     var rotation: Angle
     var onSelect: (Monitor) -> Void
@@ -240,23 +223,29 @@ struct CompactMonitorBank: View {
         return Button {
             onSelect(monitor)
         } label: {
-            HStack(spacing: 4) {
-                LED(isOn: isSelected, size: 6)
-                Text(monitor.shortName)
-            }
-            .font(Look.smallFont)
-            .foregroundStyle(isSelected ? Look.labelSelected : Look.ink)
-            .fixedSize()
-            .rotationEffect(rotation)
+            Self.label(monitor, isSelected: isSelected)
+                .rotationEffect(rotation)
         }
-        .buttonStyle(KeyButtonStyle(width: 56, height: 44, cornerRadius: 6))
+        .buttonStyle(KeyButtonStyle(width: Self.keySize.width, height: Self.keySize.height, cornerRadius: 6))
         .accessibilityLabel(monitor.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// A key's label, upright: its lamp and the monitor's short name.
+    static func label(_ monitor: Monitor, isSelected: Bool) -> some View {
+        HStack(spacing: 4) {
+            LED(isOn: isSelected, size: 6)
+            Text(monitor.shortName)
+        }
+        .font(Look.smallFont)
+        .foregroundStyle(isSelected ? Look.labelSelected : Look.ink)
+        .fixedSize()
     }
 }
 
 /// The row at the bottom: the last picture, the big key, and the camera switch.
-/// After a shot, the big key goes back to the camera.
+/// After a shot, the big key goes back to the camera, and until the next one,
+/// the last picture opens it again.
 struct ShutterRow: View {
     var stage: CameraModel.Stage
     var lastShot: PictureMode?
@@ -264,13 +253,13 @@ struct ShutterRow: View {
     var thumbnail: CGImage?
     var rotation: Angle
     var showsCaption: Bool
-    var onGallery: () -> Void
+    var onLastPicture: () -> Void
     var onKey: () -> Void
     var onFlip: () -> Void
 
     var body: some View {
         HStack(alignment: .top) {
-            Button(action: onGallery) {
+            Button(action: onLastPicture) {
                 lastPicture
             }
             .buttonStyle(.plain)
@@ -345,8 +334,7 @@ struct ShutterRow: View {
     }
 }
 
-/// After a shot: the photo in every mode. Advanced modes show their result with
-/// a lock.
+/// After a shot: the photo in every mode of the dial.
 struct ModeStrip: View {
     var selection: PictureMode
     /// Each mode's picture of the display window, once it is made.
@@ -362,7 +350,7 @@ struct ModeStrip: View {
                         onSelect(mode)
                     } label: {
                         VStack(spacing: 6) {
-                            ModeThumbnail(mode: mode, image: thumbnails[mode], isSelected: isSelected)
+                            ModeThumbnail(image: thumbnails[mode], isSelected: isSelected)
                                 .frame(width: 78, height: 54)
                             Text(mode.name)
                                 .font(Look.smallFont)
@@ -371,7 +359,7 @@ struct ModeStrip: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(mode.isAdvanced ? "\(mode.name), advanced mode" : mode.name)
+                    .accessibilityLabel(mode.name)
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
@@ -396,7 +384,7 @@ struct CompactModeStrip: View {
                     onSelect(mode)
                 } label: {
                     VStack(spacing: 3) {
-                        ModeThumbnail(mode: mode, image: thumbnails[mode], isSelected: isSelected)
+                        ModeThumbnail(image: thumbnails[mode], isSelected: isSelected)
                             .frame(width: 72, height: 51)
                         Text(mode.shortName)
                             .font(Look.smallFont)
@@ -407,7 +395,7 @@ struct CompactModeStrip: View {
                     .frame(width: 66, height: 72)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(mode.isAdvanced ? "\(mode.name), advanced mode" : mode.name)
+                .accessibilityLabel(mode.name)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
@@ -416,7 +404,6 @@ struct CompactModeStrip: View {
 
 /// One picture in the mode strip, at the TV's 3:2 shape.
 struct ModeThumbnail: View {
-    var mode: PictureMode
     /// The mode's picture, or nil while it is being made.
     var image: CGImage?
     var isSelected: Bool
@@ -424,16 +411,6 @@ struct ModeThumbnail: View {
     var body: some View {
         picture
             .clipShape(RoundedRectangle(cornerRadius: 3))
-            .overlay(alignment: .topTrailing) {
-                if mode.isAdvanced {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Look.key)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(Look.bezel.opacity(0.85)))
-                        .padding(3)
-                }
-            }
             .padding(3)
             .overlay {
                 if isSelected {
@@ -454,21 +431,24 @@ struct ModeThumbnail: View {
     }
 }
 
-/// What the review can do with a picture.
-enum ReviewAction: CaseIterable, Identifiable {
+/// What the review can do with a picture (docs/UX.md, section 5).
+enum ReviewAction: Identifiable {
     case share
     case save
-    case edit
     case send
     case delete
 
     var id: Self { self }
 
+    /// The actions, in order. Send to C64 is there once an Ultimate is set up.
+    static func all(canSend: Bool) -> [ReviewAction] {
+        canSend ? [.share, .save, .send, .delete] : [.share, .save, .delete]
+    }
+
     var title: String {
         switch self {
         case .share: "SHARE"
         case .save: "SAVE"
-        case .edit: "EDIT"
         case .send: "SEND TO C64"
         case .delete: "DELETE"
         }
@@ -479,7 +459,6 @@ enum ReviewAction: CaseIterable, Identifiable {
         switch self {
         case .share: "Share"
         case .save: "Save to Photos"
-        case .edit: "Edit"
         case .send: "Send to C64"
         case .delete: "Delete"
         }
@@ -489,17 +468,20 @@ enum ReviewAction: CaseIterable, Identifiable {
         switch self {
         case .share: "square.and.arrow.up"
         case .save: "square.and.arrow.down"
-        case .edit: "slider.horizontal.3"
         case .send: "antenna.radiowaves.left.and.right"
         case .delete: "trash"
         }
     }
 }
 
-/// The review's actions. Share sends the picture as on TV, border included.
+/// The review's actions. Share offers the picture as on TV first, then the
+/// pixel-exact PNG and the C64 files.
 struct ActionRow: View {
-    /// The picture to share, or nil while it is being drawn.
-    var shareImage: UIImage?
+    var actions: [ReviewAction]
+    /// What Share offers, or nothing while the picture is being made.
+    var files: [SharedFile]
+    /// Whether the picture is on its way to a C64.
+    var sending: Bool
     var rotation: Angle
     var showsCaptions: Bool
     var onAction: (ReviewAction) -> Void
@@ -507,8 +489,8 @@ struct ActionRow: View {
     private var keyWidth: CGFloat { showsCaptions ? 52 : 48 }
 
     var body: some View {
-        HStack(alignment: .top, spacing: showsCaptions ? 10 : 12) {
-            ForEach(ReviewAction.allCases) { action in
+        HStack(alignment: .top, spacing: showsCaptions ? 14 : 12) {
+            ForEach(actions) { action in
                 VStack(spacing: 5) {
                     key(for: action)
                     if showsCaptions {
@@ -525,21 +507,38 @@ struct ActionRow: View {
     }
 
     @ViewBuilder private func key(for action: ReviewAction) -> some View {
-        if action == .share, let shareImage {
-            let image = Image(uiImage: shareImage)
-            ShareLink(item: image, preview: SharePreview("Camera C64 picture", image: image)) {
+        switch action {
+        case .share:
+            Menu {
+                ForEach(files, id: \.kind) { file in
+                    let preview = Image(uiImage: UIImage(cgImage: file.picture.window))
+                    ShareLink(item: file, preview: SharePreview(file.kind.title, image: preview)) {
+                        Label(file.kind.title, systemImage: file.kind.symbol)
+                    }
+                }
+            } label: {
                 icon(for: action)
             }
+            .menuStyle(.button)
             .buttonStyle(KeyButtonStyle(width: keyWidth, height: 42))
+            .disabled(files.isEmpty)
             .accessibilityLabel(action.accessibilityName)
-        } else {
+        case .send where sending:
+            Button {
+            } label: {
+                ProgressView()
+                    .tint(Look.ink)
+            }
+            .buttonStyle(KeyButtonStyle(width: keyWidth, height: 42))
+            .disabled(true)
+            .accessibilityLabel("Sending to C64")
+        case .save, .send, .delete:
             Button {
                 onAction(action)
             } label: {
                 icon(for: action)
             }
             .buttonStyle(KeyButtonStyle(width: keyWidth, height: 42))
-            .disabled(action == .share)
             .accessibilityLabel(action.accessibilityName)
         }
     }

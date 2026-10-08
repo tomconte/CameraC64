@@ -33,12 +33,16 @@ targets:
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: "YES"
+        # What the keys below cannot say: the C64 file types, and plain HTTP on
+        # the local network. Xcode adds the keys below to it.
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Camera C64
         # No encryption beyond what iOS provides, so TestFlight builds skip the export-compliance question.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: "NO"
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.photography
         INFOPLIST_KEY_NSCameraUsageDescription: Camera C64 turns what your camera sees into Commodore 64 pictures.
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Camera C64 saves your pictures to your photo library.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Camera C64 sends your pictures to the Ultimate you set up, to show them on its C64.
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
