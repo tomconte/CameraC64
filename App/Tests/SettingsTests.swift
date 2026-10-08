@@ -6,14 +6,13 @@ import Testing
 /// Settings' acknowledgements, and the privacy manifest (plan, section 11).
 @MainActor
 struct SettingsTests {
-    /// The acknowledgements show the "Included" table of the bundled
+    /// The acknowledgements show the table in the bundled
     /// THIRD_PARTY_NOTICES.md, and the app's licence.
     @Test func acknowledgementsListWhatTheAppIncludes() {
         let notices = AcknowledgementsView.bundledText("THIRD_PARTY_NOTICES", "md")
         let included = Acknowledgement.included(inNotices: notices)
         #expect(included.contains { $0.name.contains("character ROM") })
         #expect(included.contains { $0.name.contains("Colodore") })
-        #expect(!included.contains { $0.name.contains("NUFLIX") })
         #expect(included.allSatisfy { !$0.licence.isEmpty && !$0.use.isEmpty })
         #expect(AcknowledgementsView.bundledText("LICENSE", nil).hasPrefix("MIT License"))
     }
@@ -22,18 +21,12 @@ struct SettingsTests {
         let notices = """
             # Notices
 
-            ## Included
+            Some text, with a | in it.
 
             | Material | Licence | Use |
             |---|---|---|
             | [A](https://example.com) | MIT | In `A.swift` |
             | B | Public domain | Ideas |
-
-            ## Planned sources
-
-            | Project | Licence | Planned use |
-            |---|---|---|
-            | C | MIT | Later |
             """
         #expect(
             Acknowledgement.included(inNotices: notices) == [

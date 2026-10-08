@@ -1,34 +1,25 @@
 import SwiftUI
 
-/// Something Camera C64 includes from others, as the "Included" table of
+/// Something Camera C64 includes from others, as the table in
 /// THIRD_PARTY_NOTICES.md lists it. Its texts are inline Markdown.
 nonisolated struct Acknowledgement: Equatable, Sendable {
     var name: String
     var licence: String
     var use: String
 
-    /// The rows of the "Included" table in THIRD_PARTY_NOTICES.md, so that the
-    /// app shows the same list as the repository, without its plans.
+    /// The rows of the table in THIRD_PARTY_NOTICES.md, so that the app shows
+    /// the same list as the repository.
     static func included(inNotices notices: String) -> [Acknowledgement] {
-        var inIncluded = false
-        var tableLines = 0
-        var rows: [Acknowledgement] = []
-        for line in notices.split(separator: "\n") {
-            let line = line.trimmingCharacters(in: .whitespaces)
-            if line.hasPrefix("## ") {
-                inIncluded = line == "## Included"
-                continue
-            }
-            guard inIncluded, line.hasPrefix("|") else { continue }
-            tableLines += 1
-            // The first two lines are the header and the separator.
-            guard tableLines > 2 else { continue }
+        let tableLines = notices.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.hasPrefix("|") }
+        // The first two lines are the header and the separator.
+        return tableLines.dropFirst(2).compactMap { line in
             let cells = line.dropFirst().split(separator: "|", omittingEmptySubsequences: false).dropLast()
                 .map { $0.trimmingCharacters(in: .whitespaces) }
-            guard cells.count == 3 else { continue }
-            rows.append(Acknowledgement(name: cells[0], licence: cells[1], use: cells[2]))
+            guard cells.count == 3 else { return nil }
+            return Acknowledgement(name: cells[0], licence: cells[1], use: cells[2])
         }
-        return rows
     }
 }
 
