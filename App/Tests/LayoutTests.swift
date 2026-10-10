@@ -51,13 +51,43 @@ struct LayoutTests {
             layout: layout,
             actions: {
                 ActionRow(
-                    actions: ReviewAction.all(canSend: true), files: [], sending: false, rotation: .zero,
-                    showsCaptions: $0, onAction: { _ in })
+                    actions: ReviewAction.all(canSend: true), files: [], sending: false, showsCaptions: $0,
+                    onAction: { _ in })
             },
             shutter: {
                 ShutterRow(
-                    stage: .review, lastShot: .multicolour, thumbnail: nil, rotation: .zero, showsCaption: $0,
-                    onLastPicture: {}, onKey: {}, onFlip: {})
+                    stage: .review, lastShot: .multicolour, thumbnail: nil, showsCaption: $0, onLastPicture: {},
+                    onKey: {}, onFlip: {})
+            })
+    }
+
+    /// The size a view takes with all the room it wants.
+    private func idealSize(of view: some View) -> CGSize {
+        size(of: view.fixedSize(), width: 2000, height: 2000)
+    }
+
+    /// The camera screen's state in the camera, or with a shot in review.
+    private func model(_ stage: CameraModel.Stage) -> CameraModel {
+        let model = CameraModel()
+        if stage == .review {
+            model.capture()
+        }
+        return model
+    }
+
+    /// The column on the left of the TV in landscape.
+    private func controlsColumn(_ stage: CameraModel.Stage) -> some View {
+        ControlsColumn(
+            model: model(stage), thumbnails: [:], onFlash: {}, onCRT: {}, onPower: {}, onSettings: {},
+            onSelectMode: { _ in }, onSelectMonitor: { _ in }, onSelectReviewMode: { _ in })
+    }
+
+    /// The column on the right of the TV in landscape.
+    private func shutterColumn(_ stage: CameraModel.Stage) -> some View {
+        ShutterColumn(
+            stage: stage, lastShot: .multicolour, thumbnail: nil, onLastPicture: {}, onKey: {}, onFlip: {},
+            actions: {
+                ActionGrid(actions: ReviewAction.all(canSend: true), files: [], sending: false, onAction: { _ in })
             })
     }
 
@@ -77,11 +107,38 @@ struct LayoutTests {
         }
     }
 
-    /// In landscape, a monitor key's label turns upright, so it runs along the
-    /// key's height: every label fits on the key's face there, 4 points clear
-    /// of either side.
+    /// In landscape, the TV sits between two columns of controls, which fit
+    /// beside it on every iPhone, in the camera and in a review, and share
+    /// what it leaves of the screen.
+    @Test func landscapeColumnsFitEveryIPhone() {
+        for phone in Self.phones {
+            // The screen inside its safe area, which stays in portrait.
+            let screen = CGSize(width: phone.width, height: phone.height - phone.top - phone.bottom)
+            let tv = TVGeometry.size(fitting: ScreenMetrics.tvArea(in: screen, turned: true), turned: true)
+            // A column as the user sees it: as high as the screen is wide.
+            let column = CGSize(width: ScreenMetrics.columnWidth(in: screen, besideTV: tv), height: screen.width)
+            #expect(column.width >= ScreenMetrics.landscapeColumnWidth, "\(phone.name): \(column.width) points")
+            #expect(abs(2 * column.width + tv.width - screen.height) < 0.001, "\(phone.name)")
+            // A TV as high as the screen is wide comes back from its 4:3 shape
+            // a hair over.
+            #expect(tv.height <= screen.width + 0.001, "\(phone.name): the TV is \(tv.height) points high")
+            for stage in [CameraModel.Stage.live, .review] {
+                let controls = idealSize(of: controlsColumn(stage))
+                #expect(
+                    controls.width <= column.width && controls.height <= column.height,
+                    "\(phone.name), \(stage): the controls take \(controls) of \(column)")
+                let shutter = idealSize(of: shutterColumn(stage))
+                #expect(
+                    shutter.width <= column.width && shutter.height <= column.height,
+                    "\(phone.name), \(stage): the big key's column takes \(shutter) of \(column)")
+            }
+        }
+    }
+
+    /// In landscape, every monitor key's label, its lamp and the monitor's
+    /// short name, fits on the key's face, 4 points clear of either side.
     @Test func landscapeMonitorLabelsFitTheirKeys() {
-        let face = CompactMonitorBank.keySize.height - KeyFace.edge
+        let face = CompactMonitorBank.keySize.width
         for monitor in Monitor.allCases {
             let label = size(of: CompactMonitorBank.label(monitor, isSelected: true), width: 500, height: 500)
             #expect(label.width + 8 <= face, "\(monitor.name): \(label.width) points on \(face)")

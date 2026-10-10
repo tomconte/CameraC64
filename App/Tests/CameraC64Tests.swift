@@ -59,7 +59,7 @@ struct CameraScreenTests {
     }
 
     @Test func turnedTVRunsAlongTheHeight() {
-        let area = ScreenMetrics.tvArea(in: CGSize(width: 402, height: 778), turned: true, stage: .live)
+        let area = ScreenMetrics.tvArea(in: CGSize(width: 402, height: 778), turned: true)
         let tv = TVGeometry.size(fitting: area, turned: true)
         #expect(tv.width == area.height)
         #expect(tv.height <= area.width)
