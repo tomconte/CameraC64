@@ -148,22 +148,25 @@ extension View {
 
 /// The "Camera C64" badge from the 2013 app's title bar.
 struct CameraBadge: View {
+    /// A narrower badge, for the column beside the TV in landscape.
+    var compact = false
+
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: compact ? 5 : 7) {
             Text("Camera")
                 .font(.system(size: 11, weight: .bold))
             VStack(spacing: 1) {
                 ForEach(Look.rainbow.indices, id: \.self) { index in
                     Rectangle()
                         .fill(Look.rainbow[index])
-                        .frame(width: 30, height: 2)
+                        .frame(width: compact ? 20 : 30, height: 2)
                 }
             }
             Text("C64")
                 .font(.system(size: 12, weight: .heavy))
         }
         .foregroundStyle(Look.badgeInk)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, compact ? 8 : 12)
         .frame(height: 22)
         .background(Capsule().fill(Look.badge))
         .accessibilityElement(children: .ignore)

@@ -9,18 +9,24 @@ import UIKit
 /// Sizes of the camera screen's parts, in points.
 enum ScreenMetrics {
     static let topBarHeight: CGFloat = 44
-    /// The controls below the TV in landscape. The TV gets the rest of the height.
-    static let compactLivePanelHeight: CGFloat = 268
-    static let compactReviewPanelHeight: CGFloat = 216
+    /// The narrowest a column of controls beside the TV gets in landscape, as
+    /// the user sees it.
+    static let landscapeColumnWidth: CGFloat = 124
 
     /// The area the TV gets, in screen coordinates. In portrait it spans the
-    /// width; in landscape it takes whatever the compact controls leave.
-    static func tvArea(in size: CGSize, turned: Bool, stage: CameraModel.Stage) -> CGSize {
+    /// width; in landscape it sits between two columns of controls, and can
+    /// take the whole height the user sees.
+    static func tvArea(in size: CGSize, turned: Bool) -> CGSize {
         guard turned else {
             return CGSize(width: size.width, height: size.width / TVGeometry.aspectRatio)
         }
-        let panel = stage == .live ? compactLivePanelHeight : compactReviewPanelHeight
-        return CGSize(width: size.width, height: max(0, size.height - topBarHeight - panel))
+        return CGSize(width: size.width, height: max(0, size.height - 2 * landscapeColumnWidth))
+    }
+
+    /// How wide each column beside a turned TV is, as the user sees it: they
+    /// share what the TV leaves.
+    static func columnWidth(in size: CGSize, besideTV tv: CGSize) -> CGFloat {
+        max(0, (size.height - tv.width) / 2)
     }
 }
 
@@ -61,18 +67,31 @@ struct CameraScreen: View {
             let orientation = held.orientation
             let turned = orientation.isLandscape
             let rotation = orientation.contentRotation
-            let area = ScreenMetrics.tvArea(in: geometry.size, turned: turned, stage: model.stage)
+            let area = ScreenMetrics.tvArea(in: geometry.size, turned: turned)
             let tvSize = TVGeometry.size(fitting: area, turned: turned)
+            // In landscape, the TV's length down the screen: the columns
+            // beside it share the rest.
+            let tvLength = turned ? tvSize.width : area.height
+            let column = CGSize(
+                width: ScreenMetrics.columnWidth(in: geometry.size, besideTV: tvSize), height: geometry.size.width)
+            // The big key stays on the user's right whichever way the phone is
+            // turned: with its top to the right, that is the top of the screen.
+            let shutterFirst = orientation == .landscapeRight
             VStack(spacing: 0) {
-                TopBar(
-                    model: model, rotation: rotation, showsTitle: !turned,
-                    onFlash: { whenOn { model.toggleFlash() } },
-                    onCRT: { whenOn { model.toggleCRT() } },
-                    onPower: { model.togglePower() },
-                    onSettings: { whenOn { showingSettings = true } }
-                )
+                Group {
+                    if turned {
+                        landscapeColumn(shutterFirst ? .shutter : .controls, size: column, rotation: rotation)
+                    } else {
+                        TopBar(
+                            model: model,
+                            onFlash: { whenOn { model.toggleFlash() } },
+                            onCRT: { whenOn { model.toggleCRT() } },
+                            onPower: { model.togglePower() },
+                            onSettings: { whenOn { showingSettings = true } })
+                    }
+                }
                 .background {
-                    Look.bezel.ignoresSafeArea(edges: .top)
+                    (turned ? Look.caseColor : Look.bezel).ignoresSafeArea(edges: .top)
                 }
                 tv(showsZoom: turned)
                     .frame(width: tvSize.width, height: tvSize.height)
@@ -81,7 +100,7 @@ struct CameraScreen: View {
                     .contentShape(Rectangle())
                     .simultaneousGesture(focusTap(tvSize: tvSize), including: model.stage == .live ? .all : .subviews)
                     .rotationEffect(rotation)
-                    .frame(width: area.width, height: area.height)
+                    .frame(width: area.width, height: tvLength)
                     .background(Look.bezel)
                     .contentShape(Rectangle())
                     .simultaneousGesture(drag(orientation))
@@ -91,18 +110,25 @@ struct CameraScreen: View {
                     } onPressingChanged: { pressing in
                         showingOriginal = pressing && model.stage == .review && model.tvOn
                     }
-                panel(turned: turned, rotation: rotation)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background {
-                        Look.caseColor.ignoresSafeArea(edges: .bottom)
+                Group {
+                    if turned {
+                        landscapeColumn(shutterFirst ? .controls : .shutter, size: column, rotation: rotation)
+                    } else {
+                        panel
                     }
-                    .overlay {
-                        if BuildKind.isDevelopment && showsCRTTuning {
-                            CRTTuningPanel(crt: crtTuning) {
-                                showsCRTTuning = false
-                            }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    Look.caseColor.ignoresSafeArea(edges: .bottom)
+                }
+                .overlay {
+                    // It covers the controls below the TV, with the phone upright.
+                    if BuildKind.isDevelopment && showsCRTTuning && !turned {
+                        CRTTuningPanel(crt: crtTuning) {
+                            showsCRTTuning = false
                         }
                     }
+                }
             }
             .animation(.spring(duration: 0.5, bounce: 0.15), value: orientation)
             .animation(.easeInOut(duration: 0.25), value: model.stage)
@@ -337,22 +363,18 @@ struct CameraScreen: View {
         return thumbnails
     }
 
-    @ViewBuilder
-    private func panel(turned: Bool, rotation: Angle) -> some View {
-        switch (model.stage, turned) {
-        case (.live, false):
+    /// The controls below the TV, with the phone upright.
+    @ViewBuilder private var panel: some View {
+        switch model.stage {
+        case .live:
             livePanel
-        case (.live, true):
-            compactLivePanel(rotation)
-        case (.review, false):
+        case .review:
             ReviewPanel(
                 mode: model.reviewMode, monitor: model.monitor, thumbnails: thumbnails,
                 onSelectMode: { mode in whenOn { model.reviewMode = mode } },
                 onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
-                actions: { actionRow(rotation: .zero, showsCaptions: $0) },
-                shutter: { shutterRow(rotation: .zero, showsCaption: $0) })
-        case (.review, true):
-            compactReviewPanel(rotation)
+                actions: { actionRow(showsCaptions: $0) },
+                shutter: { shutterRow(showsCaption: $0) })
         }
     }
 
@@ -363,40 +385,60 @@ struct CameraScreen: View {
             MonitorBank(selection: model.monitor) { monitor in whenOn { model.select(monitor) } }
                 .padding(.top, 6)
             Spacer(minLength: 8)
-            shutterRow(rotation: .zero, showsCaption: true)
+            shutterRow(showsCaption: true)
         }
         .padding(.top, 12)
         .padding(.bottom, 6)
     }
 
-    private func compactLivePanel(_ rotation: Angle) -> some View {
-        VStack(spacing: 8) {
-            CompactModeDial(selection: model.mode, rotation: rotation) { mode in whenOn { model.select(mode) } }
-            CompactMonitorBank(selection: model.monitor, rotation: rotation) { monitor in
-                whenOn { model.select(monitor) }
-            }
-            shutterRow(rotation: rotation, showsCaption: false)
-        }
-        .padding(.vertical, 8)
+    /// The columns beside the TV in landscape.
+    private enum LandscapeColumn {
+        /// On the user's left: the badge, flash, the CRT switch and settings,
+        /// then the mode dial and the monitor keys, or in a review, the mode
+        /// strip. The review has no monitor keys in landscape: the phone turns
+        /// upright to change the monitor.
+        case controls
+        /// On the user's right: the big key, with the camera switch or the
+        /// review's actions, and the last picture.
+        case shutter
     }
 
-    /// The review's controls in landscape, which have no monitor keys: the
-    /// phone turns upright to change the monitor.
-    private func compactReviewPanel(_ rotation: Angle) -> some View {
-        VStack(spacing: 8) {
-            CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, rotation: rotation) { mode in
-                whenOn { model.reviewMode = mode }
-            }
-            actionRow(rotation: rotation, showsCaptions: false)
-            shutterRow(rotation: rotation, showsCaption: false)
+    @ViewBuilder
+    private func landscapeColumn(_ column: LandscapeColumn, size: CGSize, rotation: Angle) -> some View {
+        switch column {
+        case .controls:
+            ControlsColumn(
+                model: model, thumbnails: thumbnails,
+                onFlash: { whenOn { model.toggleFlash() } },
+                onCRT: { whenOn { model.toggleCRT() } },
+                onPower: { model.togglePower() },
+                onSettings: { whenOn { showingSettings = true } },
+                onSelectMode: { mode in whenOn { model.select(mode) } },
+                onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
+                onSelectReviewMode: { mode in whenOn { model.reviewMode = mode } }
+            )
+            .turned(rotation, size: size)
+        case .shutter:
+            ShutterColumn(
+                stage: model.stage, lastShot: model.lastShot, thumbnail: lastPicture,
+                onLastPicture: { whenOn { model.showLastShot() } },
+                onKey: { whenOn { pressBigKey() } },
+                onFlip: { whenOn { flipCamera() } },
+                actions: {
+                    ActionGrid(
+                        actions: ReviewAction.all(canSend: canSend), files: sharedFiles, sending: model.sending,
+                        tvOn: model.tvOn
+                    ) { action in whenOn { perform(action) } }
+                }
+            )
+            .turned(rotation, size: size)
         }
-        .padding(.vertical, 8)
     }
 
-    private func actionRow(rotation: Angle, showsCaptions: Bool) -> some View {
+    private func actionRow(showsCaptions: Bool) -> some View {
         ActionRow(
             actions: ReviewAction.all(canSend: canSend), files: sharedFiles, sending: model.sending,
-            tvOn: model.tvOn, rotation: rotation, showsCaptions: showsCaptions
+            tvOn: model.tvOn, showsCaptions: showsCaptions
         ) { action in whenOn { perform(action) } }
     }
 
@@ -413,12 +455,16 @@ struct CameraScreen: View {
         return SharedFile.files(of: picture, crt: crt, name: name, programName: mode.title)
     }
 
-    private func shutterRow(rotation: Angle, showsCaption: Bool) -> some View {
+    /// The last picture's display window, once it is made.
+    private var lastPicture: CGImage? {
+        model.lastShot.flatMap { pictures.picture(key($0))?.window }
+    }
+
+    private func shutterRow(showsCaption: Bool) -> some View {
         ShutterRow(
             stage: model.stage,
             lastShot: model.lastShot,
-            thumbnail: model.lastShot.flatMap { pictures.picture(key($0))?.window },
-            rotation: rotation,
+            thumbnail: lastPicture,
             showsCaption: showsCaption,
             onLastPicture: { whenOn { model.showLastShot() } },
             onKey: { whenOn { pressBigKey() } },

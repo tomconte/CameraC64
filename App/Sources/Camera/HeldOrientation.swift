@@ -7,8 +7,8 @@ import UIKit
 /// How the phone is held.
 ///
 /// The app's screens stay in portrait, as Apple's Camera app does. When the
-/// phone is turned, the TV and the labels turn so they stay upright, and the
-/// controls stay where they are (docs/UX.md, section 3).
+/// phone is turned, the TV turns so it stays upright, between two columns of
+/// controls that turn with it.
 enum HeldOrientation {
     case portrait
     /// Turned anticlockwise: the top of the phone points left.
