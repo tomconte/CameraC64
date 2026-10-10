@@ -119,7 +119,9 @@ struct LayoutTests {
             let column = CGSize(width: ScreenMetrics.columnWidth(in: screen, besideTV: tv), height: screen.width)
             #expect(column.width >= ScreenMetrics.landscapeColumnWidth, "\(phone.name): \(column.width) points")
             #expect(abs(2 * column.width + tv.width - screen.height) < 0.001, "\(phone.name)")
-            #expect(tv.height <= screen.width, "\(phone.name): the TV is \(tv.height) points high")
+            // A TV as high as the screen is wide comes back from its 4:3 shape
+            // a hair over.
+            #expect(tv.height <= screen.width + 0.001, "\(phone.name): the TV is \(tv.height) points high")
             for stage in [CameraModel.Stage.live, .review] {
                 let controls = idealSize(of: controlsColumn(stage))
                 #expect(
