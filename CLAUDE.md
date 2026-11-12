@@ -60,6 +60,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **`design/`** holds SVG redraws of the camera screen's elements in the style of the 2013 artwork, written by `design/make_svgs.py`, to edit by hand (`design/README.md`). They use no SVG filters, so that every editor, and Xcode, keeps each effect as a shape.
   - The app draws them as they are: `design/export_skin.py` copies them, without their reference layers, into `App/Resources/Assets.xcassets/Skin`, where Xcode keeps them as vectors. That folder is generated: never edit it, and commit it with the SVGs. CI checks that they match.
   - `Skin.swift` says where each element's face is on its canvas, which holds its shadow too; `SkinTests` checks it against the images, and that iOS draws every SVG feature they use as Inkscape does.
+  - The case's grooves, which recall the C64's vent, are drawn in code (`Vent.swift`): they stop short of each element marked with `ventClearing`, and stay below one marked as a ceiling.
+  - `ScreenshotTests` draws the camera screen's controls in each state, and the skin, and CI keeps the pictures as the `Screens` artifact: that is how to see the screen without a Mac.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app's Info.plist comes from the `INFOPLIST_KEY_` settings in `project.yml`, added to `App/Info.plist`, which holds what those settings cannot say: the C64 files' types and plain HTTP on the local network. The app tests check both.
