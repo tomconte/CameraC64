@@ -39,7 +39,9 @@ enum Look {
     static let bezel = Color(hex: 0x1C1B19)
     static let bezelInk = Color(hex: 0xD9D3C5)
     static let bezelInkDim = Color(hex: 0x8C867A)
-    /// Words on the zoom buttons.
+    /// The buttons on the TV when it has no camera to show, and the words on
+    /// them and on the zoom buttons.
+    static let pill = Color(hex: 0x2B2925)
     static let pillInk = Color(hex: 0xE9E3D5)
 
     static let caseLabelFont = Font.system(size: 11, weight: .bold).width(.condensed)
