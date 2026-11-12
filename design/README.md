@@ -25,9 +25,9 @@ The elements put together as the app lays out the camera screen today, on an iPh
 
 | File | What | Size (pt) |
 |---|---|---|
-| `svg/mockup-portrait-live.svg` | The phone upright, live: the 2013 title bar with the badge, the flash and CRT switches and settings; the TV; zoom, the mode dial and the monitor bank; the last picture, the capture key and the flip key | 402 × 874 |
+| `svg/mockup-portrait-live.svg` | The phone upright, live: the title bar with the badge, the flash and CRT switches and settings; the TV; zoom, the mode dial and the monitor bank; the last picture, the capture key and the flip key. The C64's vent runs across the top and behind the shutter row | 402 × 874 |
 | `svg/mockup-portrait-review.svg` | The phone upright, in a review: the shot in every mode, the monitors, the four actions, and the capture key, which goes back to the camera | 402 × 874 |
-| `svg/mockup-landscape-live.svg` | The phone held sideways, its top to the left: the TV between the two columns, the capture key on the right | 874 × 402 |
+| `svg/mockup-landscape-live.svg` | The phone held sideways, its top to the left: the TV between the two columns, the capture key on the right, the vent behind both | 874 × 402 |
 | `pictures/*.png` | The app's sample photo as `c64conv` converts it in each mode, as the TV shows it, border included | 384 × 272 |
 
 ## How they are drawn
@@ -37,6 +37,7 @@ The elements put together as the app lays out the camera screen today, on an iPh
 - Each part is a named group. Inkscape shows the top-level ones as layers, labelled in French.
 - Each element sits on the case, or the panel, in a layer marked "référence, à masquer": hide it before exporting the element alone.
 - No words in the elements: the app writes its labels. The layers that show them, for reference, are marked "écrit par le code dans l'appli". They use FreeSans, a free Helvetica, where it is installed, and Helvetica or Arial elsewhere.
+- The grooves on the mockups' case recall the vent along the back of the C64's breadbin case: each is a dark groove over a line of light, and they stop short of each element and of the screen's edge, as the C64's stop round its badge and its power lamp. The script cuts them round each element (`vent`), so after moving an element, regenerate the mockup or cut its grooves by hand.
 - The mockups hold copies of the elements, their ids prefixed so that they keep apart, and the pictures as data, so that each file stands alone. Over the TV, a sketch of scanlines, a darker edge and the tube's corners stands for what the app's CRT shader draws. In landscape, the labels are narrowed as the app's condensed ones are.
 - The badge's letters are drawn, not typed, so no font is needed. "Camera" is drawn as strokes along the middle of each letter: their width is the letters' weight. "C64" is drawn as filled shapes, as its upright strokes are thicker than the others. Each letter is white over a copy in dark brown, a little wider, which outlines it.
 

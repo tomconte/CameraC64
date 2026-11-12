@@ -11,6 +11,7 @@ that file is the one to keep: regenerate only the files whose drawing changed he
 """
 
 import base64
+import math
 import pathlib
 import re
 import sys
@@ -835,6 +836,70 @@ def recess(id_, x, y, w, h, r=8):
                    stroke_width=1.6)))
 
 
+# The C64's vent, the grooves along the back of its case.
+VENT_GROOVE = "#867861"
+VENT_LIGHT = "#FBF5EA"
+# The Dynamic Island, on the screen of an iPhone 17 held upright, and the screen itself.
+ISLAND = (138, 11, 126, 37, 18.5)
+SCREEN = (0, 0, 402, 874, 55)
+
+
+def corner_inset(radius, depth):
+    """How far in a rounded corner of `radius` is, `depth` from the end of its curve."""
+    depth = min(max(depth, 0), radius)
+    return radius - math.sqrt(radius * radius - depth * depth)
+
+
+def left_out(cutout, top, bottom, margin):
+    """The span a groove from `top` to `bottom` leaves out round a rounded rectangle (x, y, w, h, r),
+    `margin` from it, or None."""
+    x, y, w, h, r = cutout
+    x0, y0, x1, y1, radius = x - margin, y - margin, x + w + margin, y + h + margin, r + margin
+    if bottom <= y0 or top >= y1:
+        return None
+    # Where the groove is nearest the cutout's middle, the cutout is widest.
+    level = min(max((y0 + y1) / 2, top), bottom)
+    inset = corner_inset(radius, max(y0 + radius - level, level - (y1 - radius)))
+    return x0 + inset, x1 - inset
+
+
+def kept_in(frame, top, bottom, margin):
+    """The span a groove from `top` to `bottom` keeps inside a rounded rectangle, `margin` in from it."""
+    x, y, w, h, r = frame
+    x0, y0, x1, y1, radius = x + margin, y + margin, x + w - margin, y + h - margin, max(r - margin, 0)
+    # Where the groove is nearest a corner, the frame is narrowest.
+    depth = max(y0 + radius - top, bottom - (y1 - radius))
+    inset = corner_inset(radius, depth) if depth > 0 else 0
+    return x0 + inset, x1 - inset
+
+
+def vent(id_, x0, x1, y0, y1, pitch=6.5, cutouts=(), margin=5.0, frame=SCREEN, edge=10.0, groove=2.3, light=1.0,
+         shortest=14.0):
+    """The vent along the back of the C64's case: grooves `pitch` apart across (x0, x1), from y0 to y1,
+    each a dark groove over a line of light. They stop short of each cutout, a rounded rectangle
+    (x, y, w, h, r) round an element, as the C64's stop round its badge and its power lamp, and
+    `edge` in from the screen's edge. Pieces shorter than `shortest` are left out."""
+    lights, grooves = [], []
+    y = y0
+    while y + groove + light <= y1 + 0.001:
+        top, bottom = y, y + groove + light
+        inside = kept_in(frame, top, bottom, edge)
+        spans = [(max(x0, inside[0]), min(x1, inside[1]))]
+        spans = [span for span in spans if span[1] - span[0] >= shortest]
+        for cutout in cutouts:
+            cut = left_out(cutout, top, bottom, margin)
+            if cut is not None:
+                spans = [piece for start, end in spans
+                         for piece in ((start, min(end, cut[0])), (max(start, cut[1]), end))
+                         if piece[1] - piece[0] >= shortest]
+        for start, end in spans:
+            grooves.append(rect(start, y, end - start, groove, groove / 2, fill=VENT_GROOVE))
+            lights.append(rect(start, y + groove, end - start, light, light / 2, fill=VENT_LIGHT, fill_opacity=0.9))
+        y += pitch
+    return group(id_, "Évent", group(f"{id_}-light", "Lumière sous les rainures", *lights),
+                 group(f"{id_}-grooves", "Rainures", *grooves), layer=True)
+
+
 def zoom_buttons(cx, cy, lit=1):
     """The zoom buttons, .5, 1x and 2, centred on (cx, cy), with the app's values written on them."""
     parts = []
@@ -875,14 +940,15 @@ def mockup_defs():
 
 
 def title_bar(stage):
-    """The top of the screen with the phone upright: the 2013 app's beige title bar, with its grooves,
-    the badge, the flash and CRT switches, and settings."""
-    grooves = []
-    for y in (74, 84, 94):
-        grooves += [rect(0, y, 402, 0.6, 0, fill="#C9BCA4"), rect(0, y + 0.6, 402, 0.6, 0, fill="#FFFBF2")]
+    """The top of the screen with the phone upright, where the C64 has its vent: grooves across it,
+    round the Dynamic Island, the badge, the flash and CRT switches, and settings."""
+    cutouts = [ISLAND, (139.5, 75.5, 122, 17, 8.5), (279, 72, 79, 24, 12), (364, 69, 30, 31, 7)]
+    if stage == "live":
+        # The flash switch and the badge share one clearing: the gap between them is too short for grooves.
+        cutouts.append((8, 72, 253.5, 24, 12))
     parts = [
         rect(0, 0, 402, 106, 0, fill="url(#mock-title)"),
-        group("title-grooves", "Rainures", *grooves),
+        vent("title-vent", 0, 402, 9, 98, cutouts=cutouts, shortest=36),
         rect(0, 104.8, 402, 0.6, 0, fill="#9B9281"),
         rect(0, 105.4, 402, 0.6, 0, fill="#6A6150"),
         embed(badge(), "badge", 137, 74),
@@ -918,9 +984,17 @@ def portrait(stage):
     tv_height = width / TV_ASPECT
     defs = mockup_defs()
     clips = []
+    # The vent behind the shutter row, round the last picture, the capture key and its label, the flip
+    # key, and the home indicator.
+    shutter = [(28, 757.7, 56, 58, 8), (117.8, 758.7, 166.3, 54, 27), (134, 861, 134, 5, 2.5)]
+    if stage == "live":
+        shutter += [(172, 816.5, 58, 14, 7), (318, 757.7, 56, 58, 12)]
+    else:
+        shutter.append((134, 817, 134, 15, 7.5))
     layers = [
         title_bar(stage),
         tv_screen("tv", 0, 106, width, tv_height, "multicolour-tv.png", defs),
+        vent("shutter-vent", 0, width, 662 if stage == "live" else 688, 868, cutouts=shutter),
     ]
     capture_y = 741.9
     if stage == "live":
@@ -1012,7 +1086,16 @@ def landscape():
         embed(capture_key(pressed=False), "capture", 711.6, 171.3, 0.95, drop=("backdrop", "label")),
     ]
     tv_x = 186
+    # The vent behind each column, round its elements, the Dynamic Island and the home indicator.
+    frame = (0, 0, width, height, 55)
+    island = (11, 138, 37, 126, 18.5)
+    left_cutouts = [island, (68.65, 13.35, 109.8, 15.3, 7.65), (78, 44, 90, 50, 10), (64, 112, 118, 42, 8),
+                    (66, 170, 116, 146, 6)]
+    right_cutouts = [(731, 12, 56, 58, 12), (795, 25, 30, 31, 7), (721.6, 182.7, 112.9, 37, 18.3),
+                     (750, 332, 56, 58, 8), (861, 134, 5, 134, 2.5)]
     layers = [
+        vent("left-vent", 0, tv_x - 6, 8, 394, cutouts=left_cutouts, frame=frame),
+        vent("right-vent", tv_x + tv_width + 6, width, 8, 394, cutouts=right_cutouts, frame=frame),
         tv_screen("tv", tv_x, (height - tv_height) / 2, tv_width, tv_height, "multicolour-tv.png", defs),
         zoom_buttons(tv_x + tv_width / 2, (height + tv_height) / 2 - tv_height * 37 / 272 / 2),
         group("left-column", "Colonne de gauche", *left, layer=True),
