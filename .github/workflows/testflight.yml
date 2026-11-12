@@ -28,7 +28,8 @@ jobs:
     concurrency:
       group: testflight
       cancel-in-progress: false
-    runs-on: macos-26
+    # The self-hosted Mac when the repository variable MACOS_RUNNER says so (docs/CI.md).
+    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer

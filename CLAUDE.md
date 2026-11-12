@@ -40,6 +40,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - on `macos-26`: the app tests in the iOS Simulator, plus an unsigned device build; the VICE comparison, with Homebrew's VICE; and the benchmark with image64 as a baseline, for comparison only
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
+- **Self-hosted Mac:** when the repository variable `MACOS_RUNNER` is `tartelet`, the macOS jobs, CI's and TestFlight's, run in virtual machines on the owner's Mac instead (`docs/CI.md`), except for fork pull requests. They then wait for the Mac: macOS jobs that stay queued mean it is off, which only the user can fix.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
 - **TestFlight:** a pushed commit whose message starts with `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
   - Upload one on your own whenever a change alters the app's UI (what its screens show, or how they behave), so it can be tried on a phone: once CI is green on the change, push a commit whose message starts with `[testflight]`, an empty one if nothing is left to commit. Otherwise, only when asked.
@@ -98,6 +99,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - the `swift:6.3.3-noble` container in `ci.yml`
   - `SWIFT_VERSION` in the session hook
   - `DEVELOPER_DIR` (Xcode 26.6, which ships Swift 6.3.3) in both workflows
+
+  The self-hosted Mac's virtual machine needs the same Xcode at the same path, which the user installs.
 - **Versions:**
   - The bundle ID `com.camerac64` belongs to the existing App Store record and must not change. That record is removed from sale, so TestFlight can't install its builds; everyday builds go to a separate dev app, `com.camerac64.dev`, whose bundle ID and name the TestFlight workflow sets at archive time.
   - The app version is `MARKETING_VERSION` in `project.yml`.
