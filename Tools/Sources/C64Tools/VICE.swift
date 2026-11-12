@@ -6,13 +6,16 @@ import Foundation
 /// copied or shipped.
 public struct VICE: Sendable {
     public enum Error: Swift.Error, CustomStringConvertible {
-        case noScreenshot(log: String)
+        /// How VICE ended, such as "exited with status 1", and the ends of its
+        /// log and of its error output.
+        case noScreenshot(ending: String, log: String, errors: String)
         case unknownColor(x: Int, y: Int, rgb: [UInt8])
         case badScreenshot(String)
 
         public var description: String {
             switch self {
-            case .noScreenshot(let log): "VICE saved no screenshot. Its log ends with:\n\(log)"
+            case .noScreenshot(let ending, let log, let errors):
+                "VICE saved no screenshot: it \(ending). Its log ends with:\n\(log)\nIts error output ends with:\n\(errors)"
             case .unknownColor(let x, let y, let rgb): "Pixel (\(x), \(y)) has a colour outside the palette: \(rgb)"
             case .badScreenshot(let reason): "VICE's screenshot could not be read: \(reason)"
             }
@@ -83,6 +86,7 @@ public struct VICE: Sendable {
             .write(to: paletteFile, atomically: true, encoding: .utf8)
         let screenshot = directory.appendingPathComponent("screen.png")
         let log = directory.appendingPathComponent("vice.log")
+        let errors = directory.appendingPathComponent("errors.txt")
 
         let process = Process()
         process.executableURL = executable
@@ -103,13 +107,20 @@ public struct VICE: Sendable {
             "-autostart", file.path,
         ]
         process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        // What VICE says outside its log, such as why it stopped early.
+        FileManager.default.createFile(atPath: errors.path, contents: nil)
+        let errorOutput = try FileHandle(forWritingTo: errors)
+        defer { try? errorOutput.close() }
+        process.standardError = errorOutput
         try process.run()
         process.waitUntilExit()
 
         guard let png = FileManager.default.contents(atPath: screenshot.path) else {
-            let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-            throw Error.noScreenshot(log: text.split(separator: "\n").suffix(20).joined(separator: "\n"))
+            let ending =
+                process.terminationReason == .uncaughtSignal
+                ? "was stopped by signal \(process.terminationStatus)"
+                : "exited with status \(process.terminationStatus)"
+            throw Error.noScreenshot(ending: ending, log: Self.lastLines(of: log), errors: Self.lastLines(of: errors))
         }
         let decoded: (width: Int, height: Int, rgb: [UInt8])
         do {
@@ -130,5 +141,11 @@ public struct VICE: Sendable {
             pixels[pixel] = index
         }
         return IndexedImage(width: decoded.width, height: decoded.height, pixels: pixels)
+    }
+
+    /// A text file's last 20 lines, or nothing if there is no such file.
+    private static func lastLines(of file: URL) -> String {
+        guard let data = FileManager.default.contents(atPath: file.path) else { return "" }
+        return String(decoding: data, as: UTF8.self).split(separator: "\n").suffix(20).joined(separator: "\n")
     }
 }
