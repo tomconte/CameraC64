@@ -15,21 +15,17 @@ struct TopBar: View {
         ZStack {
             HStack(spacing: 0) {
                 if model.stage == .live {
-                    iconButton(
-                        model.flashOn ? "bolt.fill" : "bolt.slash.fill",
-                        label: model.flashOn ? "Flash on" : "Flash off",
-                        color: model.flashOn ? Look.ledOn : Look.bezelInkDim,
+                    CaseSwitch(
+                        title: "FLASH", isOn: model.flashOn, accessibilityName: model.flashSwitchLabel,
                         action: onFlash)
                 }
-                iconButton(
-                    "tv",
-                    label: model.crtSwitchLabel,
-                    color: model.crtShown ? Look.ledOn : Look.bezelInkDim,
-                    action: onCRT)
                 Spacer()
-                iconButton("gearshape.fill", label: "Settings", color: Look.bezelInk, action: onSettings)
+                CaseSwitch(title: "CRT", isOn: model.crtShown, accessibilityName: model.crtSwitchLabel, action: onCRT)
+                SettingsKey(action: onSettings)
+                    .padding(.leading, 1)
             }
-            .padding(.horizontal, 8)
+            .padding(.leading, 12)
+            .padding(.trailing, 1)
             // As the 2013 app's title bar did, the badge switches the TV off
             // and on.
             Button(action: onPower) {
@@ -43,22 +39,12 @@ struct TopBar: View {
         }
         .frame(height: ScreenMetrics.topBarHeight)
     }
-
-    private func iconButton(
-        _ symbol: String, label: String, color: Color, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(Look.iconFont)
-                .foregroundStyle(color)
-                .frame(width: 44, height: 44)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
 }
 
 extension CameraModel {
+    /// What VoiceOver reads for the flash switch.
+    var flashSwitchLabel: String { flashOn ? "Flash on" : "Flash off" }
+
     /// What VoiceOver reads for the CRT switch.
     var crtSwitchLabel: String {
         guard monitor.hasCRT else { return "CRT effect, not on Sharp" }
@@ -74,8 +60,8 @@ extension View {
     }
 }
 
-/// The mode dial: the graphics modes by name, the selected one lit. A swipe on
-/// the TV moves along it too.
+/// The mode dial: the graphics modes by name, each with its lamp, the selected
+/// one lit. A swipe on the TV moves along it too.
 struct ModeDial: View {
     var selection: PictureMode
     var onSelect: (PictureMode) -> Void
@@ -89,13 +75,11 @@ struct ModeDial: View {
                 } label: {
                     VStack(spacing: 6) {
                         Text(mode.name)
-                        Circle()
-                            .fill(isSelected ? Look.ledOn : Color.clear)
-                            .frame(width: 6, height: 6)
+                            .font(Look.dialFont)
+                            .tracking(0.8)
+                            .engraved(isSelected ? Look.labelSelected : Look.label)
+                        LED(isOn: isSelected, size: 5)
                     }
-                    .font(Look.dialFont)
-                    .tracking(0.8)
-                    .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
                     .fixedSize()
                 }
                 .buttonStyle(.plain)
@@ -142,11 +126,13 @@ struct MonitorBank: View {
             Text(monitor.name)
         }
         .buttonStyle(MonitorKeyStyle(isSelected: monitor == selection))
+        .accessibilityLabel(monitor.name)
         .accessibilityAddTraits(monitor == selection ? .isSelected : [])
     }
 }
 
-/// A monitor key: a square key, its lamp, and the monitor's name printed beside it.
+/// A monitor key: a square key, down for the monitor chosen, its lamp, and the
+/// monitor's name engraved beside it.
 struct MonitorKeyStyle: ButtonStyle {
     var isSelected: Bool
     /// The key's side.
@@ -157,13 +143,12 @@ struct MonitorKeyStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: spacing) {
-            KeyFace(isPressed: configuration.isPressed, cornerRadius: 5)
-                .frame(width: keySize, height: keySize)
+            SkinImage(element: Skin.monitorKey, state: isSelected || configuration.isPressed, width: keySize)
             LED(isOn: isSelected)
             configuration.label
                 .font(Look.caseLabelFont)
                 .tracking(0.8)
-                .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
+                .engraved(isSelected ? Look.labelSelected : Look.label)
                 .fixedSize()
             Spacer(minLength: 0)
         }
@@ -197,7 +182,8 @@ struct ShutterRow: View {
                     Text(stage == .live ? "CAPTURE" : "BACK TO CAMERA")
                         .font(Look.caseLabelFont)
                         .tracking(1.6)
-                        .foregroundStyle(Look.label)
+                        .engraved(Look.label)
+                        .ventClearing(cornerRadius: 7)
                 }
             }
             Spacer()
@@ -222,24 +208,11 @@ struct CaptureKey: View {
 
     var body: some View {
         Button(action: action) {
-            label
+            EmptyView()
         }
         .buttonStyle(CaptureKeyStyle(width: width))
         .accessibilityLabel(stage == .live ? "Capture" : "Back to the camera")
-    }
-
-    @ViewBuilder private var label: some View {
-        if stage == .review {
-            HStack(spacing: 8) {
-                Image(systemName: "camera.fill")
-                Text("LIVE")
-                    .tracking(1.5)
-            }
-            .font(.system(size: 17, weight: .heavy).width(.condensed))
-        } else {
-            Image(systemName: "camera.fill")
-                .font(.system(size: 26, weight: .medium))
-        }
+        .ventClearing(cornerRadius: .infinity)
     }
 }
 
@@ -256,26 +229,26 @@ struct LastPictureButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(lastShot == nil ? "No pictures yet" : "Last picture")
+        .ventClearing(cornerRadius: 8)
     }
 
-    @ViewBuilder private var picture: some View {
-        if lastShot != nil, let thumbnail {
-            Image(decorative: thumbnail, scale: 1)
-                .resizable()
-                .interpolation(.none)
-                .scaledToFill()
-                .frame(width: 52, height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Look.key, lineWidth: 2)
+    /// Its frame, with the picture in its window, or the window dark until
+    /// there is one.
+    private var picture: some View {
+        SkinImage(element: Skin.lastPictureFrame, width: Skin.lastPictureFrame.face.width)
+            .overlay(alignment: .topLeading) {
+                if lastShot != nil, let thumbnail {
+                    let window = Skin.lastPictureWindow
+                    Image(decorative: thumbnail, scale: 1)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFill()
+                        .frame(width: window.width, height: window.height)
+                        .clipShape(RoundedRectangle(cornerRadius: Skin.lastPictureWindowRadius))
+                        .offset(x: window.minX, y: window.minY)
                 }
-                .frame(width: 56, height: 56)
-        } else {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Look.bezel.opacity(0.85))
-                .frame(width: 56, height: 56)
-        }
+            }
+            .contentShape(Rectangle())
     }
 }
 
@@ -285,11 +258,11 @@ struct FlipKey: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "arrow.triangle.2.circlepath.camera")
-                .font(.system(size: 20, weight: .semibold))
+            EmptyView()
         }
-        .buttonStyle(KeyButtonStyle(width: 56, height: 56, cornerRadius: 12))
+        .buttonStyle(SkinKeyStyle(element: Skin.flipKey, width: Skin.flipKey.face.width))
         .accessibilityLabel("Switch camera")
+        .ventClearing(cornerRadius: 12)
     }
 }
 
@@ -314,7 +287,7 @@ struct ModeStrip: View {
                             Text(mode.name)
                                 .font(Look.smallFont)
                                 .tracking(0.8)
-                                .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
+                                .engraved(isSelected ? Look.labelSelected : Look.label)
                         }
                     }
                     .buttonStyle(.plain)
@@ -389,15 +362,6 @@ enum ReviewAction: Identifiable {
         case .delete: "Delete"
         }
     }
-
-    var symbol: String {
-        switch self {
-        case .share: "square.and.arrow.up"
-        case .save: "square.and.arrow.down"
-        case .send: "antenna.radiowaves.left.and.right"
-        case .delete: "trash"
-        }
-    }
 }
 
 /// The review's actions, with the phone upright. In landscape, they are in
@@ -426,7 +390,7 @@ struct ActionRow: View {
                         Text(action.title)
                             .font(.system(size: 9.5, weight: .bold).width(.condensed))
                             .tracking(0.5)
-                            .foregroundStyle(Look.label)
+                            .engraved(Look.label)
                             .lineLimit(1)
                             .fixedSize()
                     }
@@ -461,34 +425,32 @@ struct ActionKey: View {
                     }
                 }
             } label: {
-                icon
+                EmptyView()
             }
             .menuStyle(.button)
-            .buttonStyle(KeyButtonStyle(width: width, height: 42))
+            .buttonStyle(key)
             .disabled(files.isEmpty)
             .accessibilityLabel(action.accessibilityName)
         case .send where sending:
             Button {
             } label: {
                 ProgressView()
-                    .tint(Look.ink)
+                    .tint(Look.pillInk)
             }
-            .buttonStyle(KeyButtonStyle(width: width, height: 42))
+            .buttonStyle(SkinKeyStyle(element: Skin.actionKey(action), width: width, held: true))
             .disabled(true)
             .accessibilityLabel("Sending to C64")
         case .share, .save, .send, .delete:
             Button {
                 onAction(action)
             } label: {
-                icon
+                EmptyView()
             }
-            .buttonStyle(KeyButtonStyle(width: width, height: 42))
+            .buttonStyle(key)
             .accessibilityLabel(action.accessibilityName)
         }
     }
 
-    private var icon: some View {
-        Image(systemName: action.symbol)
-            .font(.system(size: 18, weight: .semibold))
-    }
+    /// The action's key, with its icon and colour, as the skin draws it.
+    private var key: SkinKeyStyle { SkinKeyStyle(element: Skin.actionKey(action), width: width) }
 }

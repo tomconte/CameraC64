@@ -16,9 +16,10 @@ extension View {
     }
 }
 
-/// The column on the left of the TV in landscape: the badge, then flash, the
-/// CRT switch and settings, which are in the top bar with the phone upright,
-/// then the mode dial and the monitor keys, or in a review, the mode strip.
+/// The column on the left of the TV in landscape: the badge, then the flash
+/// and CRT switches and settings, which are in the top bar with the phone
+/// upright, then the mode dial and the monitor keys, or in a review, the mode
+/// strip.
 struct ControlsColumn: View {
     var model: CameraModel
     /// Each mode's picture of the display window, for the mode strip.
@@ -36,30 +37,43 @@ struct ControlsColumn: View {
             // As in the top bar, the badge switches the TV off and on.
             Button(action: onPower) {
                 CameraBadge(compact: true)
+                    .ventClearing(cornerRadius: 8)
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .powerSwitchAccessibility(tvOn: model.tvOn)
-            HStack(spacing: 6) {
-                if model.stage == .live {
-                    SwitchKey(
-                        symbol: model.flashOn ? "bolt.fill" : "bolt.slash.fill", isOn: model.flashOn,
-                        label: model.flashOn ? "Flash on" : "Flash off", action: onFlash)
+            HStack(spacing: 8) {
+                VStack(alignment: .trailing, spacing: 4) {
+                    if model.stage == .live {
+                        CaseSwitch(
+                            title: "FLASH", isOn: model.flashOn, accessibilityName: model.flashSwitchLabel,
+                            height: Self.switchHeight, action: onFlash)
+                    }
+                    CaseSwitch(
+                        title: "CRT", isOn: model.crtShown, accessibilityName: model.crtSwitchLabel,
+                        height: Self.switchHeight, action: onCRT)
                 }
-                SwitchKey(symbol: "tv", isOn: model.crtShown, label: model.crtSwitchLabel, action: onCRT)
-                SwitchKey(symbol: "gearshape.fill", label: "Settings", action: onSettings)
+                SettingsKey(touch: 30, action: onSettings)
             }
+            .ventClearing(cornerRadius: 10)
             if model.stage == .live {
                 CompactModeDial(selection: model.mode, onSelect: onSelectMode)
+                    .ventClearing(cornerRadius: 8)
                 CompactMonitorBank(selection: model.monitor, onSelect: onSelectMonitor)
+                    .ventClearing(cornerRadius: 6)
             } else {
                 CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, onSelect: onSelectReviewMode)
+                    .ventClearing(cornerRadius: 6)
             }
         }
         .padding(.vertical, 6)
         .frame(maxHeight: .infinity, alignment: .top)
     }
+
+    /// The height each switch takes a touch in: less than the top bar's, so
+    /// that the column fits beside the TV.
+    private static let switchHeight: CGFloat = 30
 }
 
 /// The column on the right of the TV in landscape: the big key in the
@@ -87,6 +101,7 @@ struct ShutterColumn<Actions: View>: View {
                     FlipKey(action: onFlip)
                 } else {
                     actions
+                        .ventClearing(cornerRadius: 18)
                 }
             }
             .frame(height: Self.slotHeight, alignment: .top)
@@ -100,30 +115,8 @@ struct ShutterColumn<Actions: View>: View {
     }
 }
 
-/// A small key on the case for one of the top bar's switches, in landscape,
-/// with a lamp that shows whether it is on.
-struct SwitchKey: View {
-    var symbol: String
-    /// Whether the lamp is lit, or nil for a key without a lamp.
-    var isOn: Bool?
-    var label: String
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .semibold))
-                LED(isOn: isOn ?? false, size: 5)
-                    .opacity(isOn == nil ? 0 : 1)
-            }
-        }
-        .buttonStyle(KeyButtonStyle(width: 34, height: 42, cornerRadius: 8))
-        .accessibilityLabel(label)
-    }
-}
-
-/// The mode dial in landscape: the modes in rows of two, the selected one lit.
+/// The mode dial in landscape: the modes in rows of two, each with its lamp,
+/// the selected one lit.
 /// A swipe on the TV moves along it too.
 struct CompactModeDial: View {
     var selection: PictureMode
@@ -147,13 +140,11 @@ struct CompactModeDial: View {
             onSelect(mode)
         } label: {
             HStack(spacing: 4) {
-                Circle()
-                    .fill(isSelected ? Look.ledOn : Color.clear)
-                    .frame(width: 6, height: 6)
+                LED(isOn: isSelected, size: 6)
                 Text(mode.shortName)
+                    .font(Look.caseLabelFont)
+                    .engraved(isSelected ? Look.labelSelected : Look.label)
             }
-            .font(Look.caseLabelFont)
-            .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
             .fixedSize()
             .frame(width: 56, height: 24, alignment: .leading)
             .contentShape(Rectangle())
@@ -165,7 +156,8 @@ struct CompactModeDial: View {
 }
 
 /// The monitor keys in landscape: three rows of two, colour monitors on the
-/// left as on the camera's bank, with the lamp and name on each key.
+/// left as on the camera's bank, with the lamp and name on each key, and the
+/// monitor chosen down.
 struct CompactMonitorBank: View {
     static let keySize = CGSize(width: 54, height: 44)
 
@@ -196,7 +188,7 @@ struct CompactMonitorBank: View {
         } label: {
             Self.label(monitor, isSelected: isSelected)
         }
-        .buttonStyle(KeyButtonStyle(width: Self.keySize.width, height: Self.keySize.height, cornerRadius: 6))
+        .buttonStyle(SkinKeyStyle(element: Skin.wideMonitorKey, width: Self.keySize.width, held: isSelected))
         .accessibilityLabel(monitor.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -242,7 +234,7 @@ struct CompactModeStrip: View {
                     .frame(width: 54, height: 38)
                 Text(mode.shortName)
                     .font(Look.smallFont)
-                    .foregroundStyle(isSelected ? Look.labelSelected : Look.label)
+                    .engraved(isSelected ? Look.labelSelected : Look.label)
             }
         }
         .buttonStyle(.plain)

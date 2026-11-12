@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by design/export_skin.py from design/svg/monitor-key-wide-up.svg: edit that file instead. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="62" height="54" viewBox="0 0 62 54">
+  <defs>
+    <linearGradient id="key-edge-up" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A08D6D" />
+      <stop offset="1" stop-color="#7E6A4B" />
+    </linearGradient>
+    <linearGradient id="key-face-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8BBA2" />
+      <stop offset="0.3" stop-color="#D3C8B4" />
+      <stop offset="1" stop-color="#DFD7C8" />
+    </linearGradient>
+    <linearGradient id="key-rim-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15" />
+    </linearGradient>
+    <linearGradient id="key-edge-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#85704D" />
+      <stop offset="1" stop-color="#9E8B67" />
+    </linearGradient>
+    <linearGradient id="key-face-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BBA98B" />
+      <stop offset="0.35" stop-color="#CDBFA7" />
+      <stop offset="1" stop-color="#DBD0BD" />
+    </linearGradient>
+    <linearGradient id="key-shade-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B4528" stop-opacity="0.55" />
+      <stop offset="0.3" stop-color="#5B4528" stop-opacity="0" />
+      <stop offset="1" stop-color="#5B4528" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="key">
+    <g id="key-body">
+      <g id="key-body-shadow">
+        <rect x="3.4" y="3.92" width="56.4" height="47" rx="7.2" fill="#3A2A18" fill-opacity="0.12" />
+        <rect x="3.2" y="3.84" width="56.8" height="47.4" rx="7.4" fill="#3A2A18" fill-opacity="0.12" />
+        <rect x="3" y="3.76" width="57.2" height="47.8" rx="7.6" fill="#3A2A18" fill-opacity="0.12" />
+      </g>
+      <g id="key-body-edge">
+        <rect x="3" y="3" width="56" height="46.6" rx="7" fill="url(#key-edge-up)" />
+      </g>
+      <g id="key-body-face">
+        <rect x="4" y="4" width="54" height="44" rx="6" fill="url(#key-face-up)" />
+      </g>
+      <g id="key-body-rim">
+        <rect x="4.4" y="4.4" width="53.2" height="43.2" rx="5.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8" />
+      </g>
+    </g>
+  </g>
+</svg>
