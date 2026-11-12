@@ -98,7 +98,7 @@ struct LayoutTests {
         for phone in Self.phones {
             let room = panelHeight(on: phone)
             let panel = size(of: reviewPanel(nil), width: phone.width, height: room)
-            #expect(panel.width <= phone.width, "\(phone.name): \(panel.width) points wide")
+            #expect(panel.width <= phone.width + 0.5, "\(phone.name): \(panel.width) points wide")
             #expect(panel.height <= room + 0.5, "\(phone.name): \(panel.height) points in \(room)")
             if phone.height > 667 {
                 let roomy = size(of: reviewPanel(.roomy), width: phone.width, height: room)

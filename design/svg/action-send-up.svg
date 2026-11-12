@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The review's Envoyer au C64 key, up, 52 by 42 points. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="60" height="52" viewBox="0 0 60 52">
+  <defs>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F5B550"/>
+      <stop offset="1" stop-color="#CC7A1C"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FADEB0" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#F9D396" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#F9D396" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Boîtier (référence, à masquer)">
+    <rect x="0" y="0" width="60" height="52" rx="0" fill="#D3C7AF"/>
+  </g>
+  <g id="key" inkscape:groupmode="layer" inkscape:label="Touche">
+    <g id="drop-shadow" inkscape:label="Ombre portée">
+      <rect x="4.1" y="5.225" width="53.4" height="44.5" rx="18.25" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="3.8" y="5.15" width="54" height="45" rx="18.5" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="3.5" y="5.075" width="54.6" height="45.5" rx="18.75" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="3.2" y="5" width="55.2" height="46" rx="19" fill="#3A2A18" fill-opacity="0.12"/>
+    </g>
+    <g id="edge" inkscape:label="Bord">
+      <rect x="4.8" y="6" width="52" height="42" rx="18" fill="#4A2606"/>
+    </g>
+    <g id="face" inkscape:label="Face">
+      <rect x="4" y="4" width="52" height="42" rx="18" fill="url(#face)"/>
+    </g>
+    <g id="outline" inkscape:label="Contour">
+      <rect x="4.25" y="4.25" width="51.5" height="41.5" rx="17.75" fill="none" stroke="#663D0E" stroke-opacity="0.8" stroke-width="0.5"/>
+    </g>
+    <g id="rim" inkscape:label="Reflet">
+      <rect x="5" y="5" width="50" height="40" rx="17" fill="none" stroke="url(#rim)" stroke-width="0.7"/>
+    </g>
+  </g>
+  <g id="icon" inkscape:groupmode="layer" inkscape:label="Icône gravée" transform="translate(30 24.5) scale(1.15)">
+    <g id="icon-light" inkscape:label="Lumière sous la gravure">
+      <path d="M0 -0.5 V7 M0 -3 h0.01 M-2.69 -5.69 A3.8 3.8 0 0 0 -2.69 -0.31 M2.69 -5.69 A3.8 3.8 0 0 1 2.69 -0.31 M-5.36 -7.5 A7 7 0 0 0 -5.36 1.5 M5.36 -7.5 A7 7 0 0 1 5.36 1.5" stroke="#F8CB84" stroke-width="2.3" transform="translate(0 0.6)" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-shadow" inkscape:label="Ombre de la gravure">
+      <path d="M0 -0.5 V7 M0 -3 h0.01 M-2.69 -5.69 A3.8 3.8 0 0 0 -2.69 -0.31 M2.69 -5.69 A3.8 3.8 0 0 1 2.69 -0.31 M-5.36 -7.5 A7 7 0 0 0 -5.36 1.5 M5.36 -7.5 A7 7 0 0 1 5.36 1.5" stroke="#654418" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-groove" inkscape:label="Gravure">
+      <path d="M0 -0.5 V7 M0 -3 h0.01 M-2.69 -5.69 A3.8 3.8 0 0 0 -2.69 -0.31 M2.69 -5.69 A3.8 3.8 0 0 1 2.69 -0.31 M-5.36 -7.5 A7 7 0 0 0 -5.36 1.5 M5.36 -7.5 A7 7 0 0 1 5.36 1.5" stroke="#A87228" stroke-width="1.5" transform="translate(0 0.4)" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

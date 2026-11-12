@@ -91,7 +91,14 @@ struct CameraScreen: View {
                     }
                 }
                 .background {
-                    (turned ? Look.caseColor : Look.bezel).ignoresSafeArea(edges: .top)
+                    Group {
+                        if turned {
+                            Look.caseColor
+                        } else {
+                            TitleBarBackground()
+                        }
+                    }
+                    .ignoresSafeArea(edges: .top)
                 }
                 tv(showsZoom: turned)
                     .frame(width: tvSize.width, height: tvSize.height)
@@ -115,11 +122,20 @@ struct CameraScreen: View {
                         landscapeColumn(shutterFirst ? .controls : .shutter, size: column, rotation: rotation)
                     } else {
                         panel
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .vent()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background {
-                    Look.caseColor.ignoresSafeArea(edges: .bottom)
+                    Group {
+                        if turned {
+                            Look.caseColor
+                        } else {
+                            CaseBackground()
+                        }
+                    }
+                    .ignoresSafeArea(edges: .bottom)
                 }
                 .overlay {
                     // It covers the controls below the TV, with the phone upright.
@@ -383,6 +399,7 @@ struct CameraScreen: View {
             ZoomPills(buttons: zoomButtons) { zoom in whenOn { selectZoom(zoom) } }
             ModeDial(selection: model.mode) { mode in whenOn { model.select(mode) } }
             MonitorBank(selection: model.monitor) { monitor in whenOn { model.select(monitor) } }
+                .ventClearing(cornerRadius: 8, ceiling: true)
                 .padding(.top, 6)
             Spacer(minLength: 8)
             shutterRow(showsCaption: true)
@@ -417,6 +434,8 @@ struct CameraScreen: View {
                 onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
                 onSelectReviewMode: { mode in whenOn { model.reviewMode = mode } }
             )
+            .frame(width: size.width, height: size.height)
+            .vent()
             .turned(rotation, size: size)
         case .shutter:
             ShutterColumn(
@@ -431,6 +450,8 @@ struct CameraScreen: View {
                     ) { action in whenOn { perform(action) } }
                 }
             )
+            .frame(width: size.width, height: size.height)
+            .vent()
             .turned(rotation, size: size)
         }
     }

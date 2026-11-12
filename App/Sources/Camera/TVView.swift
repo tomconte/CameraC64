@@ -416,10 +416,8 @@ struct ZoomPills: View {
                     Text(buttons.label(preset))
                         .font(.system(size: 12, weight: isLit ? .heavy : .semibold))
                         .foregroundStyle(isLit ? Look.ledOn : Look.pillInk)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(Look.pill))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SkinKeyStyle(element: Skin.zoomButton, width: Skin.zoomButton.face.width))
                 .accessibilityLabel("Zoom \(ZoomButtons.name(preset))")
                 .accessibilityAddTraits(isLit ? .isSelected : [])
             }

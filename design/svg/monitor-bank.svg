@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The monitor bank, as on an iPhone 17, with the TV chosen. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="402" height="166" viewBox="0 0 402 166">
+  <defs>
+    <linearGradient id="case-bank" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D6CAB3"/>
+      <stop offset="1" stop-color="#C9BEA6"/>
+    </linearGradient>
+    <linearGradient id="panel-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6E5A3E" stop-opacity="0.45"/>
+      <stop offset="0.25" stop-color="#6E5A3E" stop-opacity="0"/>
+      <stop offset="1" stop-color="#6E5A3E" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="key-edge-up" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A08D6D"/>
+      <stop offset="1" stop-color="#7E6A4B"/>
+    </linearGradient>
+    <linearGradient id="key-face-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8BBA2"/>
+      <stop offset="0.3" stop-color="#D3C8B4"/>
+      <stop offset="1" stop-color="#DFD7C8"/>
+    </linearGradient>
+    <linearGradient id="key-rim-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="key-edge-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#85704D"/>
+      <stop offset="1" stop-color="#9E8B67"/>
+    </linearGradient>
+    <linearGradient id="key-face-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BBA98B"/>
+      <stop offset="0.35" stop-color="#CDBFA7"/>
+      <stop offset="1" stop-color="#DBD0BD"/>
+    </linearGradient>
+    <linearGradient id="key-shade-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B4528" stop-opacity="0.55"/>
+      <stop offset="0.3" stop-color="#5B4528" stop-opacity="0"/>
+      <stop offset="1" stop-color="#5B4528" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="led-dome-off" cx="0.5" cy="0.72" r="0.65">
+      <stop offset="0" stop-color="#B86400"/>
+      <stop offset="0.55" stop-color="#7E4400"/>
+      <stop offset="1" stop-color="#4A2800"/>
+    </radialGradient>
+    <radialGradient id="led-dome-on" cx="0.42" cy="0.42" r="0.7">
+      <stop offset="0" stop-color="#FFFFA8"/>
+      <stop offset="0.3" stop-color="#FFF000"/>
+      <stop offset="0.65" stop-color="#FFB000"/>
+      <stop offset="1" stop-color="#E57A00"/>
+    </radialGradient>
+    <radialGradient id="led-halo-on" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFC21A" stop-opacity="0.6"/>
+      <stop offset="0.5" stop-color="#FFB000" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#FFA000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g id="case" inkscape:groupmode="layer" inkscape:label="Boîtier">
+    <rect x="0" y="0" width="402" height="166" rx="0" fill="url(#case-bank)"/>
+  </g>
+  <g id="panel" inkscape:groupmode="layer" inkscape:label="Panneau">
+    <g id="panel-lip" inkscape:label="Lèvre">
+      <rect x="24.6" y="18.8" width="354" height="134" rx="8" fill="#EAE2D3" fill-opacity="0.9"/>
+    </g>
+    <g id="panel-recess" inkscape:label="Creux">
+      <rect x="24" y="18" width="354" height="134" rx="8" fill="#CBBFA6"/>
+    </g>
+    <g id="panel-shade" inkscape:label="Ombre">
+      <rect x="24.8" y="18.8" width="352.4" height="132.4" rx="7.2" fill="none" stroke="url(#panel-shade)" stroke-width="1.6"/>
+    </g>
+  </g>
+  <g id="keys" inkscape:groupmode="layer" inkscape:label="Touches">
+    <g id="key-tv" inkscape:label="Touche enfoncée">
+      <g id="key-tv-edge" inkscape:label="Bord">
+        <rect x="37" y="33" width="32" height="32.2" rx="5" fill="url(#key-edge-down)"/>
+      </g>
+      <g id="key-tv-face" inkscape:label="Face">
+        <rect x="38" y="34.4" width="30" height="30" rx="4" fill="url(#key-face-down)"/>
+      </g>
+      <g id="key-tv-shade" inkscape:label="Ombre sur la face">
+        <rect x="38.5" y="34.9" width="29" height="29" rx="3.5" fill="none" stroke="url(#key-shade-down)" stroke-width="1.2"/>
+      </g>
+    </g>
+    <g id="key-bw" inkscape:label="Touche">
+      <g id="key-bw-shadow" inkscape:label="Ombre portée">
+        <rect x="206.4" y="33.92" width="32.4" height="33" rx="5.2" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206.2" y="33.84" width="32.8" height="33.4" rx="5.4" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206" y="33.76" width="33.2" height="33.8" rx="5.6" fill="#3A2A18" fill-opacity="0.12"/>
+      </g>
+      <g id="key-bw-edge" inkscape:label="Bord">
+        <rect x="206" y="33" width="32" height="32.6" rx="5" fill="url(#key-edge-up)"/>
+      </g>
+      <g id="key-bw-face" inkscape:label="Face">
+        <rect x="207" y="34" width="30" height="30" rx="4" fill="url(#key-face-up)"/>
+      </g>
+      <g id="key-bw-rim" inkscape:label="Reflet">
+        <rect x="207.4" y="34.4" width="29.2" height="29.2" rx="3.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8"/>
+      </g>
+    </g>
+    <g id="key-commodore" inkscape:label="Touche">
+      <g id="key-commodore-shadow" inkscape:label="Ombre portée">
+        <rect x="37.4" y="71.92" width="32.4" height="33" rx="5.2" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="37.2" y="71.84" width="32.8" height="33.4" rx="5.4" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="37" y="71.76" width="33.2" height="33.8" rx="5.6" fill="#3A2A18" fill-opacity="0.12"/>
+      </g>
+      <g id="key-commodore-edge" inkscape:label="Bord">
+        <rect x="37" y="71" width="32" height="32.6" rx="5" fill="url(#key-edge-up)"/>
+      </g>
+      <g id="key-commodore-face" inkscape:label="Face">
+        <rect x="38" y="72" width="30" height="30" rx="4" fill="url(#key-face-up)"/>
+      </g>
+      <g id="key-commodore-rim" inkscape:label="Reflet">
+        <rect x="38.4" y="72.4" width="29.2" height="29.2" rx="3.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8"/>
+      </g>
+    </g>
+    <g id="key-amber" inkscape:label="Touche">
+      <g id="key-amber-shadow" inkscape:label="Ombre portée">
+        <rect x="206.4" y="71.92" width="32.4" height="33" rx="5.2" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206.2" y="71.84" width="32.8" height="33.4" rx="5.4" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206" y="71.76" width="33.2" height="33.8" rx="5.6" fill="#3A2A18" fill-opacity="0.12"/>
+      </g>
+      <g id="key-amber-edge" inkscape:label="Bord">
+        <rect x="206" y="71" width="32" height="32.6" rx="5" fill="url(#key-edge-up)"/>
+      </g>
+      <g id="key-amber-face" inkscape:label="Face">
+        <rect x="207" y="72" width="30" height="30" rx="4" fill="url(#key-face-up)"/>
+      </g>
+      <g id="key-amber-rim" inkscape:label="Reflet">
+        <rect x="207.4" y="72.4" width="29.2" height="29.2" rx="3.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8"/>
+      </g>
+    </g>
+    <g id="key-sharp" inkscape:label="Touche">
+      <g id="key-sharp-shadow" inkscape:label="Ombre portée">
+        <rect x="37.4" y="109.92" width="32.4" height="33" rx="5.2" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="37.2" y="109.84" width="32.8" height="33.4" rx="5.4" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="37" y="109.76" width="33.2" height="33.8" rx="5.6" fill="#3A2A18" fill-opacity="0.12"/>
+      </g>
+      <g id="key-sharp-edge" inkscape:label="Bord">
+        <rect x="37" y="109" width="32" height="32.6" rx="5" fill="url(#key-edge-up)"/>
+      </g>
+      <g id="key-sharp-face" inkscape:label="Face">
+        <rect x="38" y="110" width="30" height="30" rx="4" fill="url(#key-face-up)"/>
+      </g>
+      <g id="key-sharp-rim" inkscape:label="Reflet">
+        <rect x="38.4" y="110.4" width="29.2" height="29.2" rx="3.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8"/>
+      </g>
+    </g>
+    <g id="key-green" inkscape:label="Touche">
+      <g id="key-green-shadow" inkscape:label="Ombre portée">
+        <rect x="206.4" y="109.92" width="32.4" height="33" rx="5.2" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206.2" y="109.84" width="32.8" height="33.4" rx="5.4" fill="#3A2A18" fill-opacity="0.12"/>
+        <rect x="206" y="109.76" width="33.2" height="33.8" rx="5.6" fill="#3A2A18" fill-opacity="0.12"/>
+      </g>
+      <g id="key-green-edge" inkscape:label="Bord">
+        <rect x="206" y="109" width="32" height="32.6" rx="5" fill="url(#key-edge-up)"/>
+      </g>
+      <g id="key-green-face" inkscape:label="Face">
+        <rect x="207" y="110" width="30" height="30" rx="4" fill="url(#key-face-up)"/>
+      </g>
+      <g id="key-green-rim" inkscape:label="Reflet">
+        <rect x="207.4" y="110.4" width="29.2" height="29.2" rx="3.6" fill="none" stroke="url(#key-rim-up)" stroke-width="0.8"/>
+      </g>
+    </g>
+  </g>
+  <g id="lamps" inkscape:groupmode="layer" inkscape:label="Voyants">
+    <g id="led-tv" inkscape:label="Voyant allumé">
+      <g id="led-tv-halo" inkscape:label="Halo">
+        <circle cx="83" cy="49" r="10.5" fill="url(#led-halo-on)"/>
+      </g>
+      <g id="led-tv-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="83" cy="49.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-tv-socket" inkscape:label="Douille">
+        <circle cx="83" cy="49" r="5.7" fill="#C08A3A"/>
+      </g>
+      <g id="led-tv-dome" inkscape:label="Dôme">
+        <circle cx="83" cy="49" r="5" fill="url(#led-dome-on)"/>
+      </g>
+      <g id="led-tv-highlight" inkscape:label="Reflet">
+        <ellipse cx="81.625" cy="47.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.55"/>
+      </g>
+    </g>
+    <g id="led-bw" inkscape:label="Voyant éteint">
+      <g id="led-bw-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="252" cy="49.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-bw-socket" inkscape:label="Douille">
+        <circle cx="252" cy="49" r="5.7" fill="#3E2408"/>
+      </g>
+      <g id="led-bw-dome" inkscape:label="Dôme">
+        <circle cx="252" cy="49" r="5" fill="url(#led-dome-off)"/>
+      </g>
+      <g id="led-bw-highlight" inkscape:label="Reflet">
+        <ellipse cx="250.625" cy="47.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.28"/>
+      </g>
+    </g>
+    <g id="led-commodore" inkscape:label="Voyant éteint">
+      <g id="led-commodore-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="83" cy="87.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-commodore-socket" inkscape:label="Douille">
+        <circle cx="83" cy="87" r="5.7" fill="#3E2408"/>
+      </g>
+      <g id="led-commodore-dome" inkscape:label="Dôme">
+        <circle cx="83" cy="87" r="5" fill="url(#led-dome-off)"/>
+      </g>
+      <g id="led-commodore-highlight" inkscape:label="Reflet">
+        <ellipse cx="81.625" cy="85.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.28"/>
+      </g>
+    </g>
+    <g id="led-amber" inkscape:label="Voyant éteint">
+      <g id="led-amber-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="252" cy="87.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-amber-socket" inkscape:label="Douille">
+        <circle cx="252" cy="87" r="5.7" fill="#3E2408"/>
+      </g>
+      <g id="led-amber-dome" inkscape:label="Dôme">
+        <circle cx="252" cy="87" r="5" fill="url(#led-dome-off)"/>
+      </g>
+      <g id="led-amber-highlight" inkscape:label="Reflet">
+        <ellipse cx="250.625" cy="85.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.28"/>
+      </g>
+    </g>
+    <g id="led-sharp" inkscape:label="Voyant éteint">
+      <g id="led-sharp-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="83" cy="125.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-sharp-socket" inkscape:label="Douille">
+        <circle cx="83" cy="125" r="5.7" fill="#3E2408"/>
+      </g>
+      <g id="led-sharp-dome" inkscape:label="Dôme">
+        <circle cx="83" cy="125" r="5" fill="url(#led-dome-off)"/>
+      </g>
+      <g id="led-sharp-highlight" inkscape:label="Reflet">
+        <ellipse cx="81.625" cy="123.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.28"/>
+      </g>
+    </g>
+    <g id="led-green" inkscape:label="Voyant éteint">
+      <g id="led-green-lip" inkscape:label="Lèvre sous le voyant">
+        <circle cx="252" cy="125.6" r="5.7" fill="#EDE6D9" fill-opacity="0.8"/>
+      </g>
+      <g id="led-green-socket" inkscape:label="Douille">
+        <circle cx="252" cy="125" r="5.7" fill="#3E2408"/>
+      </g>
+      <g id="led-green-dome" inkscape:label="Dôme">
+        <circle cx="252" cy="125" r="5" fill="url(#led-dome-off)"/>
+      </g>
+      <g id="led-green-highlight" inkscape:label="Reflet">
+        <ellipse cx="250.625" cy="123.125" rx="1.875" ry="1.125" fill="#FFFFFF" fill-opacity="0.28"/>
+      </g>
+    </g>
+  </g>
+  <g id="labels" inkscape:groupmode="layer" inkscape:label="Libellés (écrits par le code dans l’appli)">
+    <text x="30" y="13.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="9" fill="#EFE8DA" fill-opacity="0.8" letter-spacing="1.4">MONITOR</text>
+    <text x="30" y="13" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="9" fill="#857558" letter-spacing="1.4">MONITOR</text>
+    <text x="98" y="53.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">TV</text>
+    <text x="98" y="53" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">TV</text>
+    <text x="267" y="53.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">B&amp;W</text>
+    <text x="267" y="53" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">B&amp;W</text>
+    <text x="98" y="91.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">MONITOR</text>
+    <text x="98" y="91" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">MONITOR</text>
+    <text x="267" y="91.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">AMBER</text>
+    <text x="267" y="91" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">AMBER</text>
+    <text x="98" y="129.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">SHARP</text>
+    <text x="98" y="129" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">SHARP</text>
+    <text x="267" y="129.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#EFE8DA" fill-opacity="0.8">GREEN</text>
+    <text x="267" y="129" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#857558">GREEN</text>
+  </g>
+</svg>

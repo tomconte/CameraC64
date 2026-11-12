@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The Camera C64 badge, redrawn from the 2013 app's title bar. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="128" height="20" viewBox="0 0 128 20">
+  <defs>
+    <linearGradient id="bar-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCF3E2"/>
+      <stop offset="0.25" stop-color="#F8EFDE"/>
+      <stop offset="0.5" stop-color="#D9CCB6"/>
+      <stop offset="0.85" stop-color="#CDC4B3"/>
+      <stop offset="0.95" stop-color="#9B9281"/>
+      <stop offset="1" stop-color="#6A6150"/>
+    </linearGradient>
+    <linearGradient id="stripe-red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF0000"/>
+      <stop offset="1" stop-color="#FF0009"/>
+    </linearGradient>
+    <linearGradient id="stripe-orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FA6603"/>
+      <stop offset="1" stop-color="#FF6700"/>
+    </linearGradient>
+    <linearGradient id="stripe-yellow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAC703"/>
+      <stop offset="1" stop-color="#FFDD00"/>
+    </linearGradient>
+    <linearGradient id="stripe-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1DB60C"/>
+      <stop offset="1" stop-color="#00D800"/>
+    </linearGradient>
+    <linearGradient id="stripe-blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1D9AD3"/>
+      <stop offset="1" stop-color="#00C8FF"/>
+    </linearGradient>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Barre de titre (référence, à masquer)">
+    <rect x="0" y="0" width="128" height="20" rx="0" fill="url(#bar-light)"/>
+  </g>
+  <g id="badge" inkscape:groupmode="layer" inkscape:label="Badge">
+    <g id="badge-lip" inkscape:label="Liseré">
+      <rect x="2.5" y="1.5" width="122" height="17" rx="8.5" fill="#E4DBCA"/>
+    </g>
+    <g id="badge-capsule" inkscape:label="Capsule">
+      <rect x="4" y="3" width="119" height="14" rx="7" fill="#6E6359"/>
+    </g>
+  </g>
+  <g id="stripes" inkscape:groupmode="layer" inkscape:label="Bandes arc-en-ciel">
+    <g id="stripe-red" inkscape:label="Red">
+      <rect x="48.5" y="5.5" width="38.5" height="1" rx="0" fill="url(#stripe-red)"/>
+    </g>
+    <g id="stripe-orange" inkscape:label="Orange">
+      <rect x="48.5" y="7.5" width="38.5" height="1" rx="0" fill="url(#stripe-orange)"/>
+    </g>
+    <g id="stripe-yellow" inkscape:label="Yellow">
+      <rect x="48.5" y="9.5" width="38.5" height="1" rx="0" fill="url(#stripe-yellow)"/>
+    </g>
+    <g id="stripe-green" inkscape:label="Green">
+      <rect x="48.5" y="11.5" width="38.5" height="1" rx="0" fill="url(#stripe-green)"/>
+    </g>
+    <g id="stripe-blue" inkscape:label="Blue">
+      <rect x="48.5" y="13.5" width="38.5" height="1" rx="0" fill="url(#stripe-blue)"/>
+    </g>
+  </g>
+  <g id="words" inkscape:groupmode="layer" inkscape:label="Lettres">
+    <g id="word-camera" inkscape:label="Camera">
+      <g id="letter-big-c" inkscape:label="C">
+        <path d="M14 6.3 H12.1 A3.6 3.85 0 0 0 8.5 10.15 A3.6 3.85 0 0 0 12.1 14 H14" stroke="#3E3022" stroke-width="2.8" fill="none" stroke-linecap="butt" stroke-linejoin="round"/>
+        <path d="M14 6.3 H12.1 A3.6 3.85 0 0 0 8.5 10.15 A3.6 3.85 0 0 0 12.1 14 H14" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="butt" stroke-linejoin="round"/>
+      </g>
+      <g id="letter-a" inkscape:label="a">
+        <path d="M16.2 8.875 A1.7 1 0 0 1 19.625 9.475 V11.225 M15.975 10.425 A1.65 0.8 0 1 0 19.275 10.425 A1.65 0.8 0 1 0 15.975 10.425" stroke="#3E3022" stroke-width="2.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16.2 8.875 A1.7 1 0 0 1 19.625 9.475 V11.225 M15.975 10.425 A1.65 0.8 0 1 0 19.275 10.425 A1.65 0.8 0 1 0 15.975 10.425" stroke="#FFFFFF" stroke-width="1.35" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="letter-m" inkscape:label="m">
+        <path d="M21.575 11.225 V9.85 A1.5 1.375 0 0 1 24.575 9.85 V11.225 M24.575 9.85 A1.5 1.375 0 0 1 27.575 9.85 V11.225" stroke="#3E3022" stroke-width="2.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21.575 11.225 V9.85 A1.5 1.375 0 0 1 24.575 9.85 V11.225 M24.575 9.85 A1.5 1.375 0 0 1 27.575 9.85 V11.225" stroke="#FFFFFF" stroke-width="1.35" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="letter-e" inkscape:label="e">
+        <path d="M29.525 9.85 H33.325 A1.9 1.375 0 1 0 32.768 10.822" stroke="#3E3022" stroke-width="2.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M29.525 9.85 H33.325 A1.9 1.375 0 1 0 32.768 10.822" stroke="#FFFFFF" stroke-width="1.35" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="letter-r" inkscape:label="r">
+        <path d="M35.275 11.225 V8.475 M35.275 9.975 A1.5 1.5 0 0 1 36.775 8.475 H37.675" stroke="#3E3022" stroke-width="2.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M35.275 11.225 V8.475 M35.275 9.975 A1.5 1.5 0 0 1 36.775 8.475 H37.675" stroke="#FFFFFF" stroke-width="1.35" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g id="letter-a2" inkscape:label="a">
+        <path d="M39.85 8.875 A1.7 1 0 0 1 43.275 9.475 V11.225 M39.625 10.425 A1.65 0.8 0 1 0 42.925 10.425 A1.65 0.8 0 1 0 39.625 10.425" stroke="#3E3022" stroke-width="2.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M39.85 8.875 A1.7 1 0 0 1 43.275 9.475 V11.225 M39.625 10.425 A1.65 0.8 0 1 0 42.925 10.425 A1.65 0.8 0 1 0 39.625 10.425" stroke="#FFFFFF" stroke-width="1.35" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+    <g id="word-c64" inkscape:label="C64">
+      <g id="letter-c" inkscape:label="C">
+        <path d="M99.5 6 H93.3 A2.8 2.8 0 0 0 90.5 8.8 V10.2 A2.8 2.8 0 0 0 93.3 13 H99.5 V11.1 H93.8 A0.9 0.9 0 0 1 92.9 10.2 V8.8 A0.9 0.9 0 0 1 93.8 7.9 H99.5 Z" fill="#3E3022" fill-rule="evenodd" stroke="#3E3022" stroke-width="0.8" stroke-linejoin="round"/>
+        <path d="M99.5 6 H93.3 A2.8 2.8 0 0 0 90.5 8.8 V10.2 A2.8 2.8 0 0 0 93.3 13 H99.5 V11.1 H93.8 A0.9 0.9 0 0 1 92.9 10.2 V8.8 A0.9 0.9 0 0 1 93.8 7.9 H99.5 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+      </g>
+      <g id="letter-6" inkscape:label="6">
+        <path d="M109.7 6 H103.5 A2.8 2.8 0 0 0 100.7 8.8 V10.2 A2.8 2.8 0 0 0 103.5 13 H107.3 A2.4 2.4 0 0 0 109.7 10.6 V9.4 A0.9 0.9 0 0 0 108.8 8.5 H103.1 V7.7 H109.7 Z M103.6 10.2 H106.8 A0.5 0.5 0 0 1 107.3 10.7 V10.8 A0.5 0.5 0 0 1 106.8 11.3 H103.6 A0.5 0.5 0 0 1 103.1 10.8 V10.7 A0.5 0.5 0 0 1 103.6 10.2 Z" fill="#3E3022" fill-rule="evenodd" stroke="#3E3022" stroke-width="0.8" stroke-linejoin="round"/>
+        <path d="M109.7 6 H103.5 A2.8 2.8 0 0 0 100.7 8.8 V10.2 A2.8 2.8 0 0 0 103.5 13 H107.3 A2.4 2.4 0 0 0 109.7 10.6 V9.4 A0.9 0.9 0 0 0 108.8 8.5 H103.1 V7.7 H109.7 Z M103.6 10.2 H106.8 A0.5 0.5 0 0 1 107.3 10.7 V10.8 A0.5 0.5 0 0 1 106.8 11.3 H103.6 A0.5 0.5 0 0 1 103.1 10.8 V10.7 A0.5 0.5 0 0 1 103.6 10.2 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+      </g>
+      <g id="letter-4" inkscape:label="4">
+        <path d="M118.5 6 V9.6 H119.5 V11.3 H118.5 V13 H116.1 V11.3 H111.5 A0.6 0.6 0 0 1 110.9 10.7 V10.4 L115.5 6 Z M114.62 9.6 H116.1 V8.19 Z" fill="#3E3022" fill-rule="evenodd" stroke="#3E3022" stroke-width="0.8" stroke-linejoin="round"/>
+        <path d="M118.5 6 V9.6 H119.5 V11.3 H118.5 V13 H116.1 V11.3 H111.5 A0.6 0.6 0 0 1 110.9 10.7 V10.4 L115.5 6 Z M114.62 9.6 H116.1 V8.19 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+      </g>
+    </g>
+  </g>
+</svg>

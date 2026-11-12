@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by design/export_skin.py from design/svg/settings-key-down.svg: edit that file instead. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="38" height="40" viewBox="0 0 38 40">
+  <defs>
+    <linearGradient id="key-edge-up" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A08D6D" />
+      <stop offset="1" stop-color="#7E6A4B" />
+    </linearGradient>
+    <linearGradient id="key-face-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8BBA2" />
+      <stop offset="0.3" stop-color="#D3C8B4" />
+      <stop offset="1" stop-color="#DFD7C8" />
+    </linearGradient>
+    <linearGradient id="key-rim-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15" />
+    </linearGradient>
+    <linearGradient id="key-edge-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#85704D" />
+      <stop offset="1" stop-color="#9E8B67" />
+    </linearGradient>
+    <linearGradient id="key-face-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BBA98B" />
+      <stop offset="0.35" stop-color="#CDBFA7" />
+      <stop offset="1" stop-color="#DBD0BD" />
+    </linearGradient>
+    <linearGradient id="key-shade-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B4528" stop-opacity="0.55" />
+      <stop offset="0.3" stop-color="#5B4528" stop-opacity="0" />
+      <stop offset="1" stop-color="#5B4528" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="key">
+    <g id="key-body">
+      <g id="key-body-edge">
+        <rect x="3" y="3" width="32" height="32.2" rx="8" fill="url(#key-edge-down)" />
+      </g>
+      <g id="key-body-face">
+        <rect x="4" y="4.4" width="30" height="30" rx="7" fill="url(#key-face-down)" />
+      </g>
+      <g id="key-body-shade">
+        <rect x="4.5" y="4.9" width="29" height="29" rx="6.5" fill="none" stroke="url(#key-shade-down)" stroke-width="1.2" />
+      </g>
+    </g>
+  </g>
+  <g id="icon" transform="translate(19 19.4) scale(0.75)">
+    <g id="icon-light">
+      <path d="M4.4 0 A4.4 4.4 0 1 1 -4.4 0 A4.4 4.4 0 1 1 4.4 0 M5.6 0 L8 0 M3.96 3.96 L5.657 5.657 M0 5.6 L0 8 M-3.96 3.96 L-5.657 5.657 M-5.6 0 L-8 0 M-3.96 -3.96 L-5.657 -5.657 M0 -5.6 L0 -8 M3.96 -3.96 L5.657 -5.657" stroke="#FBF8F2" stroke-width="2.2" transform="translate(0 0.6)" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="icon-shadow">
+      <path d="M4.4 0 A4.4 4.4 0 1 1 -4.4 0 A4.4 4.4 0 1 1 4.4 0 M5.6 0 L8 0 M3.96 3.96 L5.657 5.657 M0 5.6 L0 8 M-3.96 3.96 L-5.657 5.657 M-5.6 0 L-8 0 M-3.96 -3.96 L-5.657 -5.657 M0 -5.6 L0 -8 M3.96 -3.96 L5.657 -5.657" stroke="#857358" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="icon-groove">
+      <path d="M4.4 0 A4.4 4.4 0 1 1 -4.4 0 A4.4 4.4 0 1 1 4.4 0 M5.6 0 L8 0 M3.96 3.96 L5.657 5.657 M0 5.6 L0 8 M-3.96 3.96 L-5.657 5.657 M-5.6 0 L-8 0 M-3.96 -3.96 L-5.657 -5.657 M0 -5.6 L0 -8 M3.96 -3.96 L5.657 -5.657" stroke="#B9AB8F" stroke-width="1.4" transform="translate(0 0.4)" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </g>
+</svg>

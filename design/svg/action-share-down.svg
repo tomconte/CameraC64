@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The review's Partager key, pressed, 52 by 42 points. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="60" height="52" viewBox="0 0 60 52">
+  <defs>
+    <linearGradient id="hole-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6D675B" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#6D675B" stop-opacity="0"/>
+      <stop offset="1" stop-color="#6D675B" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="face-pressed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#245C16"/>
+      <stop offset="1" stop-color="#399223"/>
+    </linearGradient>
+    <clipPath id="face-clip">
+      <path d="M22.8 6.2 H38 A18 18 0 0 1 56 24.2 V30 A18 18 0 0 1 38 48 H22.8 A18 18 0 0 1 4.8 30 V24.2 A18 18 0 0 1 22.8 6.2 Z"/>
+    </clipPath>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Boîtier (référence, à masquer)">
+    <rect x="0" y="0" width="60" height="52" rx="0" fill="#D3C7AF"/>
+  </g>
+  <g id="key" inkscape:groupmode="layer" inkscape:label="Touche enfoncée">
+    <g id="hole-lip" inkscape:label="Lèvre sous le trou">
+      <rect x="4" y="4.8" width="52.8" height="44" rx="18" fill="#E6DCCB" fill-opacity="0.85"/>
+    </g>
+    <g id="hole" inkscape:label="Trou">
+      <rect x="4" y="4" width="52.8" height="44" rx="18" fill="#1E1208"/>
+    </g>
+    <g id="hole-rim" inkscape:label="Bord du trou">
+      <rect x="4.5" y="4.5" width="51.8" height="43" rx="17.5" fill="none" stroke="url(#hole-rim)" stroke-width="1"/>
+    </g>
+    <g id="face" inkscape:label="Face">
+      <rect x="4.8" y="6.2" width="51.2" height="41.8" rx="18" fill="url(#face-pressed)"/>
+    </g>
+    <g id="face-shade" inkscape:label="Ombre sur la face" clip-path="url(#face-clip)">
+      <path d="M0 0 H60 V52 H0 Z M23.8 7.8 H39 A18 18 0 0 1 57 25.8 V31.6 A18 18 0 0 1 39 49.6 H23.8 A18 18 0 0 1 5.8 31.6 V25.8 A18 18 0 0 1 23.8 7.8 Z" fill-rule="evenodd" fill="#1E1208" fill-opacity="0.45"/>
+      <path d="M0 0 H60 V52 H0 Z M23.3 7 H38.5 A18 18 0 0 1 56.5 25 V30.8 A18 18 0 0 1 38.5 48.8 H23.3 A18 18 0 0 1 5.3 30.8 V25 A18 18 0 0 1 23.3 7 Z" fill-rule="evenodd" fill="#1E1208" fill-opacity="0.4"/>
+    </g>
+  </g>
+  <g id="icon" inkscape:groupmode="layer" inkscape:label="Icône gravée" transform="translate(30.4 26.6) scale(1.15)">
+    <g id="icon-light" inkscape:label="Lumière sous la gravure">
+      <path d="M-2 -4 H-7 V6 H7 V2 M-3.5 2.5 C-3.5 -3 0 -4.5 5 -4.5 M2.5 -8 L6.5 -4.5 L2.5 -1" stroke="#71A467" stroke-width="2.5" transform="translate(0 0.6)" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-shadow" inkscape:label="Ombre de la gravure">
+      <path d="M-2 -4 H-7 V6 H7 V2 M-3.5 2.5 C-3.5 -3 0 -4.5 5 -4.5 M2.5 -8 L6.5 -4.5 L2.5 -1" stroke="#1B3814" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-groove" inkscape:label="Gravure">
+      <path d="M-2 -4 H-7 V6 H7 V2 M-3.5 2.5 C-3.5 -3 0 -4.5 5 -4.5 M2.5 -8 L6.5 -4.5 L2.5 -1" stroke="#2C5E20" stroke-width="1.7" transform="translate(0 0.4)" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>
