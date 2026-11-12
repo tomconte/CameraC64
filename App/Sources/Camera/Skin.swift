@@ -6,7 +6,7 @@ import SwiftUI
 /// round it for its shadow and light; `face` is where the element itself is on
 /// that canvas, in points. The words on it, and the lamps on some keys, are
 /// the app's to draw.
-nonisolated struct SkinElement: Hashable, Sendable {
+nonisolated struct SkinElement: Equatable, Sendable {
     /// How an element's images tell its states apart.
     enum States: Hashable, Sendable {
         /// One image.

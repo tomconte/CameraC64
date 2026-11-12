@@ -166,6 +166,9 @@ jobs:
           brew install xcodegen
           xcodegen generate
       - name: Test on the iOS Simulator
+        env:
+          # ScreenshotTests draws the camera screen's controls there.
+          TEST_RUNNER_SCREENSHOTS: ${{ github.workspace }}/build/Screens
         run: |
           xcodebuild test \
             -project CameraC64.xcodeproj \
@@ -183,6 +186,13 @@ jobs:
             -archivePath build/CameraC64.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
+      - name: Keep the pictures of the screens
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Screens
+          path: build/Screens
+          if-no-files-found: ignore
       - name: Keep test results
         if: failure()
         uses: actions/upload-artifact@v7

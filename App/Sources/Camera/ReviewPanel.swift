@@ -47,6 +47,7 @@ struct ReviewPanel<Actions: View, Shutter: View>: View {
             ReviewMonitorBank(selection: monitor, onSelect: onSelectMonitor)
                 .padding(.top, 6)
             actions(roomy)
+                .ventClearing(cornerRadius: 18, ceiling: true)
             if roomy {
                 Spacer(minLength: 8)
             }

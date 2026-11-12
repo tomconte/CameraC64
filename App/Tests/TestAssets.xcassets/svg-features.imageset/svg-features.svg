@@ -15,6 +15,10 @@
       <stop offset="0" stop-color="#00FF00" />
       <stop offset="1" stop-color="#000000" />
     </radialGradient>
+    <linearGradient id="downInBox" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF0000" />
+      <stop offset="1" stop-color="#0000FF" />
+    </linearGradient>
     <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#000000" stop-opacity="1" />
       <stop offset="1" stop-color="#000000" stop-opacity="0" />
@@ -30,8 +34,12 @@
   <circle cx="50" cy="10" r="10" fill="url(#dome)" />
   <!-- At (70, 10), black at half opacity, on a rounded rectangle: grey. -->
   <rect x="60" y="0" width="20" height="20" rx="4" fill="#000000" fill-opacity="0.5" />
-  <!-- At (90, 30), a stroke painted with a gradient in the drawing's units, half way down: purple. -->
-  <path d="M90 22 V38" stroke="url(#down)" stroke-width="8" fill="none" />
+  <!-- At (84, 30), the stroke round a rounded rectangle, painted with a gradient in the drawing's units, half
+       way down: purple. -->
+  <rect x="84" y="22" width="12" height="16" rx="3" stroke="url(#down)" stroke-width="4" fill="none" />
+  <!-- At (62, 30), the stroke round a rectangle, painted with a gradient in its shape's units, half way down:
+       purple. -->
+  <rect x="62" y="24" width="14" height="12" stroke="url(#downInBox)" stroke-width="4" fill="none" />
   <!-- In a disc, a frame with a hole in it, by the even-odd rule: red at (8, 40), white in the hole at
        (20, 40), and white outside the disc at (2, 40). -->
   <g clip-path="url(#disc)">
