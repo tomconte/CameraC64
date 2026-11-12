@@ -1,4 +1,6 @@
+import C64Core
 import CoreGraphics
+import SwiftUI
 import Testing
 
 @testable import CameraC64
@@ -27,6 +29,22 @@ struct VentTests {
         // Above it, they run across the case, short of its sides.
         let above = grooves.filter { $0.maxY + layout.light < key.minY - layout.margin }
         #expect(above.allSatisfy { $0.minX == layout.edge && $0.maxX == 402 - layout.edge })
+    }
+
+    /// With the phone upright, the title bar's background, which reaches up to
+    /// the top of the screen, has grooves above the top bar, in the room the
+    /// status bar would take, and none behind the bar itself.
+    @MainActor @Test func titleBarHasTheVentAboveTheTopBar() throws {
+        let height = 62 + ScreenMetrics.topBarHeight
+        let renderer = ImageRenderer(content: TitleBarBackground().frame(width: 402, height: height))
+        renderer.scale = 2
+        let drawn = try #require(renderer.cgImage.flatMap { RGBImage($0) })
+        // A groove's dark part, from 41.5 to 43.8 points down, left of the Dynamic Island.
+        let groove = drawn[120, 85]
+        #expect(Int(groove.g) < 150, "No groove above the top bar: \(groove)")
+        // The middle of the top bar.
+        let bar = drawn[120, Int(2 * (62 + ScreenMetrics.topBarHeight / 2))]
+        #expect(Int(bar.g) > 180, "A groove behind the top bar: \(bar)")
     }
 
     /// Along the top of the screen, the grooves follow its rounded corners.

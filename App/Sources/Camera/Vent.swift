@@ -127,7 +127,8 @@ struct Vent: View {
 
 /// The vent across the top of the screen with the phone upright, above the
 /// top bar, in the room the status bar would take: it stops short of the
-/// Dynamic Island, or the notch, and follows the screen's corners.
+/// Dynamic Island, or the notch, and follows the screen's corners. It fills
+/// the title bar's background, from the top of the screen down.
 struct TopVent: View {
     var layout = VentLayout()
 
@@ -135,7 +136,10 @@ struct TopVent: View {
         GeometryReader { proxy in
             let layout = layout
             let (groove, light) = (Look.ventGroove, Look.ventLight)
-            let room = proxy.safeAreaInsets.top
+            // It fills the title bar's background, which reaches up into the
+            // safe area: what is above the bar is the room the status bar
+            // would take. (Ignoring the safe area, it is told of none.)
+            let room = max(0, proxy.size.height - ScreenMetrics.topBarHeight)
             let cutout = Self.cutout(width: proxy.size.width, room: room)
             let corners = Self.screenCornerRadius
             Canvas { context, size in
