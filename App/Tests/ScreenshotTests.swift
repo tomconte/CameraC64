@@ -46,12 +46,16 @@ struct ScreenshotTests {
     }
 
     /// The screen with the phone upright, a dark TV standing in for the
-    /// picture, as `CameraScreen` lays it out.
+    /// picture, as `CameraScreen` lays it out, in the iPhone 17's safe area,
+    /// with its Dynamic Island and corners.
     private func portrait(_ stage: CameraModel.Stage) -> some View {
         let model = model(stage)
         return VStack(spacing: 0) {
             TopBar(model: model, onFlash: {}, onCRT: {}, onPower: {}, onSettings: {})
-                .background(TitleBarBackground())
+                .background {
+                    TitleBarBackground()
+                        .ignoresSafeArea(edges: .top)
+                }
             Look.bezel
                 .frame(height: Self.screen.width / TVGeometry.aspectRatio)
             Group {
@@ -63,9 +67,22 @@ struct ScreenshotTests {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .vent()
-            .background(CaseBackground())
+            .background {
+                CaseBackground()
+                    .ignoresSafeArea(edges: .bottom)
+            }
         }
-        .frame(width: Self.screen.width, height: Self.screen.height)
+        .safeAreaPadding(.top, 62)
+        .safeAreaPadding(.bottom, 34)
+        .frame(width: Self.screen.width, height: 874)
+        .overlay(alignment: .top) {
+            Capsule()
+                .fill(.black)
+                .frame(width: 126, height: 37)
+                .padding(.top, 11)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 55))
+        .background(Color.white)
     }
 
     /// The camera's controls below the TV, as `CameraScreen` lays them out.

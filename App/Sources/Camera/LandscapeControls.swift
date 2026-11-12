@@ -54,7 +54,7 @@ struct ControlsColumn: View {
                         title: "CRT", isOn: model.crtShown, accessibilityName: model.crtSwitchLabel,
                         height: Self.switchHeight, action: onCRT)
                 }
-                SettingsKey(touch: 34, action: onSettings)
+                SettingsKey(touch: 30, action: onSettings)
             }
             .ventClearing(cornerRadius: 10)
             if model.stage == .live {
