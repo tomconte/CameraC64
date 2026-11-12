@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The switch for flash and the CRT layer, on, as in the 2013 app. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="50" height="22" viewBox="0 0 50 22">
+  <defs>
+    <linearGradient id="slot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BFB096"/>
+      <stop offset="1" stop-color="#DCD1BC"/>
+    </linearGradient>
+    <linearGradient id="track" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2C6420"/>
+      <stop offset="0.35" stop-color="#49B534"/>
+      <stop offset="1" stop-color="#339F1E"/>
+    </linearGradient>
+    <linearGradient id="track-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.45"/>
+      <stop offset="0.4" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="knob" cx="0.42" cy="0.35" r="0.65">
+      <stop offset="0" stop-color="#FBF8F1"/>
+      <stop offset="0.7" stop-color="#E7DFCF"/>
+      <stop offset="1" stop-color="#C9BEA8"/>
+    </radialGradient>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Boîtier (référence, à masquer)">
+    <rect x="0" y="0" width="50" height="22" rx="0" fill="#D3C7AF"/>
+  </g>
+  <g id="slot" inkscape:groupmode="layer" inkscape:label="Fente">
+    <g id="slot-lip" inkscape:label="Lèvre">
+      <rect x="2" y="2.8" width="46" height="18" rx="9" fill="#EFE7D8"/>
+    </g>
+    <g id="slot-recess" inkscape:label="Creux">
+      <rect x="2" y="2" width="46" height="18" rx="9" fill="url(#slot)"/>
+    </g>
+  </g>
+  <g id="track" inkscape:groupmode="layer" inkscape:label="Glissière, verte, allumée">
+    <g id="track-edge" inkscape:label="Bord">
+      <rect x="5.5" y="5.5" width="39" height="11" rx="5.5" fill="#153110"/>
+    </g>
+    <g id="track-face" inkscape:label="Glissière">
+      <rect x="6" y="6" width="38" height="10" rx="5" fill="url(#track)"/>
+    </g>
+    <g id="track-shade" inkscape:label="Ombre">
+      <rect x="6" y="6" width="38" height="10" rx="5" fill="url(#track-shade)"/>
+    </g>
+  </g>
+  <g id="knob" inkscape:groupmode="layer" inkscape:label="Bouton">
+    <g id="knob-shadow" inkscape:label="Ombre portée">
+      <circle cx="38.1" cy="11.98" r="6.7" fill="#2A1C0E" fill-opacity="0.14"/>
+      <circle cx="38.1" cy="12.08" r="7.2" fill="#2A1C0E" fill-opacity="0.14"/>
+      <circle cx="38.1" cy="12.18" r="7.7" fill="#2A1C0E" fill-opacity="0.14"/>
+    </g>
+    <g id="knob-body" inkscape:label="Bouton">
+      <circle cx="37.5" cy="11" r="6.3" fill="url(#knob)"/>
+    </g>
+    <g id="knob-outline" inkscape:label="Contour">
+      <circle cx="37.5" cy="11" r="6.1" fill="none" stroke="#9C8E74" stroke-width="0.5"/>
+    </g>
+    <g id="knob-highlight" inkscape:label="Reflet">
+      <path d="M33.3 9.4 A4.6 4.6 0 0 1 40.5 7.4" fill="none" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="0.8" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

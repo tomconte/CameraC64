@@ -11,6 +11,13 @@ Vector redraws of the camera screen's elements, in the spirit of the 2013 app's 
 | `svg/led-off.svg`, `svg/led-on.svg` | A monitor's lamp, off and lit | 22 × 22, the lamp 10 across |
 | `svg/monitor-bank.svg` | The camera's monitor bank on an iPhone 17, with the TV chosen: the keys and lamps in place, for reference | 402 × 166 |
 | `svg/badge.svg` | The Camera C64 badge, from the 2013 title bar | 128 × 20, the badge 122 × 17 |
+| `svg/action-share-up.svg` and `-down`, and the same for `save`, `send` and `delete` | The review's actions, up and pressed. Share is green and Delete red, as the 2013 app's Share and Discard were; Save takes the badge's rainbow blue, and Send to C64 its orange | 60 × 52, the key 52 × 42 |
+| `svg/flip-key-up.svg`, `svg/flip-key-down.svg` | The key that turns the camera round | 64 × 66, the key 56 square |
+| `svg/small-key-flash-up.svg` and `-down`, and the same for `crt` and `settings` | The small keys beside the TV in landscape, with the lamp the app puts on flash and CRT, for reference | 42 × 52, the key 34 × 42 |
+| `svg/monitor-key-wide-up.svg`, `svg/monitor-key-wide-down.svg` | A monitor key in landscape, on which the app writes the monitor's lamp and name | 62 × 54, the key 54 × 44 |
+| `svg/toggle-on.svg`, `svg/toggle-off.svg` | The 2013 app's switch, for flash and the CRT layer | 50 × 22 |
+| `svg/zoom-button-up.svg`, `svg/zoom-button-down.svg` | A zoom button on the TV's border, on which the app writes its value | 40 × 40, the button 34 across |
+| `svg/last-picture-frame.svg` | The frame round the last picture, whose window the app fills | 64 × 64, the frame 56 square |
 
 ## How they are drawn
 
@@ -26,5 +33,6 @@ Vector redraws of the camera screen's elements, in the spirit of the 2013 app's 
 - `python3 design/make_svgs.py` writes every file, and `python3 design/make_svgs.py monitor-bank` one of them. Every size and colour is in the script.
 - Once a file has been edited by hand, it is the one to keep: regenerate only the files whose drawing changed in the script.
 - A shadow inside a hollow is drawn from shifted copies of its outline, so some outlines are repeated. The camera on the capture key is drawn five times: its hollow, the light below it, the two bands of shadow inside it, and the clip that holds them. Change its shape in the script, or in every copy.
+- The other keys' icons are strokes, drawn three times: a light copy shifted down, below the groove; a dark copy, the groove's shadow; and a narrower copy shifted down, in the groove's colour. To change an icon, change its three copies, or its entry in `ICONS` in the script.
 - To render a file: `inkscape design/svg/capture-up.svg --export-type=png --export-dpi=192` for @2x, or 288 for @3x. Hide the reference layer first to export the element alone.
 - To compare a file with 2013's: `git show legacy-1.2:examples/SimplePhotoFilter/SimplePhotoFilter/capture-up-568h@2x.png > capture-2013.png`.

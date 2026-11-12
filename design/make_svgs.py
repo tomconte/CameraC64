@@ -283,27 +283,27 @@ LED_DEFS = [
 ]
 
 
-def monitor_key(id_, x, y, pressed, s=KEY_SIZE, r=KEY_RADIUS):
-    """A cream key whose face, `s` points square at (x, y), sits on a darker edge. Up, it casts a shadow
+def monitor_key(id_, x, y, pressed, w=KEY_SIZE, h=KEY_SIZE, r=KEY_RADIUS):
+    """A cream key whose face, `w` by `h` points at (x, y), sits on a darker edge. Up, it casts a shadow
     and catches the light along its top; pressed, it sinks, and its top is in shadow."""
     if not pressed:
         return group(
             id_, "Touche",
             group(f"{id_}-shadow", "Ombre portée", *(
-                rect(x - 1 + 0.6 - 0.5 * g, y - 1 + 1.0 - 0.2 * g, s + 2 + g, s + 2.6 + g, r + 1 + g / 2,
+                rect(x - 1 + 0.6 - 0.5 * g, y - 1 + 1.0 - 0.2 * g, w + 2 + g, h + 2.6 + g, r + 1 + g / 2,
                      fill="#3A2A18", fill_opacity=0.12)
                 for g in (0.4, 0.8, 1.2))),
-            group(f"{id_}-edge", "Bord", rect(x - 1, y - 1, s + 2, s + 2.6, r + 1, fill="url(#key-edge-up)")),
-            group(f"{id_}-face", "Face", rect(x, y, s, s, r, fill="url(#key-face-up)")),
+            group(f"{id_}-edge", "Bord", rect(x - 1, y - 1, w + 2, h + 2.6, r + 1, fill="url(#key-edge-up)")),
+            group(f"{id_}-face", "Face", rect(x, y, w, h, r, fill="url(#key-face-up)")),
             group(f"{id_}-rim", "Reflet",
-                  rect(x + 0.4, y + 0.4, s - 0.8, s - 0.8, r - 0.4, fill="none", stroke="url(#key-rim-up)",
+                  rect(x + 0.4, y + 0.4, w - 0.8, h - 0.8, r - 0.4, fill="none", stroke="url(#key-rim-up)",
                        stroke_width=0.8)))
     return group(
         id_, "Touche enfoncée",
-        group(f"{id_}-edge", "Bord", rect(x - 1, y - 1, s + 2, s + 2.2, r + 1, fill="url(#key-edge-down)")),
-        group(f"{id_}-face", "Face", rect(x, y + 0.4, s, s, r, fill="url(#key-face-down)")),
+        group(f"{id_}-edge", "Bord", rect(x - 1, y - 1, w + 2, h + 2.2, r + 1, fill="url(#key-edge-down)")),
+        group(f"{id_}-face", "Face", rect(x, y + 0.4, w, h, r, fill="url(#key-face-down)")),
         group(f"{id_}-shade", "Ombre sur la face",
-              rect(x + 0.5, y + 0.9, s - 1, s - 1, r - 0.5, fill="none", stroke="url(#key-shade-down)",
+              rect(x + 0.5, y + 0.9, w - 1, h - 1, r - 0.5, fill="none", stroke="url(#key-shade-down)",
                    stroke_width=1.2)))
 
 
@@ -377,6 +377,243 @@ def monitor_bank():
               engraved(x + 6, y - 5, "MONITOR", 9, "#857558", letter_spacing=1.4), *labels, layer=True),
     ]
     return document(width, height, "The monitor bank, as on an iPhone 17, with the TV chosen.", defs, *layers)
+
+
+# MARK: - The other keys
+
+
+def mix(a, b, t):
+    """The colour `t` of the way from `a` to `b`, both written "#RRGGBB"."""
+    ca = [int(a[i:i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(p + (q - p) * t):02X}" for p, q in zip(ca, cb))
+
+
+def gear():
+    """A gear's teeth, as strokes from its ring outwards."""
+    teeth = []
+    for k in range(8):
+        cos, sin = [(1, 0), (0.7071, 0.7071), (0, 1), (-0.7071, 0.7071), (-1, 0), (-0.7071, -0.7071), (0, -1),
+                    (0.7071, -0.7071)][k]
+        teeth.append(f"M{num(5.6 * cos)} {num(5.6 * sin)} L{num(8 * cos)} {num(8 * sin)}")
+    return "M4.4 0 A4.4 4.4 0 1 1 -4.4 0 A4.4 4.4 0 1 1 4.4 0 " + " ".join(teeth)
+
+
+# The icons pressed into the keys, centred on (0, 0) in a box 20 points across, with the width of their
+# strokes. Share is the 2013 app's; Delete is its Discard's cross.
+ICONS = {
+    "share": ("M-2 -4 H-7 V6 H7 V2 M-3.5 2.5 C-3.5 -3 0 -4.5 5 -4.5 M2.5 -8 L6.5 -4.5 L2.5 -1", 2.5),
+    "save": ("M-3.5 -2 H-7 V6 H7 V-2 H3.5 M0 -8.5 V2.5 M-3.5 -1 L0 2.5 L3.5 -1", 2.5),
+    "send": ("M0 -0.5 V7 M0 -3 h0.01 M-2.69 -5.69 A3.8 3.8 0 0 0 -2.69 -0.31 M2.69 -5.69 A3.8 3.8 0 0 1 2.69 -0.31 "
+             "M-5.36 -7.5 A7 7 0 0 0 -5.36 1.5 M5.36 -7.5 A7 7 0 0 1 5.36 1.5", 2.3),
+    "delete": ("M-5.5 -5.5 L5.5 5.5 M5.5 -5.5 L-5.5 5.5", 3.2),
+    "flip": ("M-5 -2.5 H-2.5 L-1.5 -4 H1.5 L2.5 -2.5 H5 V4 H-5 Z M1.7 0.7 A1.7 1.7 0 1 1 -1.7 0.7 "
+             "A1.7 1.7 0 1 1 1.7 0.7 M-8.37 -1.28 A8.5 8.5 0 0 1 6.01 -5.81 M5.75 -8.8 L6.01 -5.81 L3.02 -6.07 "
+             "M8.37 1.68 A8.5 8.5 0 0 1 -6.01 6.21 M-5.75 9.2 L-6.01 6.21 L-3.02 6.47", 1.7),
+    "settings": (gear(), 2.2),
+    "flash": ("M2.5 -8.5 L-4.5 1.5 H2 L-2.5 8.5", 2.6),
+    "crt": ("M-7 -2.5 H7 V6.5 H-7 Z M-3 -8 L0 -2.5 L3 -8", 2.1),
+}
+
+
+def engraved_icon(id_, name, x, y, groove, shadow, light, scale=1.0):
+    """An icon pressed into a key, drawn as strokes centred on (x, y): a light copy just below it catches
+    the light, and a narrower copy shifted down leaves the top of its groove in shadow."""
+    d, weight = ICONS[name]
+    style = {"fill": "none", "stroke_linecap": "round", "stroke_linejoin": "round"}
+    return group(
+        id_, "Icône gravée",
+        group(f"{id_}-light", "Lumière sous la gravure",
+              path(d, stroke=light, stroke_width=weight, transform="translate(0 0.6)", **style)),
+        group(f"{id_}-shadow", "Ombre de la gravure", path(d, stroke=shadow, stroke_width=weight, **style)),
+        group(f"{id_}-groove", "Gravure",
+              path(d, stroke=groove, stroke_width=weight - 0.8, transform="translate(0 0.4)", **style)),
+        transform=f"translate({num(x)} {num(y)}) scale({num(scale)})", layer=True)
+
+
+# The review's actions, as the 2013 app's coloured keys: Share green and Delete red, as its Share and
+# Discard were, and the two new actions in the badge's rainbow blue and orange.
+ACTIONS = {
+    "share": ("Partager", "#6BCB56", "#3C9A25", "#0E3A06"),
+    "save": ("Enregistrer dans Photos", "#6FB6EA", "#2C74B8", "#0B2C4E"),
+    "send": ("Envoyer au C64", "#F5B550", "#CC7A1C", "#4A2606"),
+    "delete": ("Supprimer", "#D25050", "#A31F1F", "#230000"),
+}
+
+
+def action_key(name, pressed):
+    """A coloured key for one of the review's actions, 52 by 42 points and nearly oval as in 2013, built
+    as the capture key is: up, its face sits on a dark edge and casts a shadow; pressed, it sinks into the
+    hole it sits in."""
+    label, top, bottom, edge = ACTIONS[name]
+    x, y, w, h, r = 4, 4, 52, 42, 18
+    middle = mix(top, bottom, 0.5)
+    groove, shadow, light = mix(middle, "#000000", 0.25), mix(middle, "#000000", 0.55), mix(top, "#FFFFFF", 0.3)
+    hole = (x, y, w + 0.8, h + 2)
+    if not pressed:
+        defs = [
+            linear("face", (0, top), (1, bottom)),
+            linear("rim", (0, mix(top, "#FFFFFF", 0.55), 0.9), (0.5, mix(top, "#FFFFFF", 0.4), 0.35),
+                   (1, mix(top, "#FFFFFF", 0.4), 0)),
+        ]
+        key = group(
+            "key", "Touche",
+            group("drop-shadow", "Ombre portée", *(
+                rect(x + 0.4 - 0.6 * g, y + 1.3 - 0.15 * g, w + 0.8 + 1.2 * g, h + 2 + g, r + g / 2, fill="#3A2A18",
+                     fill_opacity=0.12)
+                for g in (0.5, 1.0, 1.5, 2.0))),
+            group("edge", "Bord", rect(x + 0.8, y + 2, w, h, r, fill=edge)),
+            group("face", "Face", rect(x, y, w, h, r, fill="url(#face)")),
+            group("outline", "Contour",
+                  rect(x + 0.25, y + 0.25, w - 0.5, h - 0.5, r - 0.25, fill="none", stroke=mix(bottom, "#000000", 0.5),
+                       stroke_opacity=0.8, stroke_width=0.5)),
+            group("rim", "Reflet",
+                  rect(x + 1, y + 1, w - 2, h - 2, r - 1, fill="none", stroke="url(#rim)", stroke_width=0.7)),
+            layer=True)
+        icon = engraved_icon("icon", name, x + w / 2, y + h / 2 - 0.5, groove, shadow, light, 1.15)
+    else:
+        dy = 2.1
+        face = (x + 0.8, y + 2.2, w - 0.8, h - 0.2)
+        frame = f"M0 0 H{num(w + 8)} V{num(h + 10)} H0 Z"
+        defs = [
+            linear("hole-rim", (0, "#6D675B", 0.9), (0.45, "#6D675B", 0), (1, "#6D675B", 0)),
+            linear("face-pressed", (0, mix(bottom, "#000000", 0.4)), (1, mix(bottom, "#000000", 0.05))),
+            clip("face-clip", rounded_path(*face, r)),
+        ]
+        key = group(
+            "key", "Touche enfoncée",
+            group("hole-lip", "Lèvre sous le trou", rect(hole[0], hole[1] + 0.8, hole[2], hole[3], r, fill="#E6DCCB",
+                                                       fill_opacity=0.85)),
+            group("hole", "Trou", rect(*hole, r, fill="#1E1208")),
+            group("hole-rim", "Bord du trou",
+                  rect(hole[0] + 0.5, hole[1] + 0.5, hole[2] - 1, hole[3] - 1, r - 0.5, fill="none",
+                       stroke="url(#hole-rim)", stroke_width=1)),
+            group("face", "Face", rect(*face, r, fill="url(#face-pressed)")),
+            group("face-shade", "Ombre sur la face",
+                  shade_band(frame, rounded_path(face[0] + 1.0, face[1] + 1.6, face[2], face[3], r), "#1E1208", 0.45),
+                  shade_band(frame, rounded_path(face[0] + 0.5, face[1] + 0.8, face[2], face[3], r), "#1E1208", 0.4),
+                  clip_path="url(#face-clip)"),
+            layer=True)
+        icon = engraved_icon("icon", name, x + w / 2 + 0.4, y + h / 2 - 0.5 + dy, mix(groove, "#000000", 0.3),
+                             mix(shadow, "#000000", 0.3), mix(light, "#000000", 0.25), 1.15)
+    state = "pressed" if pressed else "up"
+    return document(w + 8, h + 10, f"The review's {label} key, {state}, 52 by 42 points.", defs,
+                    backdrop(w + 8, h + 10, PANEL_CASE, "Boîtier"), key, icon)
+
+
+# The case where the review's and the shutter's keys sit.
+PANEL_CASE = "#D3C7AF"
+CREAM_ICON = ("#B9AB8F", "#857358", "#FBF8F2")
+
+
+def cream_key(file_id, comment, w, h, r, pressed, icon=None, icon_y=None, scale=1.0, lamp=False):
+    """A cream key like the monitor keys, `w` by `h` points, with an icon pressed into it, and, where the
+    app puts one, a lamp below it, for reference."""
+    x, y = 4, 4
+    layers = [backdrop(w + 8, h + 10, PANEL_CASE, "Boîtier"),
+              group("key", "Touche", monitor_key("key-body", x, y, pressed, w, h, r), layer=True)]
+    if icon:
+        groove, shadow, light = CREAM_ICON
+        dy = 0.4 if pressed else 0
+        cy = (icon_y if icon_y is not None else y + h / 2) + dy
+        layers.append(engraved_icon("icon", icon, x + w / 2, cy, groove, shadow, light, scale))
+    defs = [*KEY_DEFS]
+    if lamp:
+        defs += LED_DEFS
+        layers.append(group("lamp", "Voyant (posé par le code)",
+                            led("lamp-led", x + w / 2, y + h - 8 + (0.4 if pressed else 0), False, r=3), layer=True))
+    return document(w + 8, h + 10, comment, defs, *layers)
+
+
+def toggle(on):
+    """The 2013 app's switch, for flash and the CRT layer: a knob that slides along a track, green when
+    on and red when off, set into a slot in the case."""
+    width, height = 50, 22
+    track_top, track_bottom = ("#2C6420", "#339F1E") if on else ("#4A1010", "#8E1B1B")
+    track_middle = "#49B534" if on else "#A82222"
+    knob_x = 37.5 if on else 12.5
+    defs = [
+        linear("slot", (0, "#BFB096"), (1, "#DCD1BC")),
+        linear("track", (0, track_top), (0.35, track_middle), (1, track_bottom)),
+        linear("track-shade", (0, "#000000", 0.45), (0.4, "#000000", 0), (1, "#000000", 0)),
+        radial("knob", (0, "#FBF8F1"), (0.7, "#E7DFCF"), (1, "#C9BEA8"), cx=0.42, cy=0.35, r=0.65),
+    ]
+    layers = [
+        backdrop(width, height, PANEL_CASE, "Boîtier"),
+        group("slot", "Fente",
+              group("slot-lip", "Lèvre", capsule(2, 2.8, 46, 18, fill="#EFE7D8")),
+              group("slot-recess", "Creux", capsule(2, 2, 46, 18, fill="url(#slot)")),
+              layer=True),
+        group("track", "Glissière, " + ("verte, allumée" if on else "rouge, éteinte"),
+              group("track-edge", "Bord", capsule(5.5, 5.5, 39, 11, fill="#153110" if on else "#3E0B0B")),
+              group("track-face", "Glissière", capsule(6, 6, 38, 10, fill="url(#track)")),
+              group("track-shade", "Ombre", capsule(6, 6, 38, 10, fill="url(#track-shade)")),
+              layer=True),
+        group("knob", "Bouton",
+              group("knob-shadow", "Ombre portée", *(
+                  circle(knob_x + 0.6, 11.9 + 0.2 * g, 6.3 + g, fill="#2A1C0E", fill_opacity=0.14)
+                  for g in (0.4, 0.9, 1.4))),
+              group("knob-body", "Bouton", circle(knob_x, 11, 6.3, fill="url(#knob)")),
+              group("knob-outline", "Contour", circle(knob_x, 11, 6.1, fill="none", stroke="#9C8E74", stroke_width=0.5)),
+              group("knob-highlight", "Reflet",
+                    path(f"M{num(knob_x - 4.2)} 9.4 A4.6 4.6 0 0 1 {num(knob_x + 3)} 7.4", fill="none", stroke="#FFFFFF",
+                         stroke_opacity=0.8, stroke_width=0.8, stroke_linecap="round")),
+              layer=True),
+    ]
+    state = "on" if on else "off"
+    return document(width, height, f"The switch for flash and the CRT layer, {state}, as in the 2013 app.", defs,
+                    *layers)
+
+
+def zoom_button(pressed):
+    """A zoom button on the TV's border: a dark round key, 34 points across. The app writes its value
+    on it, lit for the zoom chosen."""
+    size, cx, r = 40, 20, 17
+    if not pressed:
+        defs = [linear("zoom-face", (0, "#3E3A35"), (1, "#1F1D1A")),
+                linear("zoom-rim", (0, "#8A8378", 0.9), (0.5, "#8A8378", 0.2), (1, "#8A8378", 0))]
+        button = group(
+            "zoom", "Bouton de zoom",
+            group("zoom-shadow", "Ombre portée", *(
+                circle(cx + 0.3, cx + 1 + 0.2 * g, r + g, fill="#000000", fill_opacity=0.18) for g in (0.4, 0.9, 1.4))),
+            group("zoom-face", "Face", circle(cx, cx, r, fill="url(#zoom-face)")),
+            group("zoom-rim", "Reflet", circle(cx, cx, r - 0.6, fill="none", stroke="url(#zoom-rim)", stroke_width=0.8)),
+            layer=True)
+    else:
+        defs = [linear("zoom-face", (0, "#151413"), (1, "#2A2723")),
+                linear("zoom-shade", (0, "#000000", 0.7), (0.35, "#000000", 0), (1, "#000000", 0))]
+        button = group(
+            "zoom", "Bouton de zoom enfoncé",
+            group("zoom-face", "Face", circle(cx, cx + 0.5, r, fill="url(#zoom-face)")),
+            group("zoom-shade", "Ombre sur la face",
+                  circle(cx, cx + 0.5, r - 0.7, fill="none", stroke="url(#zoom-shade)", stroke_width=1.4)),
+            layer=True)
+    state = "pressed" if pressed else "up"
+    return document(size, size, f"A zoom button, {state}, on the TV's border.", defs,
+                    backdrop(size, size, "#1C1B19", "Bordure de la télé"), button)
+
+
+def last_picture_frame():
+    """The frame round the last picture, 56 points square: a cream mount, its window shaded along the
+    top. The app puts the picture in the window."""
+    size, x, w, r = 64, 4, 56, 8
+    defs = [linear("window-shade", (0, "#000000", 0.55), (0.3, "#000000", 0), (1, "#000000", 0))]
+    layers = [
+        backdrop(size, size, PANEL_CASE, "Boîtier"),
+        group("frame", "Cadre",
+              group("frame-shadow", "Ombre portée", *(
+                  rect(x + 0.4 - 0.5 * g, x + 1.2 - 0.2 * g, w + g, w + 0.8 + g, r + g / 2, fill="#3A2A18",
+                       fill_opacity=0.12)
+                  for g in (0.4, 0.8, 1.2))),
+              group("frame-mount", "Passe-partout", rect(x, x, w, w, r, fill="#F5F0E4", stroke="#B4A88E",
+                                                          stroke_width=0.6)),
+              layer=True),
+        group("window", "Fenêtre (la photo, posée par le code)",
+              rect(x + 3, x + 3, w - 6, w - 6, r - 2, fill="#2B2925"),
+              rect(x + 3, x + 3, w - 6, w - 6, r - 2, fill="none", stroke="url(#window-shade)", stroke_width=1.6),
+              layer=True),
+    ]
+    return document(size, size, "The frame round the last picture, 56 points square.", defs, *layers)
 
 
 # MARK: - The badge
@@ -509,6 +746,26 @@ FILES = {
     "led-on": lambda: led_file(on=True),
     "monitor-bank": monitor_bank,
     "badge": badge,
+    **{f"action-{name}-{state}": (lambda name=name, state=state: action_key(name, state == "down"))
+       for name in ACTIONS for state in ("up", "down")},
+    **{f"flip-key-{state}": (lambda state=state: cream_key(
+        "flip", f"The key that turns the camera round, {state}, 56 points square.", 56, 56, 12, state == "down",
+        "flip", scale=1.35)) for state in ("up", "down")},
+    **{f"small-key-{icon}-{state}": (lambda icon=icon, state=state: cream_key(
+        f"small-{icon}", f"A small key, {state}, 34 by 42 points: {icon}, beside the TV in landscape.", 34, 42, 8,
+        state == "down", icon, icon_y=4 + 16, scale=0.9, lamp=icon != "settings"))
+       for icon in ("flash", "crt", "settings") for state in ("up", "down")},
+    "monitor-key-wide-up": lambda: cream_key(
+        "wide", "A monitor key in landscape, up, 54 by 44 points: the app writes its lamp and name on it.", 54, 44, 6,
+        False),
+    "monitor-key-wide-down": lambda: cream_key(
+        "wide", "A monitor key in landscape, pressed, 54 by 44 points: the app writes its lamp and name on it.", 54,
+        44, 6, True),
+    "toggle-on": lambda: toggle(True),
+    "toggle-off": lambda: toggle(False),
+    "zoom-button-up": lambda: zoom_button(False),
+    "zoom-button-down": lambda: zoom_button(True),
+    "last-picture-frame": last_picture_frame,
 }
 
 
