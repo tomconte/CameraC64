@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A monitor key, pressed: its monitor is the one chosen, 30 points square, as on the camera's bank. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="36" height="36" viewBox="0 0 36 36">
+  <defs>
+    <linearGradient id="key-edge-up" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A08D6D"/>
+      <stop offset="1" stop-color="#7E6A4B"/>
+    </linearGradient>
+    <linearGradient id="key-face-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8BBA2"/>
+      <stop offset="0.3" stop-color="#D3C8B4"/>
+      <stop offset="1" stop-color="#DFD7C8"/>
+    </linearGradient>
+    <linearGradient id="key-rim-up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="key-edge-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#85704D"/>
+      <stop offset="1" stop-color="#9E8B67"/>
+    </linearGradient>
+    <linearGradient id="key-face-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BBA98B"/>
+      <stop offset="0.35" stop-color="#CDBFA7"/>
+      <stop offset="1" stop-color="#DBD0BD"/>
+    </linearGradient>
+    <linearGradient id="key-shade-down" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B4528" stop-opacity="0.55"/>
+      <stop offset="0.3" stop-color="#5B4528" stop-opacity="0"/>
+      <stop offset="1" stop-color="#5B4528" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Panneau (référence, à masquer)">
+    <rect x="0" y="0" width="36" height="36" rx="0" fill="#CBBFA6"/>
+  </g>
+  <g id="key" inkscape:groupmode="layer" inkscape:label="Touche">
+    <g id="monitor-key" inkscape:label="Touche enfoncée">
+      <g id="monitor-key-edge" inkscape:label="Bord">
+        <rect x="2" y="2" width="32" height="32.2" rx="5" fill="url(#key-edge-down)"/>
+      </g>
+      <g id="monitor-key-face" inkscape:label="Face">
+        <rect x="3" y="3.4" width="30" height="30" rx="4" fill="url(#key-face-down)"/>
+      </g>
+      <g id="monitor-key-shade" inkscape:label="Ombre sur la face">
+        <rect x="3.5" y="3.9" width="29" height="29" rx="3.5" fill="none" stroke="url(#key-shade-down)" stroke-width="1.2"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -56,6 +56,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - `C64/build.sh` assembles them into `C64Core` as `DisplayPrograms.swift`. That file is generated: never edit it, and commit it with the sources.
   - Exported programs copy the VIC-II's memory into the bank at `$C000`, or for PETSCII, which uses the C64's own character ROM, the bank at `$8000`.
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
+- **`design/`** holds SVG redraws of the camera screen's elements in the style of the 2013 artwork, written by `design/make_svgs.py`, to edit by hand (`design/README.md`). They use no SVG filters, so that every editor, and Xcode, keeps each effect as a shape.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app's Info.plist comes from the `INFOPLIST_KEY_` settings in `project.yml`, added to `App/Info.plist`, which holds what those settings cannot say: the C64 files' types and plain HTTP on the local network. The app tests check both.

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The capture key, up, redrawn from the 2013 app's capture-up. 1 unit = 1 point. No filters: every effect is an ordinary shape. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="135" height="72" viewBox="0 0 135 72">
+  <defs>
+    <linearGradient id="case-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A9926C"/>
+      <stop offset="0.083" stop-color="#CFC1A8"/>
+      <stop offset="0.167" stop-color="#D5C9B2"/>
+      <stop offset="0.5" stop-color="#C8BDA5"/>
+      <stop offset="0.833" stop-color="#BCB097"/>
+      <stop offset="0.917" stop-color="#A39783"/>
+      <stop offset="0.944" stop-color="#7A7162"/>
+      <stop offset="0.972" stop-color="#595347"/>
+      <stop offset="1" stop-color="#4A453C"/>
+    </linearGradient>
+    <linearGradient id="face-light" x1="0" y1="12" x2="0" y2="48.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C6A587"/>
+      <stop offset="1" stop-color="#926F51"/>
+    </linearGradient>
+    <linearGradient id="rim-light" x1="0" y1="12" x2="0" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F0D6B8" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#E0C2A2" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#E0C2A2" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="hollow-light" x1="0" y1="16.5" x2="0" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A28267"/>
+      <stop offset="1" stop-color="#84654B"/>
+    </linearGradient>
+    <clipPath id="hollow-clip">
+      <path d="M55.5 20 H63.3 V19.3 Q63.3 16.6 66 16.6 H73.1 Q75.8 16.6 75.8 19.3 V20 H83.5 Q87.5 20 87.5 24 V40 Q87.5 44 83.5 44 H55.5 Q51.5 44 51.5 40 V24 Q51.5 20 55.5 20 Z"/>
+    </clipPath>
+  </defs>
+  <g id="backdrop" inkscape:groupmode="layer" inkscape:label="Boîtier (référence, à masquer)">
+    <rect x="0" y="0" width="135" height="72" rx="0" fill="url(#case-light)"/>
+  </g>
+  <g id="key" inkscape:groupmode="layer" inkscape:label="Touche">
+    <g id="drop-shadow" inkscape:label="Ombre portée">
+      <rect x="10.6" y="13.225" width="119.4" height="39" rx="19.5" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="10.3" y="13.15" width="120" height="39.5" rx="19.75" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="10" y="13.075" width="120.6" height="40" rx="20" fill="#3A2A18" fill-opacity="0.12"/>
+      <rect x="9.7" y="13" width="121.2" height="40.5" rx="20.25" fill="#3A2A18" fill-opacity="0.12"/>
+    </g>
+    <g id="edge" inkscape:label="Bord">
+      <rect x="11.3" y="14" width="118" height="36.5" rx="18.25" fill="#160602"/>
+    </g>
+    <g id="face" inkscape:label="Face">
+      <rect x="10.5" y="12" width="118" height="36.5" rx="18.25" fill="url(#face-light)"/>
+    </g>
+    <g id="outline" inkscape:label="Contour">
+      <rect x="10.75" y="12.25" width="117.5" height="36" rx="18" fill="none" stroke="#4E3824" stroke-opacity="0.8" stroke-width="0.5"/>
+    </g>
+    <g id="rim" inkscape:label="Reflet">
+      <rect x="11.5" y="13" width="116" height="34.5" rx="17.25" fill="none" stroke="url(#rim-light)" stroke-width="0.7"/>
+    </g>
+  </g>
+  <g id="camera" inkscape:groupmode="layer" inkscape:label="Icône gravée">
+    <g id="camera-light" inkscape:label="Lumière sous le creux">
+      <path d="M55.5 20.7 H63.3 V20 Q63.3 17.3 66 17.3 H73.1 Q75.8 17.3 75.8 20 V20.7 H83.5 Q87.5 20.7 87.5 24.7 V40.7 Q87.5 44.7 83.5 44.7 H55.5 Q51.5 44.7 51.5 40.7 V24.7 Q51.5 20.7 55.5 20.7 Z" fill="#D4B597" fill-opacity="0.9"/>
+    </g>
+    <g id="camera-hollow" inkscape:label="Creux">
+      <path d="M55.5 20 H63.3 V19.3 Q63.3 16.6 66 16.6 H73.1 Q75.8 16.6 75.8 19.3 V20 H83.5 Q87.5 20 87.5 24 V40 Q87.5 44 83.5 44 H55.5 Q51.5 44 51.5 40 V24 Q51.5 20 55.5 20 Z" fill="url(#hollow-light)"/>
+    </g>
+    <g id="camera-shade" inkscape:label="Ombre dans le creux" clip-path="url(#hollow-clip)">
+      <path d="M0 0 H135 V72 H0 Z M55.5 21.1 H63.3 V20.4 Q63.3 17.7 66 17.7 H73.1 Q75.8 17.7 75.8 20.4 V21.1 H83.5 Q87.5 21.1 87.5 25.1 V41.1 Q87.5 45.1 83.5 45.1 H55.5 Q51.5 45.1 51.5 41.1 V25.1 Q51.5 21.1 55.5 21.1 Z" fill-rule="evenodd" fill="#3E2614" fill-opacity="0.45"/>
+      <path d="M0 0 H135 V72 H0 Z M55.5 20.55 H63.3 V19.85 Q63.3 17.15 66 17.15 H73.1 Q75.8 17.15 75.8 19.85 V20.55 H83.5 Q87.5 20.55 87.5 24.55 V40.55 Q87.5 44.55 83.5 44.55 H55.5 Q51.5 44.55 51.5 40.55 V24.55 Q51.5 20.55 55.5 20.55 Z" fill-rule="evenodd" fill="#3E2614" fill-opacity="0.5"/>
+    </g>
+    <g id="lens" inkscape:label="Objectif">
+      <g id="lens-shadow" inkscape:label="Ombre portée de la bague">
+        <circle cx="69.6" cy="32.7" r="8.25" fill="none" stroke="#2A160A" stroke-opacity="0.25" stroke-width="4"/>
+        <circle cx="69.6" cy="32.7" r="8.25" fill="none" stroke="#2A160A" stroke-opacity="0.25" stroke-width="3"/>
+        <circle cx="69.6" cy="32.7" r="8.25" fill="none" stroke="#2A160A" stroke-opacity="0.25" stroke-width="2"/>
+      </g>
+      <g id="lens-ring" inkscape:label="Bague">
+        <circle cx="69.6" cy="31.7" r="8.25" fill="none" stroke="#AA8A6C" stroke-width="2"/>
+      </g>
+      <g id="lens-highlight" inkscape:label="Reflet de la bague">
+        <circle cx="69.6" cy="31.2" r="8.25" fill="none" stroke="#CDB396" stroke-opacity="0.9" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+  <g id="label" inkscape:groupmode="layer" inkscape:label="Libellé (écrit par le code dans l’appli)">
+    <text x="69.6" y="62" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="8" fill="#E2D8C4" fill-opacity="0.8" text-anchor="middle">CAPTURE</text>
+    <text x="69.6" y="61.5" font-family="FreeSans, Helvetica, Arial, sans-serif" font-weight="700" font-size="8" fill="#776F5F" text-anchor="middle">CAPTURE</text>
+  </g>
+</svg>
