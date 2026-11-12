@@ -10,6 +10,7 @@ Vector redraws of the camera screen's elements, in the spirit of the 2013 app's 
 | `svg/monitor-key-up.svg`, `svg/monitor-key-down.svg` | A monitor key, up, and pressed for the monitor chosen | 36 × 36, the face 30 square |
 | `svg/led-off.svg`, `svg/led-on.svg` | A monitor's lamp, off and lit | 22 × 22, the lamp 10 across |
 | `svg/monitor-bank.svg` | The camera's monitor bank on an iPhone 17, with the TV chosen: the keys and lamps in place, for reference | 402 × 166 |
+| `svg/badge.svg` | The Camera C64 badge, from the 2013 title bar | 128 × 20, the badge 122 × 17 |
 
 ## How they are drawn
 
@@ -18,6 +19,7 @@ Vector redraws of the camera screen's elements, in the spirit of the 2013 app's 
 - Each part is a named group. Inkscape shows the top-level ones as layers, labelled in French.
 - Each element sits on the case, or the panel, in a layer marked "référence, à masquer": hide it before exporting the element alone.
 - No words in the elements: the app writes its labels. The layers that show them, for reference, are marked "écrit par le code dans l'appli". They use FreeSans, a free Helvetica, where it is installed, and Helvetica or Arial elsewhere.
+- The badge's letters are drawn, not typed, so no font is needed. "Camera" is drawn as strokes along the middle of each letter: their width is the letters' weight. "C64" is drawn as filled shapes, as its upright strokes are thicker than the others. Each letter is white over a copy in dark brown, a little wider, which outlines it.
 
 ## Making and editing them
 

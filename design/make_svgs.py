@@ -379,6 +379,124 @@ def monitor_bank():
     return document(width, height, "The monitor bank, as on an iPhone 17, with the TV chosen.", defs, *layers)
 
 
+# MARK: - The badge
+
+
+def glyph(id_, label, d, weight, cap="butt"):
+    """A letter drawn as a thick stroke along its middle, white over a dark brown outline: its weight and
+    shape change with the stroke's width and the path's points."""
+    style = {"fill": "none", "stroke_linecap": cap, "stroke_linejoin": "round"}
+    return group(
+        id_, label,
+        path(d, stroke="#3E3022", stroke_width=weight + 0.8, **style),
+        path(d, stroke="#FFFFFF", stroke_width=weight, **style))
+
+
+def letters_camera(x):
+    """"Camera" from `x`, as in the 2013 badge: a tall, round C, then rounded lowercase."""
+    # The C: 9.7 points high, from 5.3 to 15, and 6.5 wide, drawn 2 thick.
+    big_c = (f"M{num(x + 6.5)} 6.3 H{num(x + 4.6)} A3.6 3.85 0 0 0 {num(x + 1)} 10.15 "
+             f"A3.6 3.85 0 0 0 {num(x + 4.6)} 14 H{num(x + 6.5)}")
+    # Lowercase: 4.1 points high, from 7.8 to 11.9, drawn 1.35 thick.
+    weight = 1.35
+    half = weight / 2
+    top, bottom, middle, rx, ry = 7.8 + half, 11.9 - half, 9.85, 1.9, 1.375
+
+    def a(left):
+        """A two-storey a, as in the 2013 badge: a hook over a small bowl, and a stem on the right."""
+        stem = left + 5 - half
+        hook = f"M{num(left + 0.9)} {num(top + 0.4)} A1.7 1 0 0 1 {num(stem)} {num(top + 1)} V{num(bottom)}"
+        bowl_x, bowl_y, bowl_rx, bowl_ry = left + half + 1.65, bottom - 0.8, 1.65, 0.8
+        bowl = (f"M{num(bowl_x - bowl_rx)} {num(bowl_y)} A{num(bowl_rx)} {num(bowl_ry)} 0 1 0 {num(bowl_x + bowl_rx)} "
+                f"{num(bowl_y)} A{num(bowl_rx)} {num(bowl_ry)} 0 1 0 {num(bowl_x - bowl_rx)} {num(bowl_y)}")
+        return f"{hook} {bowl}"
+
+    def m(left):
+        x0, step, arch = left + half, 3, top + ry
+        return (f"M{num(x0)} {num(bottom)} V{num(arch)} A1.5 {num(ry)} 0 0 1 {num(x0 + step)} {num(arch)} "
+                f"V{num(bottom)} M{num(x0 + step)} {num(arch)} A1.5 {num(ry)} 0 0 1 {num(x0 + 2 * step)} {num(arch)} "
+                f"V{num(bottom)}")
+
+    def e(left):
+        cx = left + half + rx
+        return (f"M{num(cx - rx)} {num(middle)} H{num(cx + rx)} "
+                f"A{num(rx)} {num(ry)} 0 1 0 {num(cx + rx * 0.7071)} {num(middle + ry * 0.7071)}")
+
+    def r(left):
+        x0 = left + half
+        return (f"M{num(x0)} {num(bottom)} V{num(top)} M{num(x0)} {num(top + 1.5)} "
+                f"A1.5 1.5 0 0 1 {num(x0 + 1.5)} {num(top)} H{num(x0 + 2.4)}")
+
+    # Each letter's left edge: a is 5 wide, e 5.15, m 7.35 and r 3.75, with 0.6 between them.
+    left = x + 7.8
+    return [
+        glyph("letter-big-c", "C", big_c, 2),
+        glyph("letter-a", "a", a(left), weight, "round"),
+        glyph("letter-m", "m", m(left + 5.6), weight, "round"),
+        glyph("letter-e", "e", e(left + 13.55), weight, "round"),
+        glyph("letter-r", "r", r(left + 19.3), weight, "round"),
+        glyph("letter-a2", "a", a(left + 23.65), weight, "round"),
+    ]
+
+
+def glyph_shape(id_, label, d):
+    """A letter drawn as a filled shape, white over a dark brown outline. Its holes are subpaths."""
+    return group(
+        id_, label,
+        path(d, fill="#3E3022", fill_rule="evenodd", stroke="#3E3022", stroke_width=0.8, stroke_linejoin="round"),
+        path(d, fill="#FFFFFF", fill_rule="evenodd"))
+
+
+def letters_c64(x):
+    """"C64" from `x`, in squarish capitals 7 points high, from 6 to 13, as in the 2013 badge: their
+    upright strokes are 2.4 thick and the others 1.7 to 1.9, with corners rounder outside than in."""
+    c = (f"M{num(x + 9)} 6 H{num(x + 2.8)} A2.8 2.8 0 0 0 {num(x)} 8.8 V10.2 A2.8 2.8 0 0 0 {num(x + 2.8)} 13 "
+         f"H{num(x + 9)} V11.1 H{num(x + 3.3)} A0.9 0.9 0 0 1 {num(x + 2.4)} 10.2 V8.8 "
+         f"A0.9 0.9 0 0 1 {num(x + 3.3)} 7.9 H{num(x + 9)} Z")
+    # The 6: an arm over a notch open to the right, then a bowl with a small hole.
+    s = x + 10.2
+    six = (f"M{num(s + 9)} 6 H{num(s + 2.8)} A2.8 2.8 0 0 0 {num(s)} 8.8 V10.2 A2.8 2.8 0 0 0 {num(s + 2.8)} 13 "
+           f"H{num(s + 6.6)} A2.4 2.4 0 0 0 {num(s + 9)} 10.6 V9.4 A0.9 0.9 0 0 0 {num(s + 8.1)} 8.5 "
+           f"H{num(s + 2.4)} V7.7 H{num(s + 9)} Z "
+           f"M{num(s + 2.9)} 10.2 H{num(s + 6.1)} A0.5 0.5 0 0 1 {num(s + 6.6)} 10.7 V10.8 "
+           f"A0.5 0.5 0 0 1 {num(s + 6.1)} 11.3 H{num(s + 2.9)} A0.5 0.5 0 0 1 {num(s + 2.4)} 10.8 V10.7 "
+           f"A0.5 0.5 0 0 1 {num(s + 2.9)} 10.2 Z")
+    # The 4: a diagonal from the top of its stem down to the bar, round a small triangular hole.
+    f = x + 20.4
+    four = (f"M{num(f + 7.6)} 6 V9.6 H{num(f + 8.6)} V11.3 H{num(f + 7.6)} V13 H{num(f + 5.2)} V11.3 "
+            f"H{num(f + 0.6)} A0.6 0.6 0 0 1 {num(f)} 10.7 V10.4 L{num(f + 4.6)} 6 Z "
+            f"M{num(f + 3.72)} 9.6 H{num(f + 5.2)} V8.19 Z")
+    return [glyph_shape("letter-c", "C", c), glyph_shape("letter-6", "6", six), glyph_shape("letter-4", "4", four)]
+
+
+def badge():
+    """The "Camera C64" badge from the 2013 app's title bar: white letters and rainbow stripes on a taupe
+    capsule set into the bar. The letters are drawn as strokes, so no font is needed."""
+    width, height = 128, 20
+    stripes = [("red", "#FF0000", "#FF0009"), ("orange", "#FA6603", "#FF6700"), ("yellow", "#FAC703", "#FFDD00"),
+               ("green", "#1DB60C", "#00D800"), ("blue", "#1D9AD3", "#00C8FF")]
+    defs = [
+        linear("bar-light", (0, "#FCF3E2"), (0.25, "#F8EFDE"), (0.5, "#D9CCB6"), (0.85, "#CDC4B3"), (0.95, "#9B9281"),
+               (1, "#6A6150")),
+        *(linear(f"stripe-{name}", (0, upper), (1, lower)) for name, upper, lower in stripes),
+    ]
+    layers = [
+        group("backdrop", "Barre de titre (référence, à masquer)",
+              rect(0, 0, width, height, 0, fill="url(#bar-light)"), layer=True),
+        group("badge", "Badge",
+              group("badge-lip", "Liseré", capsule(2.5, 1.5, 122, 17, fill="#E4DBCA")),
+              group("badge-capsule", "Capsule", capsule(4, 3, 119, 14, fill="#6E6359")),
+              layer=True),
+        group("stripes", "Bandes arc-en-ciel", *(
+            group(f"stripe-{name}", name.capitalize(),
+                  rect(48.5, 5.5 + 2 * index, 38.5, 1, 0, fill=f"url(#stripe-{name})"))
+            for index, (name, _, _) in enumerate(stripes)), layer=True),
+        group("words", "Lettres", group("word-camera", "Camera", *letters_camera(7.5)),
+              group("word-c64", "C64", *letters_c64(90.5)), layer=True),
+    ]
+    return document(width, height, "The Camera C64 badge, redrawn from the 2013 app's title bar.", defs, *layers)
+
+
 # MARK: - Files
 
 
@@ -390,6 +508,7 @@ FILES = {
     "led-off": lambda: led_file(on=False),
     "led-on": lambda: led_file(on=True),
     "monitor-bank": monitor_bank,
+    "badge": badge,
 }
 
 
