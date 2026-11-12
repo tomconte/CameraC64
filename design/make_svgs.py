@@ -10,7 +10,9 @@ Writes design/svg/<name>.svg for each name given, or every file. Once a file has
 that file is the one to keep: regenerate only the files whose drawing changed here.
 """
 
+import base64
 import pathlib
+import re
 import sys
 
 OUT = pathlib.Path(__file__).resolve().parent / "svg"
@@ -94,9 +96,25 @@ def clip(id_, d):
     return f'<clipPath id="{id_}">\n  <path d="{d}"/>\n</clipPath>'
 
 
-def text(x, y, words, size, colour, **extra):
+def text(x, y, words, size, colour, stretch=1.0, **extra):
+    """Words in the labels' font. With `stretch` below 1 they are narrowed, as the app's condensed
+    labels are where space is short."""
+    if stretch != 1:
+        extra["transform"] = f"matrix({num(stretch)} 0 0 1 {num(x)} {num(y)})"
+        x = y = 0
     return (f'<text {attrs(x=x, y=y, font_family=LABEL_FONT, font_weight=700, font_size=size, fill=colour, **extra)}>'
             f"{words}</text>")
+
+
+# Helvetica Bold's widths, which FreeSans Bold shares, in thousandths of the size: to centre words with
+# something beside them.
+WIDTHS = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ&", (
+    722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667,
+    944, 667, 667, 611, 722)))
+
+
+def text_width(words, size, stretch=1.0):
+    return sum(WIDTHS[letter] for letter in words.replace("&amp;", "&")) * size / 1000 * stretch
 
 
 def engraved(x, y, words, size, colour, **extra):
@@ -108,13 +126,16 @@ def engraved(x, y, words, size, colour, **extra):
 
 
 def document(width, height, comment, defs, *layers):
+    body = "\n".join(indent(layer) for layer in layers)
+    # Only the mockups hold pictures, linked as xlink:href, which every editor reads.
+    xlink = ' xmlns:xlink="http://www.w3.org/1999/xlink"\n    ' if "xlink:" in body else ""
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         f"<!-- {comment} 1 unit = 1 point. No filters: every effect is an ordinary shape. -->\n"
-        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg"{xlink} xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"\n'
         f'     width="{num(width)}" height="{num(height)}" viewBox="0 0 {num(width)} {num(height)}">\n'
         "  <defs>\n" + indent(indent("\n".join(defs))) + "\n  </defs>\n"
-        + "\n".join(indent(layer) for layer in layers) + "\n</svg>\n")
+        + body + "\n</svg>\n")
 
 
 def backdrop(width, height, fill, what="Boîtier"):
@@ -734,6 +755,274 @@ def badge():
     return document(width, height, "The Camera C64 badge, redrawn from the 2013 app's title bar.", defs, *layers)
 
 
+# MARK: - Mockups
+
+
+PICTURES = pathlib.Path(__file__).resolve().parent / "pictures"
+# The TV's shape: the C64's screen, 384 by 272 pixels each 0.936 as wide as tall, as the app's TVGeometry.
+TV_ASPECT = 384 * 0.936 / 272
+INK = "#857558"
+# How much narrower the app's condensed labels are than FreeSans Bold.
+NARROW = 0.84
+
+
+def embed(doc, prefix, x, y, scale=1.0, drop=("backdrop",)):
+    """Another file's drawing placed at (x, y) and scaled: its ids take a prefix, so that two keys'
+    gradients keep apart, and the reference layers named in `drop` go."""
+    defs = doc[doc.index("<defs>") + len("<defs>"):doc.index("</defs>")]
+    body = doc[doc.index("</defs>") + len("</defs>"):doc.rindex("</svg>")]
+    for id_ in drop:
+        start = body.find(f'<g id="{id_}"')
+        if start >= 0:
+            # Reference layers hold only shapes and words, no groups.
+            body = body[:start] + body[body.index("</g>", start) + len("</g>"):]
+    text = f"<defs>{defs}</defs>{body}".replace(' inkscape:groupmode="layer"', "")
+    text = re.sub(r'id="([^"]+)"', lambda m: f'id="{prefix}-{m.group(1)}"', text)
+    text = re.sub(r"url\(#([^)]+)\)", lambda m: f"url(#{prefix}-{m.group(1)})", text)
+    lines = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    return (f'<g id="{prefix}" transform="translate({num(x)} {num(y)}) scale({num(scale)})">\n'
+            + indent(lines) + "\n</g>")
+
+
+def picture_data(name):
+    """A converted picture, from design/pictures, as a data URL, so that each mockup holds its pictures."""
+    return "data:image/png;base64," + base64.b64encode((PICTURES / name).read_bytes()).decode()
+
+
+def picture(x, y, w, h, name, **extra):
+    return (f'<image {attrs(x=x, y=y, width=w, height=h, preserveAspectRatio="none", **extra)} '
+            f'xlink:href="{picture_data(name)}"/>')
+
+
+def window(id_, x, y, w, h, r, name, clip_defs):
+    """A picture's display window in (x, y, w, h), cut from the whole screen and clipped to a rounded
+    rectangle; the clip joins `clip_defs`."""
+    clip_defs.append(clip(f"{id_}-clip", rounded_path(x, y, w, h, r)))
+    sx, sy = w / 320, h / 200
+    return group(id_, "Photo (posée par le code)",
+                 picture(x - 32 * sx, y - 35 * sy, 384 * sx, 272 * sy, name), clip_path=f"url(#{id_}-clip)")
+
+
+def tv_screen(id_, x, y, w, h, name, defs):
+    """The TV: the C64 picture, border included, with a sketch of what the app's CRT shader draws over
+    it: scanlines, a darker edge, and the tube's rounded corners."""
+    line = h / 272
+    corner = 0.04 * h * 3
+    defs += [
+        f'<pattern id="{id_}-scanlines" {attrs(x=x, y=y, width=4, height=line)} patternUnits="userSpaceOnUse">\n'
+        f'  {rect(0, line * 0.55, 4, line * 0.45, 0, fill="#000000", fill_opacity=0.28)}\n</pattern>',
+        radial(f"{id_}-vignette", (0, "#000000", 0), (0.65, "#000000", 0), (1, "#000000", 0.5), r=0.72),
+    ]
+    tube = f"M{num(x)} {num(y)} H{num(x + w)} V{num(y + h)} H{num(x)} Z {rounded_path(x, y, w, h, corner)}"
+    return group(
+        id_, "Télé (l’image et l’effet CRT sont calculés par l’appli)",
+        rect(x, y, w, h, 0, fill="#000000"),
+        picture(x, y, w, h, name),
+        rect(x, y, w, h, 0, fill=f"url(#{id_}-scanlines)"),
+        rect(x, y, w, h, 0, fill=f"url(#{id_}-vignette)"),
+        path(tube, fill_rule="evenodd", fill="#0C0B0A"),
+        layer=True)
+
+
+def recess(id_, x, y, w, h, r=8):
+    """A panel pressed into the case, as the monitor bank's."""
+    return group(
+        id_, "Panneau",
+        group(f"{id_}-lip", "Lèvre", rect(x + 0.6, y + 0.8, w, h, r, fill="#EAE2D3", fill_opacity=0.9)),
+        group(f"{id_}-recess", "Creux", rect(x, y, w, h, r, fill=PANEL)),
+        group(f"{id_}-shade", "Ombre",
+              rect(x + 0.8, y + 0.8, w - 1.6, h - 1.6, r - 0.8, fill="none", stroke="url(#panel-shade)",
+                   stroke_width=1.6)))
+
+
+def zoom_buttons(cx, cy, lit=1):
+    """The zoom buttons, .5, 1x and 2, centred on (cx, cy), with the app's values written on them."""
+    parts = []
+    for index, (value, dx) in enumerate(((".5", -44), ("1×", 0), ("2", 44))):
+        parts.append(embed(zoom_button(False), f"zoom-{index}", cx + dx - 20, cy - 20))
+        parts.append(text(cx + dx, cy + 4.3, value, 12, "#F4B23C" if index == lit else "#E9E3D5",
+                          text_anchor="middle"))
+    return group("zoom", "Zoom", *parts, layer=True)
+
+
+def phone(width, height, comment, defs, *layers):
+    """A mockup on the case as an iPhone 17 shows it, upright or held sideways with its top to the left:
+    its screen's corners, its Dynamic Island and its home indicator."""
+    if height > width:
+        island = rect(138, 11, 126, 37, 18.5, fill="#000000")
+        indicator = rect(134, 861, 134, 5, 2.5, fill="#1C1B19")
+    else:
+        island = rect(11, 138, 37, 126, 18.5, fill="#000000")
+        indicator = rect(861, 134, 5, 134, 2.5, fill="#1C1B19")
+    defs = [*defs, clip("screen-clip", rounded_path(0, 0, width, height, 55))]
+    return document(
+        width, height, comment, defs,
+        group("screen", "Écran",
+              group("case", "Boîtier", rect(0, 0, width, height, 0, fill="url(#mock-case)"), layer=True),
+              *layers,
+              group("phone", "iPhone (référence, à masquer)", island, indicator, layer=True),
+              layer=True, clip_path="url(#screen-clip)"))
+
+
+def mockup_defs():
+    return [
+        linear("mock-case", (0, "#D6CAB3"), (1, "#C6BBA3")),
+        linear("mock-title", (0, "#FBF2E1"), (0.55, "#E6DAC6"), (1, "#D2C5AD")),
+        linear("panel-shade", (0, "#6E5A3E", 0.45), (0.25, "#6E5A3E", 0), (1, "#6E5A3E", 0)),
+        *KEY_DEFS,
+        *LED_DEFS,
+    ]
+
+
+def title_bar(stage):
+    """The top of the screen with the phone upright: the 2013 app's beige title bar, with its grooves,
+    the badge, the flash and CRT switches, and settings."""
+    grooves = []
+    for y in (74, 84, 94):
+        grooves += [rect(0, y, 402, 0.6, 0, fill="#C9BCA4"), rect(0, y + 0.6, 402, 0.6, 0, fill="#FFFBF2")]
+    parts = [
+        rect(0, 0, 402, 106, 0, fill="url(#mock-title)"),
+        group("title-grooves", "Rainures", *grooves),
+        rect(0, 104.8, 402, 0.6, 0, fill="#9B9281"),
+        rect(0, 105.4, 402, 0.6, 0, fill="#6A6150"),
+        embed(badge(), "badge", 137, 74),
+        engraved(302, 88, "CRT", 10, INK, text_anchor="end"),
+        embed(toggle(True), "crt-switch", 306, 73),
+        embed(cream_key("settings", "", 30, 30, 7, False, "settings", scale=0.75), "settings", 360, 65),
+    ]
+    if stage == "live":
+        parts += [engraved(12, 88, "FLASH", 10, INK), embed(toggle(False), "flash-switch", 48, 73)]
+    return group("title-bar", "Barre de titre", *parts, layer=True)
+
+
+def mode_dial():
+    names = (("HIRES", 90), ("MULTICOLOUR", 171), ("PETSCII", 260.5), ("BBS", 317.5))
+    parts = []
+    for name, cx in names:
+        chosen = name == "MULTICOLOUR"
+        parts.append(engraved(cx, 481, name, 13, "#3E3528" if chosen else INK, text_anchor="middle"))
+        parts.append(led(f"dial-{name.lower()}", cx, 491, chosen, r=2.5))
+    return group("mode-dial", "Modes", *parts, layer=True)
+
+
+def last_picture(x, y, clips):
+    """The last picture in its frame, its top-left corner at (x, y)."""
+    return group("last-picture", "Dernière photo",
+                 embed(last_picture_frame(), "frame", x - 4, y - 4),
+                 window("last-photo", x + 3, y + 3, 50, 50, 6, "multicolour-tv.png", clips), layer=True)
+
+
+def portrait(stage):
+    """The camera screen with the phone upright, live or in a review, on an iPhone 17."""
+    width, height = 402, 874
+    tv_height = width / TV_ASPECT
+    defs = mockup_defs()
+    clips = []
+    layers = [
+        title_bar(stage),
+        tv_screen("tv", 0, 106, width, tv_height, "multicolour-tv.png", defs),
+    ]
+    capture_y = 741.9
+    if stage == "live":
+        layers += [
+            zoom_buttons(201, 439.2),
+            mode_dial(),
+            embed(monitor_bank(), "bank", 0, 498, drop=("backdrop", "case")),
+            group("shutter", "Prise de vue",
+                  embed(capture_key(pressed=False), "capture", 103.1, capture_y, 1.4),
+                  embed(cream_key("flip", "", 56, 56, 12, False, "flip", scale=1.35), "flip", 314, 753.7),
+                  layer=True),
+        ]
+    else:
+        strip = []
+        modes = (("HIRES", "hires-tv.png"), ("MULTI", "multicolour-tv.png"), ("PETSCII", "petscii-tv.png"),
+                 ("BBS", "bbs-tv.png"))
+        for index, (name, file) in enumerate(modes):
+            x, y = 16 + 88 * index, 426.2
+            chosen = name == "MULTI"
+            strip += [
+                rect(x + 3, y + 3, 72, 48, 3, fill="#1C1B19"),
+                window(f"strip-{name.lower()}", x + 3, y + 3, 72, 48, 3, file, clips),
+                engraved(x + 39, 495, name, 10, "#3E3528" if chosen else INK, text_anchor="middle",
+                         letter_spacing=0.8),
+            ]
+            if chosen:
+                strip.append(rect(x + 1, y + 1, 76, 52, 6, fill="none", stroke="#F4B23C", stroke_width=2))
+        monitors = (("tv", "TV", 0, 0), ("mon", "MON", 1, 0), ("sharp", "SHARP", 2, 0), ("bw", "B&amp;W", 0, 1),
+                    ("amber", "AMBER", 1, 1), ("green", "GREEN", 2, 1))
+        bank = [recess("review-panel", 16, 520, 370, 86), engraved(22, 515, "MONITOR", 9, INK, letter_spacing=1.4)]
+        for id_, name, column, row in monitors:
+            x, y = 28 + 118 * column, 535 + 36 * row
+            chosen = id_ == "tv"
+            bank += [monitor_key(f"review-key-{id_}", x, y, chosen, 26, 26, 3.5),
+                     led(f"review-led-{id_}", x + 38, y + 13, chosen),
+                     engraved(x + 50, y + 17, name, 11, INK)]
+        actions = []
+        for index, (name, caption) in enumerate((("share", "SHARE"), ("save", "SAVE"), ("send", "SEND TO C64"),
+                                                 ("delete", "DELETE"))):
+            x = 76 + 66 * index
+            actions += [embed(action_key(name, pressed=False), f"action-{name}", x - 4, 614),
+                        engraved(x + 26, 674, caption, 9.5, INK, text_anchor="middle", letter_spacing=0.5)]
+        layers += [
+            group("mode-strip", "Bande des modes", *strip, layer=True),
+            group("review-bank", "Moniteurs", *bank, layer=True),
+            group("actions", "Actions", *actions, layer=True),
+            group("shutter", "Retour à la caméra",
+                  embed(capture_key(pressed=False), "capture", 103.1, capture_y, 1.4, drop=("backdrop", "label")),
+                  engraved(201, 828, "BACK TO CAMERA", 11, INK, text_anchor="middle", letter_spacing=1.6),
+                  layer=True),
+        ]
+    layers.append(last_picture(28, 757.7, clips))
+    state = "live" if stage == "live" else "in a review, after a shot"
+    return phone(width, height, f"The camera screen with the phone upright, {state}, on an iPhone 17.",
+                 [*defs, *clips], *layers)
+
+
+def landscape():
+    """The camera screen with the phone held sideways, its top to the left, on an iPhone 17: the TV in
+    the middle, between two columns of controls."""
+    width, height = 874, 402
+    tv_width = 530
+    tv_height = tv_width / TV_ASPECT
+    defs = mockup_defs()
+    clips = []
+    left = [
+        embed(badge(), "badge", 66.4, 12, 0.9),
+        engraved(112, 58.5, "FLASH", 9, INK, text_anchor="end"), embed(toggle(False), "flash-switch", 116, 44),
+        engraved(112, 86.5, "CRT", 9, INK, text_anchor="end"), embed(toggle(True), "crt-switch", 116, 72),
+    ]
+    # As the app's: cells 56 by 24, each its lamp and its mode's name.
+    for name, x, y in (("HIRES", 66, 106), ("MULTI", 126, 106), ("PETSCII", 66, 134), ("BBS", 126, 134)):
+        chosen = name == "MULTI"
+        left += [led(f"dial-{name.lower()}", x + 3, y + 12, chosen, r=3),
+                 engraved(x + 10, y + 16, name, 11, "#3E3528" if chosen else INK, stretch=NARROW)]
+    for id_, name, column, row in (("tv", "TV", 0, 0), ("bw", "B&amp;W", 1, 0), ("mon", "MON", 0, 1),
+                                   ("amber", "AMBER", 1, 1), ("sharp", "SHARP", 0, 2), ("green", "GREEN", 1, 2)):
+        x, y = 66 + 62 * column, 170 + 50 * row
+        chosen = id_ == "tv"
+        drop = 0.4 if chosen else 0
+        # The lamp, 6 across, 4 from the name, both centred on the key, as the app's label.
+        start = x + (54 - 10 - text_width(name, 10, NARROW)) / 2
+        left += [embed(cream_key("wide", "", 54, 44, 6, chosen), f"key-{id_}", x - 4, y - 4),
+                 led(f"led-{id_}", start + 3, y + 22 + drop, chosen, r=3),
+                 text(start + 10, y + 25.5 + drop, name, 10, "#3E3528" if chosen else "#4F4537", stretch=NARROW)]
+    right = [
+        embed(cream_key("flip", "", 56, 56, 12, False, "flip", scale=1.35), "flip", 727, 8),
+        embed(cream_key("settings", "", 30, 30, 7, False, "settings", scale=0.75), "settings", 791, 21),
+        embed(capture_key(pressed=False), "capture", 711.6, 171.3, 0.95, drop=("backdrop", "label")),
+    ]
+    tv_x = 186
+    layers = [
+        tv_screen("tv", tv_x, (height - tv_height) / 2, tv_width, tv_height, "multicolour-tv.png", defs),
+        zoom_buttons(tv_x + tv_width / 2, (height + tv_height) / 2 - tv_height * 37 / 272 / 2),
+        group("left-column", "Colonne de gauche", *left, layer=True),
+        group("right-column", "Colonne de droite", *right, layer=True),
+        last_picture(750, 332, clips),
+    ]
+    return phone(width, height, "The camera screen with the phone held sideways, top to the left, on an iPhone 17.",
+                 [*defs, *clips], *layers)
+
+
 # MARK: - Files
 
 
@@ -766,6 +1055,9 @@ FILES = {
     "zoom-button-up": lambda: zoom_button(False),
     "zoom-button-down": lambda: zoom_button(True),
     "last-picture-frame": last_picture_frame,
+    "mockup-portrait-live": lambda: portrait("live"),
+    "mockup-portrait-review": lambda: portrait("review"),
+    "mockup-landscape-live": landscape,
 }
 
 
