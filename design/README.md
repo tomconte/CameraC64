@@ -14,6 +14,7 @@ Vector redraws of the camera screen's elements, in the spirit of the 2013 app's 
 | `svg/action-share-up.svg` and `-down`, and the same for `save`, `send` and `delete` | The review's actions, up and pressed. Share is green and Delete red, as the 2013 app's Share and Discard were; Save takes the badge's rainbow blue, and Send to C64 its orange | 60 × 52, the key 52 × 42 |
 | `svg/flip-key-up.svg`, `svg/flip-key-down.svg` | The key that turns the camera round | 64 × 66, the key 56 square |
 | `svg/small-key-flash-up.svg` and `-down`, and the same for `crt` and `settings` | The small keys beside the TV in landscape, with the lamp the app puts on flash and CRT, for reference | 42 × 52, the key 34 × 42 |
+| `svg/settings-key-up.svg`, `svg/settings-key-down.svg` | The settings key, in the top bar and beside the TV in landscape | 38 × 40, the key 30 square |
 | `svg/monitor-key-wide-up.svg`, `svg/monitor-key-wide-down.svg` | A monitor key in landscape, on which the app writes the monitor's lamp and name | 62 × 54, the key 54 × 44 |
 | `svg/toggle-on.svg`, `svg/toggle-off.svg` | The 2013 app's switch, for flash and the CRT layer | 50 × 22 |
 | `svg/zoom-button-up.svg`, `svg/zoom-button-down.svg` | A zoom button on the TV's border, on which the app writes its value | 40 × 40, the button 34 across |
@@ -50,4 +51,6 @@ The elements put together as the app lays out the camera screen today, on an iPh
 - A shadow inside a hollow is drawn from shifted copies of its outline, so some outlines are repeated. The camera on the capture key is drawn five times: its hollow, the light below it, the two bands of shadow inside it, and the clip that holds them. Change its shape in the script, or in every copy.
 - The other keys' icons are strokes, drawn three times: a light copy shifted down, below the groove; a dark copy, the groove's shadow; and a narrower copy shifted down, in the groove's colour. To change an icon, change its three copies, or its entry in `ICONS` in the script.
 - To render a file: `inkscape design/svg/capture-up.svg --export-type=png --export-dpi=192` for @2x, or 288 for @3x. Hide the reference layer first to export the element alone.
+- `python3 design/export_skin.py` puts the elements the app draws into its asset catalog, in `App/Resources/Assets.xcassets/Skin`, without their reference layers. Run it after changing one, and commit both: CI checks that they match. A new element, or a canvas of another size, also needs its entry in `App/Sources/Camera/Skin.swift`, which says where the element's face is on its canvas.
+- What the app can draw: shapes, paths, gradients, clipping and opacity, as these files use. Not text, filters, masks, patterns, embedded images or CSS styles: keep such things in a reference layer, or the export stops with the file's name.
 - To compare a file with 2013's: `git show legacy-1.2:examples/SimplePhotoFilter/SimplePhotoFilter/capture-up-568h@2x.png > capture-2013.png`.

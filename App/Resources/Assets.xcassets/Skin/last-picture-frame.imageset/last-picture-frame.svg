@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written by design/export_skin.py from design/svg/last-picture-frame.svg: edit that file instead. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="window-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.55" />
+      <stop offset="0.3" stop-color="#000000" stop-opacity="0" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g id="frame">
+    <g id="frame-shadow">
+      <rect x="4.2" y="5.12" width="56.4" height="57.2" rx="8.2" fill="#3A2A18" fill-opacity="0.12" />
+      <rect x="4" y="5.04" width="56.8" height="57.6" rx="8.4" fill="#3A2A18" fill-opacity="0.12" />
+      <rect x="3.8" y="4.96" width="57.2" height="58" rx="8.6" fill="#3A2A18" fill-opacity="0.12" />
+    </g>
+    <g id="frame-mount">
+      <rect x="4" y="4" width="56" height="56" rx="8" fill="#F5F0E4" stroke="#B4A88E" stroke-width="0.6" />
+    </g>
+  </g>
+  <g id="window">
+    <rect x="7" y="7" width="50" height="50" rx="6" fill="#2B2925" />
+    <rect x="7" y="7" width="50" height="50" rx="6" fill="none" stroke="url(#window-shade)" stroke-width="1.6" />
+  </g>
+</svg>

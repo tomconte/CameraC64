@@ -1127,6 +1127,9 @@ FILES = {
         f"small-{icon}", f"A small key, {state}, 34 by 42 points: {icon}, beside the TV in landscape.", 34, 42, 8,
         state == "down", icon, icon_y=4 + 16, scale=0.9, lamp=icon != "settings"))
        for icon in ("flash", "crt", "settings") for state in ("up", "down")},
+    **{f"settings-key-{state}": (lambda state=state: cream_key(
+        "settings", f"The settings key, {state}, 30 points square: in the top bar, and beside the TV in landscape.", 30,
+        30, 7, state == "down", "settings", scale=0.75)) for state in ("up", "down")},
     "monitor-key-wide-up": lambda: cream_key(
         "wide", "A monitor key in landscape, up, 54 by 44 points: the app writes its lamp and name on it.", 54, 44, 6,
         False),

@@ -20,6 +20,7 @@ Tools/Benchmark/get-photos.sh          # the quality benchmark's photos, once
 swift run -c release --package-path Tools c64conv benchmark -o /tmp/report   # quality, against Tools/Benchmark/scores.txt
 swift run -c release --package-path Tools c64conv speed                      # how long a viewfinder frame takes here
 C64/build.sh                           # after editing C64/*.s: reassembles DisplayPrograms.swift
+python3 design/export_skin.py          # after editing design/svg: puts the app's skin into its asset catalog
 swift format lint --strict --recursive Packages App Tools       # CI fails on any finding
 swift format format --in-place --recursive Packages App Tools   # apply the formatting
 ```
@@ -57,6 +58,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - Exported programs copy the VIC-II's memory into the bank at `$C000`, or for PETSCII, which uses the C64's own character ROM, the bank at `$8000`.
 - **`Tools/`** is a Swift package on top of `C64Core`: the `c64conv` CLI, a small PNG codec, the quality benchmark (`Tools/Benchmark/`), and the tests that run exported programs in VICE.
 - **`design/`** holds SVG redraws of the camera screen's elements in the style of the 2013 artwork, written by `design/make_svgs.py`, to edit by hand (`design/README.md`). They use no SVG filters, so that every editor, and Xcode, keeps each effect as a shape.
+  - The app draws them as they are: `design/export_skin.py` copies them, without their reference layers, into `App/Resources/Assets.xcassets/Skin`, where Xcode keeps them as vectors. That folder is generated: never edit it, and commit it with the SVGs. CI checks that they match.
+  - `Skin.swift` says where each element's face is on its canvas, which holds its shadow too; `SkinTests` checks it against the images, and that iOS draws every SVG feature they use as Inkscape does.
 - **`App/`** is a thin SwiftUI layer on top of `C64Core`.
   - The Xcode project is generated from `project.yml` by XcodeGen: edit `project.yml` and never commit `CameraC64.xcodeproj`.
   - The app's Info.plist comes from the `INFOPLIST_KEY_` settings in `project.yml`, added to `App/Info.plist`, which holds what those settings cannot say: the C64 files' types and plain HTTP on the local network. The app tests check both.
