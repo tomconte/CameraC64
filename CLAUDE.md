@@ -92,6 +92,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Quality benchmark:** a change that alters pictures changes the scores in `Tools/Benchmark/scores.txt`. CI fails if they get worse; when the change is meant, run `c64conv benchmark --update-baseline` and commit the scores with it. The photos come from Kodak's suite on a personal website, which sometimes refuses requests; `get-photos.sh` retries, and CI caches them.
 - **VICE** (in `Tools/Sources/C64Tools/VICE.swift`):
   - `x64sc` 3.10 crashes when it logs to a stdout that is not a terminal, so it logs to a file.
+  - Each copy of VICE creates its configuration, cache and state directories as it starts, checking each part of the path before making it. On a machine where they don't exist yet, such as a fresh virtual machine, copies that start together race, and the one that loses exits before it opens its log, with its error on stdout. So `VICE.screen` creates them first, and keeps what VICE prints.
   - VICE applies its colour settings even to an external palette. With saturation, contrast, brightness, gamma and tint at 1000, it shows the palette's colours exactly.
   - A `.prg` autostarts with `-autostartprgmode 1`, which puts it straight into memory. VICE's default loads it through an emulated disk, which takes about 30 million cycles.
   - Its screenshots are taken before the CRT emulation (`-VICIIfilter 1`), so they can't check the display models; the blur widths were matched to its PAL renderer's source instead.
