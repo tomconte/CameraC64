@@ -41,6 +41,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - on `macos-26`: the app tests in the iOS Simulator, plus an unsigned device build; the VICE comparison, with Homebrew's VICE; and the benchmark with image64 as a baseline, for comparison only
 
   After pushing, read the run's results and job logs with the GitHub tools, then fix and push again.
+- **Self-hosted Mac:** when the repository variable `MACOS_RUNNER` is `tartelet`, the macOS jobs, CI's and TestFlight's, run in virtual machines on the owner's Mac instead (`docs/CI.md`), except for fork pull requests. They then wait for the Mac: macOS jobs that stay queued mean it is off, which only the user can fix.
 - **Pushing cancels CI:** a new push cancels the in-progress CI run on the same branch. Don't push while waiting on a run whose result you need.
 - **TestFlight:** a pushed commit whose message starts with `[testflight]` uploads a TestFlight build of the dev app, `com.camerac64.dev` (`.github/workflows/testflight.yml`). The marker exists because the GitHub integration cannot start workflows by hand (it gets a 403). Uploads to the release app happen only through a manual run with `app: release`.
   - Upload one on your own whenever a change alters the app's UI (what its screens show, or how they behave), so it can be tried on a phone: once CI is green on the change, push a commit whose message starts with `[testflight]`, an empty one if nothing is left to commit. Otherwise, only when asked.
@@ -97,6 +98,7 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
 - **Quality benchmark:** a change that alters pictures changes the scores in `Tools/Benchmark/scores.txt`. CI fails if they get worse; when the change is meant, run `c64conv benchmark --update-baseline` and commit the scores with it. The photos come from Kodak's suite on a personal website, which sometimes refuses requests; `get-photos.sh` retries, and CI caches them.
 - **VICE** (in `Tools/Sources/C64Tools/VICE.swift`):
   - `x64sc` 3.10 crashes when it logs to a stdout that is not a terminal, so it logs to a file.
+  - Each copy of VICE creates its configuration, cache and state directories as it starts, checking each part of the path before making it. On a machine where they don't exist yet, such as a fresh virtual machine, copies that start together race, and the one that loses exits before it opens its log, with its error on stdout. So `VICE.screen` creates them first, and keeps what VICE prints.
   - VICE applies its colour settings even to an external palette. With saturation, contrast, brightness, gamma and tint at 1000, it shows the palette's colours exactly.
   - A `.prg` autostarts with `-autostartprgmode 1`, which puts it straight into memory. VICE's default loads it through an emulated disk, which takes about 30 million cycles.
   - Its screenshots are taken before the CRT emulation (`-VICIIfilter 1`), so they can't check the display models; the blur widths were matched to its PAL renderer's source instead.
@@ -104,6 +106,8 @@ xcodebuild test -project CameraC64.xcodeproj -scheme CameraC64 \
   - the `swift:6.3.3-noble` container in `ci.yml`
   - `SWIFT_VERSION` in the session hook
   - `DEVELOPER_DIR` (Xcode 26.6, which ships Swift 6.3.3) in both workflows
+
+  The self-hosted Mac's virtual machine needs the same Xcode at the same path, which the user installs.
 - **Versions:**
   - The bundle ID `com.camerac64` belongs to the existing App Store record and must not change. That record is removed from sale, so TestFlight can't install its builds; everyday builds go to a separate dev app, `com.camerac64.dev`, whose bundle ID and name the TestFlight workflow sets at archive time.
   - The app version is `MARKETING_VERSION` in `project.yml`.

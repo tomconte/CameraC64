@@ -87,7 +87,10 @@ jobs:
   vice:
     name: VICE comparison (macOS)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: macos-26
+    # The repository variable MACOS_RUNNER can send the macOS jobs to the self-hosted
+    # Mac (docs/CI.md). Fork pull requests always run on GitHub's runners: the
+    # repository is public, and the Mac would run a stranger's code.
+    runs-on: ${{ github.event_name != 'pull_request' && vars.MACOS_RUNNER || 'macos-26' }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
@@ -119,7 +122,7 @@ jobs:
     name: Benchmark with image64 (macOS)
     needs: core
     continue-on-error: true
-    runs-on: macos-26
+    runs-on: ${{ github.event_name != 'pull_request' && vars.MACOS_RUNNER || 'macos-26' }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
@@ -152,7 +155,7 @@ jobs:
   app:
     name: App (iOS)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: macos-26
+    runs-on: ${{ github.event_name != 'pull_request' && vars.MACOS_RUNNER || 'macos-26' }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:

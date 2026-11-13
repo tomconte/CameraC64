@@ -6,13 +6,17 @@ import Foundation
 /// copied or shipped.
 public struct VICE: Sendable {
     public enum Error: Swift.Error, CustomStringConvertible {
-        case noScreenshot(log: String)
+        /// How VICE ended, and the ends of its log and of what it printed.
+        /// It exits with status 1 at the cycle limit, as it should, so only
+        /// a signal or another status says more.
+        case noScreenshot(ending: String, log: String, output: String)
         case unknownColor(x: Int, y: Int, rgb: [UInt8])
         case badScreenshot(String)
 
         public var description: String {
             switch self {
-            case .noScreenshot(let log): "VICE saved no screenshot. Its log ends with:\n\(log)"
+            case .noScreenshot(let ending, let log, let output):
+                "VICE saved no screenshot: it \(ending). Its log ends with:\n\(log)\nIts output ends with:\n\(output)"
             case .unknownColor(let x, let y, let rgb): "Pixel (\(x), \(y)) has a colour outside the palette: \(rgb)"
             case .badScreenshot(let reason): "VICE's screenshot could not be read: \(reason)"
             }
@@ -68,6 +72,7 @@ public struct VICE: Sendable {
     /// `Screen.width` × `Screen.height` colour indices, border included.
     /// Loading from a disk takes about 30 million cycles more.
     public func screen(running file: URL, cycles: Int = 4_000_000) throws -> IndexedImage {
+        _ = Self.userDirectories
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "vice-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -83,6 +88,7 @@ public struct VICE: Sendable {
             .write(to: paletteFile, atomically: true, encoding: .utf8)
         let screenshot = directory.appendingPathComponent("screen.png")
         let log = directory.appendingPathComponent("vice.log")
+        let output = directory.appendingPathComponent("output.txt")
 
         let process = Process()
         process.executableURL = executable
@@ -102,14 +108,22 @@ public struct VICE: Sendable {
             "-limitcycles", String(cycles), "-exitscreenshot", screenshot.path,
             "-autostart", file.path,
         ]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        // What VICE prints outside its log: before it opens the log, it
+        // reports errors on stdout.
+        _ = FileManager.default.createFile(atPath: output.path, contents: nil)
+        let printed = try FileHandle(forWritingTo: output)
+        defer { try? printed.close() }
+        process.standardOutput = printed
+        process.standardError = printed
         try process.run()
         process.waitUntilExit()
 
         guard let png = FileManager.default.contents(atPath: screenshot.path) else {
-            let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-            throw Error.noScreenshot(log: text.split(separator: "\n").suffix(20).joined(separator: "\n"))
+            let ending =
+                process.terminationReason == .uncaughtSignal
+                ? "was stopped by signal \(process.terminationStatus)"
+                : "exited with status \(process.terminationStatus)"
+            throw Error.noScreenshot(ending: ending, log: Self.lastLines(of: log), output: Self.lastLines(of: output))
         }
         let decoded: (width: Int, height: Int, rgb: [UInt8])
         do {
@@ -130,5 +144,29 @@ public struct VICE: Sendable {
             pixels[pixel] = index
         }
         return IndexedImage(width: decoded.width, height: decoded.height, pixels: pixels)
+    }
+
+    /// VICE's configuration, cache and state directories, made once before it
+    /// first starts. Each copy of VICE makes them as it starts, and copies
+    /// that start together race for the state directory: the one that loses
+    /// exits at once, before opening its log. The names are VICE's: the XDG
+    /// directories, or their defaults in the home directory.
+    private static let userDirectories: Void = {
+        let environment = ProcessInfo.processInfo.environment
+        let home = environment["HOME"] ?? NSHomeDirectory()
+        let directories = [
+            ("XDG_CONFIG_HOME", "\(home)/.config"), ("XDG_CACHE_HOME", "\(home)/.cache"),
+            ("XDG_STATE_HOME", "\(home)/.local/state"),
+        ]
+        for (variable, standard) in directories {
+            let base = environment[variable].flatMap { $0.isEmpty ? nil : $0 } ?? standard
+            try? FileManager.default.createDirectory(atPath: "\(base)/vice", withIntermediateDirectories: true)
+        }
+    }()
+
+    /// A text file's last 20 lines, or nothing if there is no such file.
+    private static func lastLines(of file: URL) -> String {
+        guard let data = FileManager.default.contents(atPath: file.path) else { return "" }
+        return String(decoding: data, as: UTF8.self).split(separator: "\n").suffix(20).joined(separator: "\n")
     }
 }

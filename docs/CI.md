@@ -7,9 +7,9 @@
 | Job | Runner | Steps |
 |---|---|---|
 | C64Core and tools (Linux) | `ubuntu-latest`, `swift:6.3.3-noble` container | `swift format lint`; reassemble the display programs with cc65 and check that `DisplayPrograms.swift` is unchanged; build and test `C64Core`, in debug and optimised; test the tools; run the quality benchmark and check its scores against `Tools/Benchmark/scores.txt` |
-| App (iOS) | `macos-26`, Xcode 26.6 | check that the skin in the asset catalog matches `design/svg` (`design/export_skin.py --check`); generate the project with XcodeGen, run the tests in the iOS Simulator (iPhone 17), build an unsigned archive for devices |
-| VICE comparison (macOS) | `macos-26`, Xcode 26.6 | install VICE with Homebrew, then run the tools' tests, which run every exported program in VICE and compare its screen with the renderer's |
-| Benchmark with image64 (macOS) | `macos-26`, Xcode 26.6 | after the Linux job: build a fixed version of [image64](https://github.com/nschneir/image64) and run the quality benchmark with it as a baseline. It never fails the run: its scores are for comparison |
+| App (iOS) | `macos-26` or the [self-hosted Mac](#the-self-hosted-mac), Xcode 26.6 | check that the skin in the asset catalog matches `design/svg` (`design/export_skin.py --check`); generate the project with XcodeGen, run the tests in the iOS Simulator (iPhone 17), build an unsigned archive for devices |
+| VICE comparison (macOS) | `macos-26` or the self-hosted Mac, Xcode 26.6 | install VICE with Homebrew, then run the tools' tests, which run every exported program in VICE and compare its screen with the renderer's |
+| Benchmark with image64 (macOS) | `macos-26` or the self-hosted Mac, Xcode 26.6 | after the Linux job: build a fixed version of [image64](https://github.com/nschneir/image64) and run the quality benchmark with it as a baseline. It never fails the run: its scores are for comparison |
 
 If the app tests fail, the job keeps the `.xcresult` bundle as a download on the run page. Pass or fail, it keeps pictures of the camera screen's controls in each state, on an iPhone 17 upright and sideways, and of every element of the skin, as the `Screens` download: `ScreenshotTests` draws them as the app does. That is how to see the screen without a Mac, though the test's renderer leaves out what UIKit draws, such as Share's menu and the mode strip, and the TV stays dark. If the VICE comparison fails, its job keeps the screens that differ, VICE's and the renderer's, as a download. The quality benchmark always keeps its page, with every picture next to its photo, and adds its scores to the run's summary.
 
@@ -17,7 +17,37 @@ Now and then a `macos-26` runner has no iPhone 17 simulator, and the app job sto
 
 The benchmark's photos come from a personal website that sometimes refuses requests. The Linux job downloads them once and keeps them in the Actions cache, saved only when complete, and readable on macOS too, which is why it installs zstd. The cache key follows `Tools/Benchmark/photos.txt`.
 
-When changing the Swift version, update it in three places: the container image in `ci.yml`, `SWIFT_VERSION` in `.claude/hooks/session-start.sh`, and the Xcode version (`DEVELOPER_DIR`) in `ci.yml`.
+When changing the Swift version, update it in three places: the container image in `ci.yml`, `SWIFT_VERSION` in `.claude/hooks/session-start.sh`, and the Xcode version (`DEVELOPER_DIR`) in `ci.yml`. The self-hosted Mac's virtual machine then needs the new Xcode too.
+
+## The self-hosted Mac
+
+The macOS jobs, CI's and TestFlight's, can run on the owner's Mac instead of GitHub's `macos-26` runners. [Tartelet](https://github.com/shapehq/tartelet) runs them there in virtual machines it starts with [Tart](https://tart.run): a fresh copy of one virtual machine for each job, deleted once the job ends.
+
+The repository variable `MACOS_RUNNER` (Settings → Secrets and variables → Actions → Variables) chooses where they run:
+
+- set to `tartelet`, the label Tartelet gives its runners, they run on the Mac
+- unset, they run on `macos-26`
+
+Pull requests from forks always run on GitHub's runners: the repository is public, and the Mac would run a stranger's code.
+
+While the variable is set, the macOS jobs wait for the Mac. If they stay queued, it is asleep or Tartelet is stopped; unsetting the variable sends later runs back to GitHub.
+
+### The virtual machine
+
+It has what the workflows expect of GitHub's image:
+
+- Cirrus Labs' `ghcr.io/cirruslabs/macos-tahoe-base`, which has Homebrew and the user `admin` (password `admin`), with automatic login, Remote Login and passwordless sudo. A virtual machine can't run a newer macOS than the Mac it runs on.
+- Xcode 26.6 at `/Applications/Xcode_26.6.app`, the path in `DEVELOPER_DIR`, with its licence accepted (`sudo xcodebuild -license accept`), `sudo xcodebuild -runFirstLaunch` run, and the iOS simulator (`xcodebuild -downloadPlatform iOS`), which comes with the iPhone 17 the app tests use.
+- From Homebrew: `xcbeautify`; `xcodegen` and `vice`, which the jobs would otherwise install on every run; and `zstd` and `gnu-tar`, without which the Actions cache can't read the photos the Linux job keeps.
+
+It doesn't need the runner: Tartelet installs and registers one in each copy. Give it enough memory for Xcode and the Simulator, about 12 GB, and let Tartelet run two at once, the most Apple allows, so that a run's three macOS jobs don't all wait for one another.
+
+### Tartelet's settings
+
+- Virtual machine: the one above, with the SSH login `admin` and password `admin`.
+- GitHub runner: the scope Repository, for this repository, through a GitHub App installed on the owner's account for this repository only. The App needs the repository permissions Administration (read and write) and Metadata (read-only).
+
+Tartelet logs to `~/Library/Application Support/dk.shape.Tartelet/Logs`. Whatever goes wrong while it sets up a runner, it ends with "Failed establishing SSH connection": the lines before that one say what failed, such as "The GitHub app has not been installed".
 
 ## Claude Code on the web
 
