@@ -117,6 +117,10 @@ struct CameraScreen: View {
                     } onPressingChanged: { pressing in
                         showingOriginal = pressing && model.stage == .review && model.tvOn
                     }
+                    // The case's lip round the TV, whose bevel spills onto the
+                    // case: above it, so the case's slots don't cover it.
+                    .tvLip(upright: !turned)
+                    .zIndex(1)
                 Group {
                     if turned {
                         landscapeColumn(shutterFirst ? .controls : .shutter, size: column, rotation: rotation)
