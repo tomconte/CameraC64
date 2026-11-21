@@ -1,17 +1,8 @@
 import SwiftUI
 
-/// How the review lays out its controls.
-enum ReviewLayout {
-    /// With captions under the keys.
-    case roomy
-    /// Closer together, without captions, where the roomy layout does not
-    /// fit, as on an iPhone SE.
-    case tight
-}
-
 /// The controls below the TV in a review, with the phone upright (docs/UX.md,
-/// section 5): the mode strip, the monitor bank, the actions and the shutter
-/// row. They fit below the TV on every iPhone, and the roomy layout on all but
+/// section 5): the mode strip, the monitor bank, the actions, grooves like the
+/// C64's vent in the room that is left, and the shutter row. They fit below the TV on every iPhone, and the roomy layout on all but
 /// the smallest: `LayoutTests` measures them. In landscape, the review has no
 /// monitor keys: the phone turns upright to change the monitor.
 struct ReviewPanel<Actions: View, Shutter: View>: View {
@@ -23,7 +14,7 @@ struct ReviewPanel<Actions: View, Shutter: View>: View {
     var onSelectMonitor: (Monitor) -> Void
     /// The layout to keep to, or nil for the roomy one where it fits and the
     /// tight one elsewhere.
-    var layout: ReviewLayout?
+    var layout: PanelLayout?
     /// The review's actions, with captions or without.
     @ViewBuilder var actions: (_ showsCaptions: Bool) -> Actions
     /// The shutter row, with its caption or without.
@@ -40,16 +31,16 @@ struct ReviewPanel<Actions: View, Shutter: View>: View {
         }
     }
 
-    private func controls(_ layout: ReviewLayout) -> some View {
+    private func controls(_ layout: PanelLayout) -> some View {
         let roomy = layout == .roomy
         return VStack(spacing: roomy ? 12 : 8) {
             ModeStrip(selection: mode, thumbnails: thumbnails, onSelect: onSelectMode)
             ReviewMonitorBank(selection: monitor, onSelect: onSelectMonitor)
                 .padding(.top, 6)
             actions(roomy)
-                .ventClearing(cornerRadius: 18, ceiling: true)
             if roomy {
-                Spacer(minLength: 8)
+                VentBand(edge: 16)
+                    .frame(minHeight: 8, idealHeight: 8, maxHeight: .infinity)
             }
             shutter(roomy)
         }

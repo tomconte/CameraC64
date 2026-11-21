@@ -157,7 +157,8 @@ struct MonitorKeyStyle: ButtonStyle {
     }
 }
 
-/// The row at the bottom: the last picture, the big key, and the camera switch.
+/// The row at the bottom, in a panel pressed into the case: the last picture,
+/// the big key, and the camera switch.
 /// After a shot, the big key goes back to the camera, and until the next one,
 /// the last picture opens it again. In landscape, they move to the column
 /// beside the TV (`ShutterColumn`).
@@ -183,7 +184,6 @@ struct ShutterRow: View {
                         .font(Look.caseLabelFont)
                         .tracking(1.6)
                         .engraved(Look.label)
-                        .ventClearing(cornerRadius: 7)
                 }
             }
             Spacer()
@@ -195,7 +195,11 @@ struct ShutterRow: View {
                     .frame(width: 56, height: 56)
             }
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 12)
+        // Where room is short, as on an iPhone SE, the panel hugs the keys.
+        .padding(.vertical, showsCaption ? 8 : 3)
+        .recessedPanel()
+        .padding(.horizontal, 16)
     }
 }
 
@@ -212,7 +216,6 @@ struct CaptureKey: View {
         }
         .buttonStyle(CaptureKeyStyle(width: width))
         .accessibilityLabel(stage == .live ? "Capture" : "Back to the camera")
-        .ventClearing(cornerRadius: .infinity)
     }
 }
 
@@ -229,7 +232,6 @@ struct LastPictureButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(lastShot == nil ? "No pictures yet" : "Last picture")
-        .ventClearing(cornerRadius: 8)
     }
 
     /// Its frame, with the picture in its window, or the window dark until
@@ -262,7 +264,6 @@ struct FlipKey: View {
         }
         .buttonStyle(SkinKeyStyle(element: Skin.flipKey, width: Skin.flipKey.face.width))
         .accessibilityLabel("Switch camera")
-        .ventClearing(cornerRadius: 12)
     }
 }
 

@@ -71,6 +71,21 @@ extension View {
     /// A panel pressed into the case, as the 2013 app's MON SELEC panel was,
     /// with its title engraved above it.
     func casePanel(_ title: String) -> some View {
+        recessedPanel()
+            .overlay(alignment: .topLeading) {
+                Text(title)
+                    .font(Look.smallFont)
+                    .tracking(1.4)
+                    .engraved(Look.label)
+                    .fixedSize()
+                    .offset(x: 6, y: -14)
+                    .accessibilityHidden(true)
+            }
+    }
+
+    /// A panel pressed into the case, behind this view: a lip of light along
+    /// its lower edge, and shade along its top.
+    func recessedPanel() -> some View {
         background {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
@@ -88,15 +103,6 @@ extension View {
                             startPoint: .top, endPoint: .bottom),
                         lineWidth: 1.6)
             }
-        }
-        .overlay(alignment: .topLeading) {
-            Text(title)
-                .font(Look.smallFont)
-                .tracking(1.4)
-                .engraved(Look.label)
-                .fixedSize()
-                .offset(x: 6, y: -14)
-                .accessibilityHidden(true)
         }
     }
 }

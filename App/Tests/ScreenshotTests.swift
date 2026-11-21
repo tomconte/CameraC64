@@ -66,7 +66,6 @@ struct ScreenshotTests {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .vent()
             .background {
                 CaseBackground()
                     .ignoresSafeArea(edges: .bottom)
@@ -85,21 +84,16 @@ struct ScreenshotTests {
         .background(Color.white)
     }
 
-    /// The camera's controls below the TV, as `CameraScreen` lays them out.
+    /// The camera's controls below the TV.
     private func livePanel(_ model: CameraModel) -> some View {
-        VStack(spacing: 12) {
-            ZoomPills(buttons: ZoomButtons(presets: [0.5, 1, 2], zoom: 1)) { _ in }
-            ModeDial(selection: model.mode) { _ in }
-            MonitorBank(selection: model.monitor) { _ in }
-                .ventClearing(cornerRadius: 8, ceiling: true)
-                .padding(.top, 6)
-            Spacer(minLength: 8)
-            ShutterRow(
-                stage: .live, lastShot: nil, thumbnail: nil, showsCaption: true, onLastPicture: {}, onKey: {},
-                onFlip: {})
-        }
-        .padding(.top, 12)
-        .padding(.bottom, 6)
+        LivePanel(
+            zoom: ZoomButtons(presets: [0.5, 1, 2], zoom: 1), mode: model.mode, monitor: model.monitor,
+            onSelectZoom: { _ in }, onSelectMode: { _ in }, onSelectMonitor: { _ in },
+            shutter: {
+                ShutterRow(
+                    stage: .live, lastShot: nil, thumbnail: nil, showsCaption: $0, onLastPicture: {}, onKey: {},
+                    onFlip: {})
+            })
     }
 
     /// The review's controls below the TV.
@@ -130,7 +124,6 @@ struct ScreenshotTests {
                 onSelectMode: { _ in }, onSelectMonitor: { _ in }, onSelectReviewMode: { _ in }
             )
             .frame(width: column)
-            .vent()
             // The TV, as high as the screen is wide.
             Look.bezel
                 .frame(width: Self.screen.width * TVGeometry.aspectRatio)
@@ -141,7 +134,6 @@ struct ScreenshotTests {
                 }
             )
             .frame(width: column)
-            .vent()
         }
         .frame(height: Self.screen.width)
         .background(Look.caseColor)

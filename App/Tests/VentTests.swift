@@ -47,6 +47,19 @@ struct VentTests {
         #expect(Int(bar.g) > 180, "A groove behind the top bar: \(bar)")
     }
 
+    /// A band of grooves in free space holds as many whole grooves as fit,
+    /// centred, across it short of its sides.
+    @Test func bandsCentreWholeGrooves() throws {
+        let grooves = layout.band(width: 402, height: 50)
+        #expect(grooves.count == 8)
+        let first = try #require(grooves.first)
+        let last = try #require(grooves.last)
+        let below = 50 - (last.maxY + layout.light)
+        #expect(abs(first.minY - below) < 0.001, "\(first.minY) above, \(below) below")
+        #expect(grooves.allSatisfy { $0.minX == layout.edge && $0.maxX == 402 - layout.edge })
+        #expect(layout.band(width: 402, height: 3).isEmpty)
+    }
+
     /// Along the top of the screen, the grooves follow its rounded corners.
     @Test func groovesFollowTheScreensCorners() throws {
         let grooves = layout.grooves(width: 402, from: 9, to: 65, clearings: [], cornerRadius: 55)

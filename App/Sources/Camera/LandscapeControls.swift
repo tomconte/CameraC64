@@ -37,7 +37,6 @@ struct ControlsColumn: View {
             // As in the top bar, the badge switches the TV off and on.
             Button(action: onPower) {
                 CameraBadge(compact: true)
-                    .ventClearing(cornerRadius: 8)
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
             }
@@ -56,16 +55,15 @@ struct ControlsColumn: View {
                 }
                 SettingsKey(touch: 30, action: onSettings)
             }
-            .ventClearing(cornerRadius: 10)
             if model.stage == .live {
                 CompactModeDial(selection: model.mode, onSelect: onSelectMode)
-                    .ventClearing(cornerRadius: 8)
                 CompactMonitorBank(selection: model.monitor, onSelect: onSelectMonitor)
-                    .ventClearing(cornerRadius: 6)
             } else {
                 CompactModeStrip(selection: model.reviewMode, thumbnails: thumbnails, onSelect: onSelectReviewMode)
-                    .ventClearing(cornerRadius: 6)
             }
+            // Grooves like the C64's vent, in the room left below.
+            VentBand()
+                .frame(minHeight: 0, idealHeight: 0, maxHeight: .infinity)
         }
         .padding(.vertical, 6)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -76,9 +74,9 @@ struct ControlsColumn: View {
     private static let switchHeight: CGFloat = 30
 }
 
-/// The column on the right of the TV in landscape: the big key in the
-/// middle, the camera switch above it, or in a review, the actions, and the
-/// last picture below.
+/// The column on the right of the TV in landscape, in a panel pressed into the
+/// case: the big key in the middle, the camera switch above it, or in a
+/// review, the actions, and the last picture below.
 struct ShutterColumn<Actions: View>: View {
     /// The height of the slots above and below the big key, which keep it in
     /// the middle: room for the review's actions.
@@ -101,18 +99,25 @@ struct ShutterColumn<Actions: View>: View {
                     FlipKey(action: onFlip)
                 } else {
                     actions
-                        .ventClearing(cornerRadius: 18)
                 }
             }
             .frame(height: Self.slotHeight, alignment: .top)
             Spacer(minLength: 12)
-            CaptureKey(stage: stage, width: 112, action: onKey)
+            CaptureKey(stage: stage, width: Self.keyWidth, action: onKey)
             Spacer(minLength: 12)
             LastPictureButton(lastShot: lastShot, thumbnail: thumbnail, action: onLastPicture)
                 .frame(height: Self.slotHeight, alignment: .bottom)
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .recessedPanel()
+        .padding(4)
     }
+
+    /// How wide the big key is: as wide as its panel leaves room for in the
+    /// narrowest column.
+    static var keyWidth: CGFloat { 104 }
 }
 
 /// The mode dial in landscape: the modes in rows of two, each with its lamp,
@@ -255,7 +260,7 @@ struct ActionGrid: View {
     var onAction: (ReviewAction) -> Void
 
     var body: some View {
-        Grid(horizontalSpacing: 10, verticalSpacing: 8) {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
             ForEach(actions.rows(of: 2), id: \.startIndex) { row in
                 GridRow {
                     ForEach(row) { action in

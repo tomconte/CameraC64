@@ -29,14 +29,14 @@ A TV above a C64, as in the 2013 app, but with a TV of the right shape.
 3. zoom buttons (0.5×, 1×, 2×…)
 4. the mode dial
 5. the monitor bank
-6. the shutter row: the last picture, the capture key, front/back camera
+6. the shutter row, in a panel pressed into the case: the last picture, the capture key, front/back camera, with grooves like the C64's vent in the room above it
 
 **Landscape: the TV in the middle, between two columns of controls**, like a TV set with its controls on either side.
 
 - The screen follows how the phone is held even when rotation lock is on, as the Camera app does, so the whole app can stay in portrait. The TV turns to stay upright, and so do the two columns beside it, each laid out as the user sees it.
 - The TV takes the phone's whole height where it can: about 530×401 pt on an iPhone 17, with the picture at 442×295 pt (1.4 pt per C64 pixel). Each column is at least 124 pt wide, and they share what the TV leaves. The zoom buttons move onto the TV's border.
 - On the left: the badge, then the flash and CRT switches, with the settings key beside them, then the mode dial in two rows of two, and the monitor keys in three rows of two, colour monitors on the left, with their lamps and names on them, the chosen one down. In a review, the mode strip takes the place of the dial and the monitor keys (section 5).
-- On the right: the capture key in the middle, front/back camera above it, and the last picture below. In a review, the actions take the place of front/back camera.
+- On the right, in a panel pressed into the case: the capture key in the middle, front/back camera above it, and the last picture below. In a review, the actions take the place of front/back camera. Grooves like the C64's vent fill the room left below the controls on the left.
 - The capture key stays on the right whichever way the phone is turned: the columns swap sides.
 - Turning the phone moves the controls between the portrait layout and the columns.
 
@@ -102,7 +102,7 @@ With Reduce Motion on, the warm-up, the power-off and the fill-in are skipped.
 ## 7. Look
 
 - The camera screen wears a skin in the 2013 app's style. Its keys, lamps, switches, badge, zoom buttons and the last picture's frame are vector drawings in `design/svg`, which the app shows as they are (`design/README.md`): they can be redrawn there, by hand or by a designer, without touching the code.
-- What depends on the layout is drawn in code: the case, lit from above, the beige title bar, the panel the monitor keys sit in, the engraved labels, and the grooves that recall the vent along the back of the C64's case. They run across the top of the screen, behind the shutter row and behind the columns beside the TV, and stop short of each element, as the C64's stop round its badge.
+- What depends on the layout is drawn in code: the case, lit from above, the beige title bar, the panel the monitor keys sit in, the engraved labels, and the grooves that recall the vent along the back of the C64's case. They run across the top of the screen, round the Dynamic Island as the C64's run round its badge, and fill the free space above the shutter row and below the controls beside the TV, never behind a key. The shutter row sits in a panel pressed into the case, as the monitor keys do, which gives the case some depth.
 - The colours, fonts and styles the screen adds to the skin live in one place (`Look`), so that the skin can change without touching layout or behaviour.
 - The 2013 artwork is the reference. It is at tag `legacy-1.2`, in `examples/SimplePhotoFilter/SimplePhotoFilter/`.
 - C64-style text can use the character ROM's shapes, which the app includes for PETSCII mode (see the plan, section 17).

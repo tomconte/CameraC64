@@ -45,7 +45,7 @@ struct LayoutTests {
 
     /// The review's controls with the phone upright, in a layout, or as the
     /// review picks it.
-    private func reviewPanel(_ layout: ReviewLayout?) -> some View {
+    private func reviewPanel(_ layout: PanelLayout?) -> some View {
         ReviewPanel(
             mode: .multicolour, monitor: .tv, thumbnails: [:], onSelectMode: { _ in }, onSelectMonitor: { _ in },
             layout: layout,
@@ -57,6 +57,19 @@ struct LayoutTests {
             shutter: {
                 ShutterRow(
                     stage: .review, lastShot: .multicolour, thumbnail: nil, showsCaption: $0, onLastPicture: {},
+                    onKey: {}, onFlip: {})
+            })
+    }
+
+    /// The camera's controls with the phone upright, in a layout, or as the
+    /// panel picks it, with the zoom buttons of a phone with four lenses.
+    private func livePanel(_ layout: PanelLayout?) -> some View {
+        LivePanel(
+            zoom: ZoomButtons(presets: [0.5, 1, 2, 5], zoom: 1), mode: .multicolour, monitor: .tv,
+            onSelectZoom: { _ in }, onSelectMode: { _ in }, onSelectMonitor: { _ in }, layout: layout,
+            shutter: {
+                ShutterRow(
+                    stage: .live, lastShot: .multicolour, thumbnail: nil, showsCaption: $0, onLastPicture: {},
                     onKey: {}, onFlip: {})
             })
     }
@@ -102,6 +115,22 @@ struct LayoutTests {
             #expect(panel.height <= room + 0.5, "\(phone.name): \(panel.height) points in \(room)")
             if phone.height > 667 {
                 let roomy = size(of: reviewPanel(.roomy), width: phone.width, height: room)
+                #expect(roomy.height <= room + 0.5, "\(phone.name), roomy: \(roomy.height) points in \(room)")
+            }
+        }
+    }
+
+    /// With the phone upright, the camera's controls fit below the TV on every
+    /// iPhone, and with the vent's grooves and the capture key's caption on all
+    /// but the iPhone SE. (Sizes may round up to a pixel.)
+    @Test func cameraControlsFitEveryIPhone() {
+        for phone in Self.phones {
+            let room = panelHeight(on: phone)
+            let panel = size(of: livePanel(nil), width: phone.width, height: room)
+            #expect(panel.width <= phone.width + 0.5, "\(phone.name): \(panel.width) points wide")
+            #expect(panel.height <= room + 0.5, "\(phone.name): \(panel.height) points in \(room)")
+            if phone.height > 667 {
+                let roomy = size(of: livePanel(.roomy), width: phone.width, height: room)
                 #expect(roomy.height <= room + 0.5, "\(phone.name), roomy: \(roomy.height) points in \(room)")
             }
         }
