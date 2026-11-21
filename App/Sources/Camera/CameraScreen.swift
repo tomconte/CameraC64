@@ -122,8 +122,6 @@ struct CameraScreen: View {
                         landscapeColumn(shutterFirst ? .controls : .shutter, size: column, rotation: rotation)
                     } else {
                         panel
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .vent()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -395,17 +393,12 @@ struct CameraScreen: View {
     }
 
     private var livePanel: some View {
-        VStack(spacing: 12) {
-            ZoomPills(buttons: zoomButtons) { zoom in whenOn { selectZoom(zoom) } }
-            ModeDial(selection: model.mode) { mode in whenOn { model.select(mode) } }
-            MonitorBank(selection: model.monitor) { monitor in whenOn { model.select(monitor) } }
-                .ventClearing(cornerRadius: 8, ceiling: true)
-                .padding(.top, 6)
-            Spacer(minLength: 8)
-            shutterRow(showsCaption: true)
-        }
-        .padding(.top, 12)
-        .padding(.bottom, 6)
+        LivePanel(
+            zoom: zoomButtons, mode: model.mode, monitor: model.monitor,
+            onSelectZoom: { zoom in whenOn { selectZoom(zoom) } },
+            onSelectMode: { mode in whenOn { model.select(mode) } },
+            onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
+            shutter: { shutterRow(showsCaption: $0) })
     }
 
     /// The columns beside the TV in landscape.
@@ -434,8 +427,6 @@ struct CameraScreen: View {
                 onSelectMonitor: { monitor in whenOn { model.select(monitor) } },
                 onSelectReviewMode: { mode in whenOn { model.reviewMode = mode } }
             )
-            .frame(width: size.width, height: size.height)
-            .vent()
             .turned(rotation, size: size)
         case .shutter:
             ShutterColumn(
@@ -450,8 +441,6 @@ struct CameraScreen: View {
                     ) { action in whenOn { perform(action) } }
                 }
             )
-            .frame(width: size.width, height: size.height)
-            .vent()
             .turned(rotation, size: size)
         }
     }

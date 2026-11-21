@@ -1,28 +1,18 @@
 import SwiftUI
 
 // The camera screen's case recalls the vent along the back of the C64's case:
-// grooves across it, each a dark groove over a line of light, which stop
-// short of the elements on the case, as the C64's stop round its badge and
-// its power lamp (design/README.md, and the mockups in design/svg). They run
-// across the top of the screen with the phone upright, behind the shutter
-// row, and behind the columns beside the TV in landscape.
+// grooves across it, each a dark groove over a line of light (design/README.md,
+// and the mockups in design/svg). They run across the top of the screen with
+// the phone upright, round the Dynamic Island as the C64's run round its
+// badge; and in bands that fill the case's free space, never behind a key:
+// above the shutter row's panel with the phone upright, and below the
+// controls beside the TV in landscape.
 
-/// An element on the case that the vent's grooves stop short of.
+/// Something the vent's grooves stop short of, such as the Dynamic Island.
 nonisolated struct VentClearing: Equatable, Sendable {
-    /// Where the element is, in the vent's coordinates.
+    /// Where it is, in the vent's coordinates.
     var frame: CGRect
     var cornerRadius: CGFloat
-    /// Whether the grooves stay below it, as they stay below the monitor bank.
-    var isCeiling = false
-}
-
-/// The elements on the case, gathered for the vent behind them.
-nonisolated struct VentClearings: PreferenceKey {
-    static let defaultValue: [VentClearing] = []
-
-    static func reduce(value: inout [VentClearing], nextValue: () -> [VentClearing]) {
-        value += nextValue()
-    }
 }
 
 /// Where the grooves go: they stop short of each element, and of the case's
@@ -84,6 +74,16 @@ nonisolated struct VentLayout: Sendable {
         return (frame.minX + inset, frame.maxX - inset)
     }
 
+    /// Whole grooves across a band `width` by `height`, as many as fit,
+    /// centred in it.
+    func band(width: CGFloat, height: CGFloat) -> [CGRect] {
+        let depth = groove + light
+        guard height >= depth else { return [] }
+        let count = Int((height - depth) / pitch) + 1
+        let top = (height - CGFloat(count - 1) * pitch - depth) / 2
+        return grooves(width: width, from: top, to: height, clearings: [])
+    }
+
     /// How far in a rounded corner of `radius` is, `depth` from the end of its curve.
     static func cornerInset(_ radius: CGFloat, depth: CGFloat) -> CGFloat {
         let depth = min(max(depth, 0), radius)
@@ -102,22 +102,16 @@ nonisolated struct VentLayout: Sendable {
     }
 }
 
-/// The vent's grooves in a view's frame, stopping short of the elements it
-/// gathered (`ventClearing`), and below its ceilings.
-struct Vent: View {
-    /// The coordinate space the elements are measured in.
-    static let space = "vent"
-    var clearings: [VentClearing]
-    var layout = VentLayout()
+/// A band of the vent's grooves, filling the free space it is given: whole
+/// grooves across it, centred, `edge` in from its sides.
+struct VentBand: View {
+    var edge: CGFloat = 12
 
     var body: some View {
-        let layout = layout
+        let layout = VentLayout(edge: edge)
         let (groove, light) = (Look.ventGroove, Look.ventLight)
-        // Below the lowest ceiling, or from the top.
-        let top = clearings.filter(\.isCeiling).map { $0.frame.maxY + 12 }.max() ?? layout.pitch / 2
-        let elements = clearings.filter { !$0.isCeiling }
         Canvas { context, size in
-            let grooves = layout.grooves(width: size.width, from: top, to: size.height, clearings: elements)
+            let grooves = layout.band(width: size.width, height: size.height)
             layout.draw(grooves, in: &context, groove: groove, light: light)
         }
         .allowsHitTesting(false)
@@ -164,30 +158,5 @@ struct TopVent: View {
             return [VentClearing(frame: CGRect(x: width / 2 - 100, y: -10, width: 200, height: 42), cornerRadius: 20)]
         }
         return []
-    }
-}
-
-extension View {
-    /// Keeps the vent's grooves clear of this element, whose corners are
-    /// rounded by `cornerRadius`. With `ceiling`, they stay below it.
-    func ventClearing(cornerRadius: CGFloat, ceiling: Bool = false) -> some View {
-        background {
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: VentClearings.self,
-                    value: [
-                        VentClearing(
-                            frame: proxy.frame(in: .named(Vent.space)), cornerRadius: cornerRadius, isCeiling: ceiling)
-                    ])
-            }
-        }
-    }
-
-    /// Draws the vent's grooves behind this view, clear of the elements in it.
-    func vent() -> some View {
-        coordinateSpace(.named(Vent.space))
-            .backgroundPreferenceValue(VentClearings.self) { clearings in
-                Vent(clearings: clearings)
-            }
     }
 }
