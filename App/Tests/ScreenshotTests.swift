@@ -58,6 +58,8 @@ struct ScreenshotTests {
                 }
             Look.bezel
                 .frame(height: Self.screen.width / TVGeometry.aspectRatio)
+                .tvLip(upright: true)
+                .zIndex(1)
             Group {
                 if stage == .live {
                     livePanel(model)
@@ -125,8 +127,13 @@ struct ScreenshotTests {
             )
             .frame(width: column)
             // The TV, as high as the screen is wide.
+            // Laid out upright and turned, as `CameraScreen` turns it.
             Look.bezel
-                .frame(width: Self.screen.width * TVGeometry.aspectRatio)
+                .frame(width: Self.screen.width, height: Self.screen.width * TVGeometry.aspectRatio)
+                .tvLip(upright: false)
+                .rotationEffect(.degrees(90))
+                .frame(width: Self.screen.width * TVGeometry.aspectRatio, height: Self.screen.width)
+                .zIndex(1)
             ShutterColumn(
                 stage: stage, lastShot: .multicolour, thumbnail: nil, onLastPicture: {}, onKey: {}, onFlip: {},
                 actions: {

@@ -256,3 +256,65 @@ struct SettingsKey: View {
         .accessibilityLabel("Settings")
     }
 }
+
+/// One edge of the case's lip round the TV, which sits in an opening of the
+/// case: a bevel on the case's side, a crease where they meet, and the shadow
+/// the case casts on the picture. It is drawn on either side of the TV's
+/// edge, so the TV keeps its size.
+struct TVLipEdge: View {
+    enum Side {
+        /// The case above the TV, on the screen.
+        case above
+        /// The case below the TV, on the screen.
+        case below
+    }
+
+    var side: Side
+    /// Whether the bevel faces the light, which comes from the top as the
+    /// user sees it: with the phone upright, only the lip below the TV does;
+    /// held sideways, both lips are lit from the side alike.
+    var lit: Bool
+    /// How far the case's shadow falls on the picture.
+    var shadow: CGFloat
+
+    static let bevel: CGFloat = 4
+    static let crease: CGFloat = 1
+
+    var body: some View {
+        let outward: UnitPoint = side == .above ? .top : .bottom
+        let inward: UnitPoint = side == .above ? .bottom : .top
+        let bevel = LinearGradient(
+            colors: [lit ? Color.white.opacity(0.55) : Color.black.opacity(0.22), .clear],
+            startPoint: inward, endPoint: outward)
+        let cast = LinearGradient(
+            colors: [Color.black.opacity(lit ? 0.3 : 0.5), .clear], startPoint: outward, endPoint: inward)
+        VStack(spacing: 0) {
+            if side == .above {
+                Rectangle().fill(bevel).frame(height: Self.bevel)
+                Look.titleBarEdgeShade.frame(height: Self.crease)
+                Rectangle().fill(cast).frame(height: shadow)
+            } else {
+                Rectangle().fill(cast).frame(height: shadow)
+                Look.titleBarEdgeShade.frame(height: Self.crease)
+                Rectangle().fill(bevel).frame(height: Self.bevel)
+            }
+        }
+        .offset(y: (Self.bevel + Self.crease) * (side == .above ? -1 : 1))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// The case's lip round the TV, at its edges above and below on the
+    /// screen, where the case meets it. Give the TV a higher z-index than the
+    /// case beside it, so that the lip's bevel, outside the TV, shows.
+    func tvLip(upright: Bool) -> some View {
+        overlay(alignment: .top) {
+            TVLipEdge(side: .above, lit: !upright, shadow: upright ? 7 : 5)
+        }
+        .overlay(alignment: .bottom) {
+            TVLipEdge(side: .below, lit: true, shadow: upright ? 3 : 5)
+        }
+    }
+}
